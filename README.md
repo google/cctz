@@ -15,7 +15,7 @@ https://github.com/google/googletest
 # Getting Started
 
 1. Download/install Bazel http://bazel.io/docs/install.html
-2. Get the cctz source
+2. Get the cctz source: `git clone https://github.com/google/cctz.git` then `cd cctz`
 3. Build cctz and run the tests: `bazel test ...`
 
 # Fundamental Concepts
