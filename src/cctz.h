@@ -54,8 +54,8 @@ using time_point = std::chrono::time_point<std::chrono::system_clock, duration>;
 // identifiers.
 //
 // Examples:
-//   cctz::TimeZone utc = base::UTCTimeZone();
-//   cctz::TimeZone loc = base::LocalTimeZone();
+//   cctz::TimeZone utc = cctz::UTCTimeZone();
+//   cctz::TimeZone loc = cctz::LocalTimeZone();
 //   cctz::TimeZone lax;
 //   if (!cctz::LoadTimeZone("America/Los_Angeles", &lax)) { ... }
 //
