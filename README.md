@@ -3,7 +3,7 @@ This is not an official Google product.
 # Overview
 
 CCTZ (C++ Time Zone) is a library for translating between absolute times and
-civil times (see the "Fundamental Concepts" section below for an explanation of
+civil times (see the [Fundamental Concepts](#fundamental-concepts) section below for an explanation of
 these terms) using the rules defined by a time zone.
 
 This library currently works on Linux, using the standard IANA time zone data
