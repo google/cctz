@@ -20,7 +20,7 @@ https://github.com/google/googletest
 
 # Fundamental Concepts
 
-[ The slides presented at [CppCon '15](http://cppcon.org) http://goo.gl/ofof4N ]
+[ The slides presented at [CppCon '15](http://cppcon.org) are here: http://goo.gl/ofof4N ]
 
 There are two ways to represent time: as an *Absolute Time*, and as a *Civil
 Time*. An absolute time uniquely and universally represents a specific instant
