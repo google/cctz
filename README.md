@@ -12,7 +12,13 @@ installed on the system in `/usr/share/zoneinfo`.
 CCTZ is built using http://bazel.io and tested using
 https://github.com/google/googletest
 
-## Fundamental Concepts
+# Getting Started
+
+1. Download/install Bazel http://bazel.io/docs/install.html
+2. Get the cctz source
+3. Build cctz and run the tests: `bazel test ...`
+
+# Fundamental Concepts
 
 [ The slides presented at [CppCon '15](http://cppcon.org) http://goo.gl/ofof4N ]
 
@@ -65,10 +71,10 @@ languages and libraries may model these concepts differently with different
 classes and sometimes even different names, but these fundamental concepts and
 relationships will still exist.
 
-## These concepts in CCTZ
+# These concepts in CCTZ
 
 An *absolute* time is represented by a `cctz::time_point`.
 A *civil* time is represented by a `cctz::Breakdown`, or even separate integers.
 A *time zone* is represented by a `cctz::TimeZone`.
 
-XXX: See the cctz.h file for more details.
+See the [cctz.h](https://github.com/google/cctz/blob/master/src/cctz.h) header file for more details.
