@@ -96,7 +96,7 @@ struct Breakdown {
   int day;             // day of month [1:31]
   int hour;            // hour of day [0:23]
   int minute;          // minute of hour [0:59]
-  int second;          // second of minute [0:60]
+  int second;          // second of minute [0:59]
   duration subsecond;  // [0s:1s)
   int weekday;         // 1==Mon, ..., 7=Sun
   int yearday;         // day of year [1:366]
