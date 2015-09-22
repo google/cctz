@@ -35,9 +35,9 @@ int main() {
   // Shift epoch: UTC to "local time_t"
   int off = GetOffset(now, "America/New_York");
   const std::time_t now_nyc = now + off;
-  std::tm tm_utc;
-  gmtime_r(&now_nyc, &tm_utc);
-  std::cout << Format("NYC: %F %T\n", tm_utc);
+  std::tm tm_nyc;
+  gmtime_r(&now_nyc, &tm_nyc);
+  std::cout << Format("NYC: %F %T\n", tm_nyc);
 
   // Shift back: "local time_t" to UTC
   off = GetOffset(now_nyc, "America/New_York");
