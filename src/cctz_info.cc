@@ -661,7 +661,7 @@ bool TimeZoneInfo::Load(const std::string& name) {
   } else {
     char ebuf[64] = "Failed to open";
     intptr_t rc =
-        reinterpret_cast<intptr_t>(strerror_r(errno, ebuf, sizeof ebuf));
+        static_cast<intptr_t>(strerror_r(errno, ebuf, sizeof ebuf));
     const char* msg =
         (-1 <= rc && rc < 256) ? ebuf : reinterpret_cast<const char*>(rc);
     std::clog << path << ": " << msg << "\n";
