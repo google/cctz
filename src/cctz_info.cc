@@ -33,9 +33,9 @@
 
 #include "src/cctz_info.h"
 
-#include <errno.h>
 #include <algorithm>
 #include <cassert>
+#include <cerrno>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>

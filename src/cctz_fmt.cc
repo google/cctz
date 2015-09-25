@@ -16,7 +16,6 @@
 #include "src/cctz.h"
 
 #include <chrono>
-#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <ctime>
@@ -172,6 +171,32 @@ const char* ParseInt(const char* dp, int width, T min, T max, T* vp) {
   return dp;
 }
 
+// The number of base-10 digits that can be represented by an int64_t.
+const int kDigits10_64 = std::numeric_limits<int64_t>::digits10;
+
+// 10^n for everything that can be represented by an int64_t.
+const int64_t kExp10[kDigits10_64 + 1] = {
+    1,
+    10,
+    100,
+    1000,
+    10000,
+    100000,
+    1000000,
+    10000000,
+    100000000,
+    1000000000,
+    10000000000,
+    100000000000,
+    1000000000000,
+    10000000000000,
+    100000000000000,
+    1000000000000000,
+    10000000000000000,
+    100000000000000000,
+    1000000000000000000,
+};
+
 }  // namespace
 
 // Uses strftime(3) to format the given Time.  The following extended format
@@ -198,14 +223,9 @@ std::string Format(const std::string& format, const time_point& tp,
   const std::tm tm = ToTM(bd);
 
   // Scratch buffer for internal conversions.
-  const int digits10_64 = std::numeric_limits<int64_t>::digits10;  // == 18
-  char buf[3 + digits10_64];  // enough for longest conversion
+  char buf[3 + kDigits10_64];  // enough for longest conversion
   char* const ep = buf + sizeof(buf);
   char* bp;  // works back from ep
-
-  // Select a scaling factor for rendering a subsecond field using an
-  // int64_t such that it displays full resolution without overflow.
-  const int max_subsec_scale = 18;
 
   // Maintain three, disjoint subsequences that span format.
   //   [format.begin() ... pending) : already formatted into result
@@ -319,8 +339,7 @@ std::string Format(const std::string& format, const time_point& tp,
       }
       char* cp = ep;
       const int64_t nanoseconds = bd.subsecond.count();
-      bp = Format64(cp, max_subsec_scale,
-                    nanoseconds * std::pow(10, max_subsec_scale - 9));
+      bp = Format64(cp, 9, nanoseconds);
       while (cp != bp && cp[-1] == '0') --cp;
       if (cp != bp) *--bp = '.';
       bp = Format02d(bp, bd.second);
@@ -345,10 +364,10 @@ std::string Format(const std::string& format, const time_point& tp,
           }
           bp = ep;
           if (n > 0) {
-            if (n > max_subsec_scale) n = max_subsec_scale;
+            if (n > kDigits10_64) n = kDigits10_64;
             const int64_t nanoseconds = bd.subsecond.count();
-            bp = Format64(bp, n, (n > 9) ? nanoseconds * std::pow(10, n - 9)
-                                         : nanoseconds / std::pow(10, 9 - n));
+            bp = Format64(bp, n, (n > 9) ? nanoseconds * kExp10[n - 9]
+                                         : nanoseconds / kExp10[9 - n]);
             *--bp = '.';
           }
           bp = Format02d(bp, bd.second);
@@ -419,7 +438,7 @@ const char* ParseSubSeconds(const char* dp, duration* subseconds) {
         ++dp;
       }
       if (dp != bp) {
-        v *= std::pow(10, 9 - exp);
+        v *= kExp10[9 - exp];
         *subseconds = std::chrono::nanoseconds(v);
       } else {
         dp = nullptr;
