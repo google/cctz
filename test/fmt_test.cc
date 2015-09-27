@@ -357,7 +357,7 @@ TEST(Format, RFC1123Format) {  // locale specific
 }
 
 //
-// Testing ParseTime()
+// Testing Parse()
 //
 
 TEST(Parse, Basics) {
@@ -869,7 +869,7 @@ TEST(Parse, RFC3339Format) {
 }
 
 //
-// Roundtrip test for FormatTime()/ParseTime().
+// Roundtrip test for Format()/Parse().
 //
 
 TEST(FormatParse, RoundTrip) {

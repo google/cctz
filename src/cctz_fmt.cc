@@ -119,7 +119,7 @@ void FormatTM(std::string* out, const std::string& fmt, const std::tm& tm) {
   }
 }
 
-// Used for %E#S specifiers and for data values in ParseTime().
+// Used for %E#S specifiers and for data values in Parse().
 template <typename T>
 const char* ParseInt(const char* dp, int width, T min, T max, T* vp) {
   if (dp != nullptr) {
@@ -459,7 +459,7 @@ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
 }  // namespace
 
 // Uses strptime(3) to parse the given input.  Supports the same extended
-// format specifiers as FormatTime(), although %E#S and %E*S are treated
+// format specifiers as Format(), although %E#S and %E*S are treated
 // identically.
 //
 // The standard specifiers from RFC3339_* (%Y, %m, %d, %H, %M, and %S) are
@@ -654,7 +654,7 @@ bool Parse(const std::string& format, const std::string& input,
   // Skip any remaining whitespace.
   while (std::isspace(*data)) ++data;
 
-  // ParseTime() must consume the entire input string.
+  // Parse() must consume the entire input string.
   if (*data != '\0') return false;
 
   // If we saw %s then we ignore anything else and return that time.
@@ -689,7 +689,7 @@ bool Parse(const std::string& format, const std::string& input,
   const TimeInfo ti = MakeTimeInfo(year, tm.tm_mon + 1, tm.tm_mday,
                                    tm.tm_hour, tm.tm_min, tm.tm_sec, ptz);
 
-  // ParseTime() fails if any normalization was done.  That is,
+  // Parse() fails if any normalization was done.  That is,
   // parsing "Sep 31" will not produce the equivalent of "Oct 1".
   if (ti.normalized) return false;
 
