@@ -1,0 +1,6 @@
+# ignore all files in the bazel directories
+/bazel-bin
+/bazel-cctz
+/bazel-genfiles
+/bazel-out
+/bazel-testlogs
