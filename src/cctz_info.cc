@@ -415,28 +415,29 @@ size_t TimeZoneInfo::Header::DataLength(size_t time_len) const {
 }
 
 bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
-  Header hdr;
+  // Read and validate the header.
   tzhead tzh;
-
-  // Read, validate, and skip the header for the 4-byte data.
   if (fread(&tzh, 1, sizeof tzh, fp) != sizeof tzh)
     return false;
   if (strncmp(tzh.tzh_magic, TZ_MAGIC, sizeof(tzh.tzh_magic)) != 0)
     return false;
-  if (tzh.tzh_version[0] == '\0')  // demand 8-byte transition times
-    return false;
+  Header hdr;
   hdr.Build(tzh);
-  if (fseek(fp, hdr.DataLength(4), SEEK_CUR) != 0)
-    return false;
-
-  // Read and validate the header for the 8-byte data.
-  if (fread(&tzh, 1, sizeof tzh, fp) != sizeof tzh)
-    return false;
-  if (strncmp(tzh.tzh_magic, TZ_MAGIC, sizeof(tzh.tzh_magic)) != 0)
-    return false;
-  if (tzh.tzh_version[0] == '\0')
-    return false;
-  hdr.Build(tzh);
+  size_t time_len = 4;
+  if (tzh.tzh_version[0] != '\0') {
+    // Skip the 4-byte data.
+    if (fseek(fp, hdr.DataLength(time_len), SEEK_CUR) != 0)
+      return false;
+    // Read and validate the header for the 8-byte data.
+    if (fread(&tzh, 1, sizeof tzh, fp) != sizeof tzh)
+      return false;
+    if (strncmp(tzh.tzh_magic, TZ_MAGIC, sizeof(tzh.tzh_magic)) != 0)
+      return false;
+    if (tzh.tzh_version[0] == '\0')
+      return false;
+    hdr.Build(tzh);
+    time_len = 8;
+  }
   if (hdr.timecnt < 0 || hdr.typecnt <= 0)
     return false;
   if (hdr.leapcnt != 0) {
@@ -451,8 +452,8 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   if (hdr.ttisgmtcnt != 0 && hdr.ttisgmtcnt != hdr.typecnt)
     return false;
 
-  // Read the 8-byte data into a local buffer.
-  size_t len = hdr.DataLength(8);
+  // Read the data into a local buffer.
+  size_t len = hdr.DataLength(time_len);
   std::vector<char> tbuf(len);
   if (fread(tbuf.data(), 1, len, fp) != len)
     return false;
@@ -461,8 +462,8 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   // Decode and validate the transitions.
   transitions_.resize(hdr.timecnt);
   for (int32_t i = 0; i != hdr.timecnt; ++i) {
-    transitions_[i].unix_time = Decode64(bp);
-    bp += 8;
+    transitions_[i].unix_time = (time_len == 4) ? Decode32(bp) : Decode64(bp);
+    bp += time_len;
     if (i != 0) {
       // Check that the transitions are ordered by time (as zic guarantees).
       if (!Transition::ByUnixTime()(transitions_[i - 1], transitions_[i]))
@@ -519,24 +520,20 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   bp += 1 * hdr.ttisstdcnt;     // UTC/local indicators
   bp += 1 * hdr.ttisgmtcnt;     // standard/wall indicators
 
-  // Snarf up the NL-enclosed future POSIX spec. Note
-  // that version '3' files utilize an extended format.
   future_spec_.clear();
-  if (fgetc(fp) != '\n')
-    return false;
-  for (int c = fgetc(fp); c != '\n'; c = fgetc(fp)) {
-    if (c == EOF)
+  if (tzh.tzh_version[0] != '\0') {
+    // Snarf up the NL-enclosed future POSIX spec. Note
+    // that version '3' files utilize an extended format.
+    if (fgetc(fp) != '\n')
       return false;
-    future_spec_.push_back(c);
+    for (int c = fgetc(fp); c != '\n'; c = fgetc(fp)) {
+      if (c == EOF)
+        return false;
+      future_spec_.push_back(c);
+    }
   }
 
-  // Version '2' and '3' (at least) files end here, but we
-  // don't assert EOF so that we're forwards compatible.
-  if (fgetc(fp) != EOF) {
-    std::clog << name << ": Extra data in version "
-              << (tzh.tzh_version[0] == '\0' ? '0' : tzh.tzh_version[0])
-              << " zoneinfo\n";
-  }
+  // We don't check for EOF so that we're forwards compatible.
 
   // Use the POSIX-TZ-environment-variable-style string to handle times
   // in years after the last transition stored in the zoneinfo data.

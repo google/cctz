@@ -6,7 +6,8 @@ CCTZ (C++ Time Zone) is a library for translating between absolute times and
 civil times (see the [Fundamental Concepts](#fundamental-concepts) section below for an explanation of
 these terms) using the rules defined by a time zone.
 
-This library currently works on Linux ([OS X support coming soon!](https://github.com/google/cctz/issues/1)), using the standard IANA time zone data
+This library currently works on Linux and OS X,
+using the standard IANA time zone data
 installed on the system in `/usr/share/zoneinfo`.
 
 CCTZ is built using http://bazel.io and tested using

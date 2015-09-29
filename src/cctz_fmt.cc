@@ -645,7 +645,7 @@ bool Parse(const std::string& format, const std::string& input,
   }
 
   // Adjust a 12-hour tm_hour value if it should be in the afternoon.
-  if (twelve_hour && afternoon) {
+  if (twelve_hour && afternoon && tm.tm_hour < 12) {
     tm.tm_hour += 12;
   }
 
