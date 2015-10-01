@@ -34,7 +34,6 @@
 #include "src/cctz_info.h"
 
 #include <algorithm>
-#include <cassert>
 #include <cerrno>
 #include <chrono>
 #include <cstdint>
@@ -353,9 +352,7 @@ bool DateTime::Normalize(int64_t year, int mon, int day,
 
 // Assign from a Breakdown, created using a TimeZoneInfo timestamp.
 inline void DateTime::Assign(const Breakdown& bd) {
-  bool normalized = Normalize(bd.year, bd.month, bd.day,
-                              bd.hour, bd.minute, bd.second);
-  assert(!normalized);  // LocalTime() result is already normal
+  Normalize(bd.year, bd.month, bd.day, bd.hour, bd.minute, bd.second);
 }
 
 // What (no leap-seconds) UTC+seconds zoneinfo would look like.
