@@ -41,26 +41,17 @@ class TimeZoneIf {
 };
 
 // Convert a time_point to a count of seconds since the Unix epoch.
-template <typename T>
-inline T ToUnixSeconds(const time_point& tp) {
-  using clock = std::chrono::system_clock;
-  return std::chrono::duration_cast<std::chrono::duration<T>>(
-             (std::chrono::time_point_cast<time_point::duration>(
-                  clock::time_point()) -
-              std::chrono::time_point_cast<time_point::duration>(
-                  clock::from_time_t(0))) +
-             tp.time_since_epoch())
+inline int64_t ToUnixSeconds(const time_point& tp) {
+  return std::chrono::duration_cast<std::chrono::duration<int64_t>>(
+             tp - std::chrono::system_clock::from_time_t(0))
       .count();
 }
 
 // Convert a count of seconds since the Unix epoch to a time_point.
-template <typename T>
-inline time_point FromUnixSeconds(T t) {
-  using clock = std::chrono::system_clock;
+inline time_point FromUnixSeconds(int64_t t) {
   return std::chrono::time_point_cast<time_point::duration>(
-             clock::from_time_t(0)) +
-         std::chrono::duration_cast<time_point::duration>(
-             std::chrono::duration<T>(t));
+             std::chrono::system_clock::from_time_t(0)) +
+         std::chrono::seconds(t);
 }
 
 }  // namespace cctz

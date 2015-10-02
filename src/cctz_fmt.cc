@@ -309,10 +309,9 @@ std::string Format(const std::string& format, const time_point& tp,
           break;
         case 's':
           bp = Format64(
-              ep, 0,
-              std::chrono::time_point_cast<std::chrono::duration<int64_t>>(tp)
-                  .time_since_epoch()
-                  .count());
+              ep, 0, std::chrono::duration_cast<std::chrono::duration<int64_t>>(
+                         tp - std::chrono::system_clock::from_time_t(0))
+                         .count());
           result.append(bp, ep - bp);
           break;
       }

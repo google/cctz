@@ -32,7 +32,7 @@ TimeZoneLibC::TimeZoneLibC(const std::string& name) {
 
 Breakdown TimeZoneLibC::BreakTime(const time_point& tp) const {
   Breakdown bd;
-  std::time_t t = ToUnixSeconds<std::time_t>(tp);
+  std::time_t t = ToUnixSeconds(tp);
   duration subsecond = tp - FromUnixSeconds(t);
   if (subsecond < duration::zero()) {
     t -= 1;

@@ -242,7 +242,7 @@ time_point FromTimeT(T t, bool* normalized) {
 }
 
 inline time_point ShiftTime(time_point tp, __int128 offset, bool* normalized) {
-  return FromTimeT(ToUnixSeconds<int64_t>(tp) + offset, normalized);
+  return FromTimeT(ToUnixSeconds(tp) + offset, normalized);
 }
 
 inline TimeInfo MakeUnique(__int128 unix_time, bool normalized) {
@@ -773,7 +773,7 @@ TimeInfo TimeZoneInfo::TimeLocal(int64_t year, int mon, int day, int hour,
 }
 
 Breakdown TimeZoneInfo::BreakTime(const time_point& tp) const {
-  int64_t unix_time = ToUnixSeconds<int64_t>(tp);
+  int64_t unix_time = ToUnixSeconds(tp);
   duration subsecond = tp - FromUnixSeconds(unix_time);
   if (subsecond < duration::zero()) {
     unix_time -= 1;
