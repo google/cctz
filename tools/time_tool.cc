@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
   cctz::TimeZone zone = cctz::LocalTimeZone();
   for (;;) {
     static option opts[] = {
-        {"zone", required_argument, nullptr, 'z'},
+        {"tz", required_argument, nullptr, 'z'},
         {nullptr, 0, nullptr, 0},
     };
     int c = getopt_long(argc, argv, "z:", opts, nullptr);
@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
         }
         break;
       default:
-        std::cerr << "Usage: " << prog << " [--zone=<zone>] [<time-spec>]\n";
+        std::cerr << "Usage: " << prog << " [--tz=<zone>] [<time-spec>]\n";
         return 1;
     }
   }
