@@ -92,9 +92,7 @@ void InstantInfo(const std::string& label, cctz::time_point when,
                    zone_label.size());
   std::cout << label << " {\n";
   std::cout << std::setw(width) << std::right << time_label << ": ";
-  std::time_t seconds = std::chrono::system_clock::to_time_t(when);
-  std::cout << std::setw(10) << seconds;
-  if (seconds >= (1LL << 31)) std::cout << " [>31b]";
+  std::cout << std::setw(10) << Format("%s", when, utc);
   std::cout << "\n";
   std::cout << std::setw(width) << std::right << utc_label << ": ";
   std::cout << FormatTimeInZone(when, utc) << "\n";
