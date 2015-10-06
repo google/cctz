@@ -312,8 +312,8 @@ inline std::string Format(const std::string& format, const time_point<D>& tp,
 }
 
 template <typename D>
-bool Parse(const std::string& format, const std::string& input,
-           const TimeZone& tz, time_point<D>* tpp) {
+inline bool Parse(const std::string& format, const std::string& input,
+                  const TimeZone& tz, time_point<D>* tpp) {
   bool Parse(const std::string&, const std::string&, const TimeZone&,
              time_point<seconds64>*, std::chrono::nanoseconds*);
   time_point<seconds64> tp{};
