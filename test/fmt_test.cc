@@ -74,6 +74,29 @@ void TestFormatSpecifier(time_point<D> tp, TimeZone tz, const std::string& fmt,
 // Testing Format()
 //
 
+TEST(Format, TimePointResolution) {
+  using std::chrono::time_point_cast;
+  const char kFmt[] = "%H:%M:%E*S";
+  const TimeZone utc = UTCTimeZone();
+  const time_point<std::chrono::nanoseconds> t0 =
+      system_clock::from_time_t(1420167845) + std::chrono::milliseconds(123) +
+      std::chrono::microseconds(456) + std::chrono::nanoseconds(789);
+  EXPECT_EQ("03:04:05.123456789",
+            Format(kFmt, time_point_cast<std::chrono::nanoseconds>(t0), utc));
+  EXPECT_EQ("03:04:05.123456",
+            Format(kFmt, time_point_cast<std::chrono::microseconds>(t0), utc));
+  EXPECT_EQ("03:04:05.123",
+            Format(kFmt, time_point_cast<std::chrono::milliseconds>(t0), utc));
+  EXPECT_EQ("03:04:05",
+            Format(kFmt, time_point_cast<std::chrono::seconds>(t0), utc));
+  EXPECT_EQ("03:04:05",
+            Format(kFmt, time_point_cast<seconds64>(t0), utc));
+  EXPECT_EQ("03:04:00",
+            Format(kFmt, time_point_cast<std::chrono::minutes>(t0), utc));
+  EXPECT_EQ("03:00:00",
+            Format(kFmt, time_point_cast<std::chrono::hours>(t0), utc));
+}
+
 TEST(Format, Basics) {
   TimeZone tz = UTCTimeZone();
   time_point<std::chrono::nanoseconds> tp = system_clock::from_time_t(0);
@@ -359,6 +382,48 @@ TEST(Format, RFC1123Format) {  // locale specific
 //
 // Testing Parse()
 //
+
+TEST(Parse, TimePointResolution) {
+  using std::chrono::time_point_cast;
+  const char kFmt[] = "%H:%M:%E*S";
+  const TimeZone utc = UTCTimeZone();
+
+  time_point<std::chrono::nanoseconds> tp_ns;
+  EXPECT_TRUE(Parse(kFmt, "03:04:05.123456789", utc, &tp_ns));
+  EXPECT_EQ("03:04:05.123456789", Format(kFmt, tp_ns, utc));
+  EXPECT_TRUE(Parse(kFmt, "03:04:05.123456", utc, &tp_ns));
+  EXPECT_EQ("03:04:05.123456", Format(kFmt, tp_ns, utc));
+
+  time_point<std::chrono::microseconds> tp_us;
+  EXPECT_TRUE(Parse(kFmt, "03:04:05.123456789", utc, &tp_us));
+  EXPECT_EQ("03:04:05.123456", Format(kFmt, tp_us, utc));
+  EXPECT_TRUE(Parse(kFmt, "03:04:05.123456", utc, &tp_us));
+  EXPECT_EQ("03:04:05.123456", Format(kFmt, tp_us, utc));
+  EXPECT_TRUE(Parse(kFmt, "03:04:05.123", utc, &tp_us));
+  EXPECT_EQ("03:04:05.123", Format(kFmt, tp_us, utc));
+
+  time_point<std::chrono::milliseconds> tp_ms;
+  EXPECT_TRUE(Parse(kFmt, "03:04:05.123456", utc, &tp_ms));
+  EXPECT_EQ("03:04:05.123", Format(kFmt, tp_ms, utc));
+  EXPECT_TRUE(Parse(kFmt, "03:04:05.123", utc, &tp_ms));
+  EXPECT_EQ("03:04:05.123", Format(kFmt, tp_ms, utc));
+  EXPECT_TRUE(Parse(kFmt, "03:04:05", utc, &tp_ms));
+  EXPECT_EQ("03:04:05", Format(kFmt, tp_ms, utc));
+
+  time_point<std::chrono::seconds> tp_s;
+  EXPECT_TRUE(Parse(kFmt, "03:04:05.123", utc, &tp_s));
+  EXPECT_EQ("03:04:05", Format(kFmt, tp_s, utc));
+  EXPECT_TRUE(Parse(kFmt, "03:04:05", utc, &tp_s));
+  EXPECT_EQ("03:04:05", Format(kFmt, tp_s, utc));
+
+  time_point<std::chrono::minutes> tp_m;
+  EXPECT_TRUE(Parse(kFmt, "03:04:05", utc, &tp_m));
+  EXPECT_EQ("03:04:00", Format(kFmt, tp_m, utc));
+
+  time_point<std::chrono::hours> tp_h;
+  EXPECT_TRUE(Parse(kFmt, "03:04:05", utc, &tp_h));
+  EXPECT_EQ("03:00:00", Format(kFmt, tp_h, utc));
+}
 
 TEST(Parse, Basics) {
   TimeZone tz = UTCTimeZone();

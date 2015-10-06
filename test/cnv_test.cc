@@ -696,6 +696,28 @@ TEST(StdChronoTimePoint, TimeTAlignment) {
   EXPECT_EQ(TP::duration::zero(), diff % std::chrono::seconds(1));
 }
 
+TEST(BreakTime, TimePointResolution) {
+  using std::chrono::time_point_cast;
+  const TimeZone utc = UTCTimeZone();
+  const auto t0 = system_clock::from_time_t(0);
+  Breakdown bd{};
+
+  bd = BreakTime(time_point_cast<std::chrono::nanoseconds>(t0), utc);
+  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  bd = BreakTime(time_point_cast<std::chrono::microseconds>(t0), utc);
+  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  bd = BreakTime(time_point_cast<std::chrono::milliseconds>(t0), utc);
+  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  bd = BreakTime(time_point_cast<std::chrono::seconds>(t0), utc);
+  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  bd = BreakTime(time_point_cast<seconds64>(t0), utc);
+  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  bd = BreakTime(time_point_cast<std::chrono::minutes>(t0), utc);
+  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  bd = BreakTime(time_point_cast<std::chrono::hours>(t0), utc);
+  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+}
+
 TEST(BreakTime, LocalTimeInUTC) {
   const Breakdown bd = BreakTime(system_clock::from_time_t(0), UTCTimeZone());
   ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
@@ -729,6 +751,31 @@ TEST(BreakTime, LocalTimeInSydney) {
   const Breakdown bd = BreakTime(system_clock::from_time_t(90), tz);
   ExpectTime(bd, 1970, 1, 1, 10, 1, 30, 10 * 60 * 60, false, "AEST");
   EXPECT_EQ(4, bd.weekday);  // Thursday
+}
+
+TEST(MakeTime, TimePointResolution) {
+  const TimeZone utc = UTCTimeZone();
+  const time_point<std::chrono::nanoseconds> tp_ns = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  EXPECT_EQ("04:05", Format("%M:%E*S", tp_ns, utc));
+  const time_point<std::chrono::microseconds> tp_us = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  EXPECT_EQ("04:05", Format("%M:%E*S", tp_us, utc));
+  const time_point<std::chrono::milliseconds> tp_ms = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  EXPECT_EQ("04:05", Format("%M:%E*S", tp_ms, utc));
+  const time_point<std::chrono::seconds> tp_s = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  EXPECT_EQ("04:05", Format("%M:%E*S", tp_s, utc));
+  const time_point<seconds64> tp_s64 = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  EXPECT_EQ("04:05", Format("%M:%E*S", tp_s64, utc));
+
+  // These next two require time_point_cast because the conversion from a
+  // resolution of seconds (the return value of MakeTime()) to a coarser
+  // resolution requires an explicit cast.
+  using std::chrono::time_point_cast;
+  const time_point<std::chrono::minutes> tp_m =
+      time_point_cast<std::chrono::minutes>(MakeTime(2015, 1, 2, 3, 4, 5, utc));
+  EXPECT_EQ("04:00", Format("%M:%E*S", tp_m, utc));
+  const time_point<std::chrono::hours> tp_h =
+      time_point_cast<std::chrono::hours>(MakeTime(2015, 1, 2, 3, 4, 5, utc));
+  EXPECT_EQ("00:00", Format("%M:%E*S", tp_h, utc));
 }
 
 TEST(MakeTime, Normalization) {
