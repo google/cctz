@@ -76,7 +76,7 @@ void TestFormatSpecifier(time_point<D> tp, TimeZone tz, const std::string& fmt,
 
 TEST(Format, Basics) {
   TimeZone tz = UTCTimeZone();
-  auto tp = system_clock::from_time_t(0);
+  time_point<std::chrono::nanoseconds> tp = system_clock::from_time_t(0);
 
   // Starts with a couple basic edge cases.
   EXPECT_EQ("", Format("", tp, tz));
@@ -206,7 +206,7 @@ TEST(Format, Escaping) {
 
 TEST(Format, ExtendedSeconds) {
   const TimeZone tz = UTCTimeZone();
-  auto tp = system_clock::from_time_t(0);
+  time_point<std::chrono::nanoseconds> tp = system_clock::from_time_t(0);
   tp += hours(3) + minutes(4) + seconds(5);
   tp += milliseconds(6) + microseconds(7) + nanoseconds(8);
 
@@ -726,7 +726,7 @@ TEST(Parse, ExtendedSeconds) {
   // Here is a "%E*S" case we got wrong for a while.  The fractional
   // part of the first instant is less than 2^31 and was correctly
   // parsed, while the second (and any subsecond field >=2^31) failed.
-  auto tp = system_clock::from_time_t(0);
+  time_point<std::chrono::nanoseconds> tp = system_clock::from_time_t(0);
   EXPECT_TRUE(Parse("%E*S", "0.2147483647", tz, &tp));
   EXPECT_EQ(system_clock::from_time_t(0) + nanoseconds(214748364), tp);
   tp = system_clock::from_time_t(0);
