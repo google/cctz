@@ -24,8 +24,7 @@ cctz::time_point<cctz::seconds64> FloorDay(cctz::time_point<D> tp,
   const cctz::Breakdown bd = cctz::BreakTime(tp, tz);
   const cctz::TimeInfo ti =
       cctz::MakeTimeInfo(bd.year, bd.month, bd.day, 0, 0, 0, tz);
-  if (ti.kind == cctz::TimeInfo::Kind::SKIPPED) return ti.trans;
-  return ti.pre;
+  return ti.kind == cctz::TimeInfo::Kind::SKIPPED ? ti.trans : ti.pre;
 }
 
 int main() {

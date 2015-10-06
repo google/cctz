@@ -58,7 +58,7 @@ using seconds64 = std::chrono::duration<int64_t, std::chrono::seconds::period>;
 // as LoadTimeZone(). Note: strings like "PST" and "EDT" are not valid TZ
 // identifiers.
 //
-// Examples:
+// Example:
 //   cctz::TimeZone utc = cctz::UTCTimeZone();
 //   cctz::TimeZone loc = cctz::LocalTimeZone();
 //   cctz::TimeZone lax;
@@ -117,6 +117,11 @@ struct Breakdown {
 // Returns the civil time components (and some other data) for the given
 // absolute time in the given time zone. Accepts a system_clock time_point of
 // any duration.
+//
+// Example:
+//   const cctz::TimeZone tz = ...
+//   const auto tp = std::chrono::system_clock::now();
+//   const Breakdown bd = cctz::BreakTime(tp, tz);
 template <typename D>
 Breakdown BreakTime(const time_point<D>& tp, const TimeZone& tz);
 
@@ -125,6 +130,10 @@ Breakdown BreakTime(const time_point<D>& tp, const TimeZone& tz);
 // fields. If the given civil time refers to a time that is either skipped or
 // repeated (see the TimeInfo doc), then the as-if rule is followed and the
 // time_point according to the pre-transition offset is returned.
+//
+// Example:
+//   const cctz::TimeZone tz = ...
+//   const auto tp = cctz::MakeTime(2015, 1, 2, 3, 4, 5, tz);
 time_point<seconds64> MakeTime(int64_t year, int mon, int day,
                                int hour, int min, int sec,
                                const TimeZone& tz);
@@ -146,7 +155,7 @@ time_point<seconds64> MakeTime(int64_t year, int mon, int day,
 // returns times calculated using the pre-transition and post-transition UTC
 // offsets, plus the transition time itself.
 //
-// Examples:
+// Example:
 //   cctz::TimeZone lax;
 //   if (!cctz::LoadTimeZone("America/Los_Angeles", &lax)) { ... }
 //
@@ -197,6 +206,14 @@ struct TimeInfo {
 // the given TimeZone after normalizing the fields. NOTE: Prefer calling
 // the MakeTime() function unless you know that the default time_point
 // that it returns is not what you want.
+//
+// Example:
+//   // Calculates the first start of the day, given:
+//   //   int year, month, day;
+//   const cctz::TimeZone tz = ...
+//   const auto ti = cctz::MakeTimeInfo(year, month, day, 0, 0, 0, tz);
+//   const auto day_start =
+//       (ti.kind == cctz::TimeInfo::Kind::SKIPPED) ? ti.trans : ti.pre;
 TimeInfo MakeTimeInfo(int64_t year, int mon, int day, int hour,
                       int min, int sec, const TimeZone& tz);
 
@@ -222,7 +239,7 @@ TimeInfo MakeTimeInfo(int64_t year, int mon, int day, int hour,
 //   auto tp = cctz::MakeTime(2013, 1, 2, 3, 4, 5, lax);
 //
 //   std::string f = cctz::Format("%H:%M:%S", tp, lax);  // "03:04:05"
-//   f = cctz::Format("%H:%M:%E3S", tp, lax);  // "03:04:05.000"
+//   f = cctz::Format("%H:%M:%E3S", tp, lax);            // "03:04:05.000"
 template <typename D>
 std::string Format(const std::string& format, const time_point<D>& tp,
                    const TimeZone& tz);
@@ -261,6 +278,13 @@ std::string Format(const std::string& format, const time_point<D>& tp,
 //   "00.x" -> 00.x  // exact
 //
 // Errors are indicated by returning false.
+//
+// Example:
+//   const cctz::TimeZone tz = ...
+//   std::chrono::system_clock::time_point tp;
+//   if (cctz::Parse("%Y-%m-%d", "2015-10-09", tz, &tp)) {
+//     ...
+//   }
 template <typename D>
 bool Parse(const std::string& format, const std::string& input,
            const TimeZone& tz, time_point<D>* tpp);
