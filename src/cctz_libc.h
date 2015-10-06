@@ -29,7 +29,7 @@ class TimeZoneLibC : public TimeZoneIf {
   explicit TimeZoneLibC(const std::string& name);
 
   // TimeZoneIf implementations.
-  Breakdown BreakTime(const time_point& tp) const override;
+  Breakdown BreakTime(const time_point<seconds64>& tp) const override;
   TimeInfo MakeTimeInfo(int64_t year, int mon, int day,
                         int hour, int min, int sec) const override;
 

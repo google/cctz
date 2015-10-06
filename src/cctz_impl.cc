@@ -99,7 +99,7 @@ const TimeZone::Impl& TimeZone::Impl::get(const TimeZone& tz) {
 
 TimeZone::Impl::Impl(const std::string& name) : name_(name) {}
 
-Breakdown TimeZone::Impl::BreakTime(const time_point& tp) const {
+Breakdown TimeZone::Impl::BreakTime(const time_point<seconds64>& tp) const {
   return zone_->BreakTime(tp);
 }
 

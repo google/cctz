@@ -59,7 +59,8 @@ const char RFC1123_no_wday[] =  "%d %b %Y %H:%M:%S %z";
 
 // A helper that tests the given format specifier by itself, and with leading
 // and trailing characters.  For example: TestFormatSpecifier(tp, "%a", "Thu").
-void TestFormatSpecifier(time_point tp, TimeZone tz, const std::string& fmt,
+template <typename D>
+void TestFormatSpecifier(time_point<D> tp, TimeZone tz, const std::string& fmt,
                          const std::string& ans) {
   EXPECT_EQ(ans, Format(fmt, tp, tz));
   EXPECT_EQ("xxx " + ans, Format("xxx " + fmt, tp, tz));
@@ -75,7 +76,7 @@ void TestFormatSpecifier(time_point tp, TimeZone tz, const std::string& fmt,
 
 TEST(Format, Basics) {
   TimeZone tz = UTCTimeZone();
-  time_point tp = system_clock::from_time_t(0);
+  auto tp = system_clock::from_time_t(0);
 
   // Starts with a couple basic edge cases.
   EXPECT_EQ("", Format("", tp, tz));
@@ -99,7 +100,7 @@ TEST(Format, Basics) {
 
 TEST(Format, PosixConversions) {
   const TimeZone tz = UTCTimeZone();
-  time_point tp = system_clock::from_time_t(0);
+  auto tp = system_clock::from_time_t(0);
 
   TestFormatSpecifier(tp, tz, "%d", "01");
   TestFormatSpecifier(tp, tz, "%e", " 1");  // extension but internal support
@@ -137,7 +138,7 @@ TEST(Format, PosixConversions) {
 
 TEST(Format, LocaleSpecific) {
   const TimeZone tz = UTCTimeZone();
-  time_point tp = system_clock::from_time_t(0);
+  auto tp = system_clock::from_time_t(0);
 
   TestFormatSpecifier(tp, tz, "%a", "Thu");
   TestFormatSpecifier(tp, tz, "%A", "Thursday");
@@ -186,7 +187,7 @@ TEST(Format, LocaleSpecific) {
 
 TEST(Format, Escaping) {
   const TimeZone tz = UTCTimeZone();
-  time_point tp = system_clock::from_time_t(0);
+  auto tp = system_clock::from_time_t(0);
 
   TestFormatSpecifier(tp, tz, "%%", "%");
   TestFormatSpecifier(tp, tz, "%%a", "%a");
@@ -205,7 +206,7 @@ TEST(Format, Escaping) {
 
 TEST(Format, ExtendedSeconds) {
   const TimeZone tz = UTCTimeZone();
-  time_point tp = system_clock::from_time_t(0);
+  auto tp = system_clock::from_time_t(0);
   tp += hours(3) + minutes(4) + seconds(5);
   tp += milliseconds(6) + microseconds(7) + nanoseconds(8);
 
@@ -247,7 +248,7 @@ TEST(Format, ExtendedSeconds) {
 }
 
 TEST(Format, ExtendedOffset) {
-  time_point tp = system_clock::from_time_t(0);
+  auto tp = system_clock::from_time_t(0);
 
   TimeZone tz = UTCTimeZone();
   TestFormatSpecifier(tp, tz, "%Ez", "+00:00");
@@ -270,10 +271,9 @@ TEST(Format, ExtendedOffset) {
 TEST(Format, ExtendedYears) {
   const TimeZone utc = UTCTimeZone();
   const char e4y_fmt[] = "%E4Y%m%d";  // no separators
-  time_point tp;
 
   // %E4Y zero-pads the year to produce at least 4 chars, including the sign.
-  tp = MakeTime(-999, 11, 27, 0, 0, 0, utc);
+  auto tp = MakeTime(-999, 11, 27, 0, 0, 0, utc);
   EXPECT_EQ("-9991127", Format(e4y_fmt, tp, utc));
   tp = MakeTime(-99, 11, 27, 0, 0, 0, utc);
   EXPECT_EQ("-0991127", Format(e4y_fmt, tp, utc));
@@ -305,7 +305,7 @@ TEST(Format, RFC3339Format) {
   TimeZone tz;
   EXPECT_TRUE(LoadTimeZone("America/Los_Angeles", &tz));
 
-  time_point tp = MakeTime(1977, 6, 28, 9, 8, 7, tz);
+  time_point<std::chrono::nanoseconds> tp = MakeTime(1977, 6, 28, 9, 8, 7, tz);
   EXPECT_EQ("1977-06-28T09:08:07-07:00", Format(RFC3339_full, tp, tz));
   EXPECT_EQ("1977-06-28T09:08:07-07:00", Format(RFC3339_sec, tp, tz));
 
@@ -351,7 +351,7 @@ TEST(Format, RFC1123Format) {  // locale specific
   TimeZone tz;
   EXPECT_TRUE(LoadTimeZone("America/Los_Angeles", &tz));
 
-  time_point tp = MakeTime(1977, 6, 28, 9, 8, 7, tz);
+  auto tp = MakeTime(1977, 6, 28, 9, 8, 7, tz);
   EXPECT_EQ("Tue, 28 Jun 1977 09:08:07 -0700", Format(RFC1123_full, tp, tz));
   EXPECT_EQ("28 Jun 1977 09:08:07 -0700", Format(RFC1123_no_wday, tp, tz));
 }
@@ -362,7 +362,8 @@ TEST(Format, RFC1123Format) {  // locale specific
 
 TEST(Parse, Basics) {
   TimeZone tz = UTCTimeZone();
-  time_point tp = system_clock::from_time_t(1234567890);
+  time_point<std::chrono::nanoseconds> tp =
+      system_clock::from_time_t(1234567890);
 
   // Simple edge cases.
   EXPECT_TRUE(Parse("", "", tz, &tp));
@@ -376,70 +377,61 @@ TEST(Parse, Basics) {
       Parse("%Y-%m-%d %H:%M:%S %z", "2013-06-28 19:08:09 -0800", tz, &tp));
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 2013, 6, 29, 3, 8, 9, 0, false, "UTC");
-  EXPECT_EQ(duration::zero(), bd.subsecond);
 }
 
 TEST(Parse, WithTimeZone) {
   TimeZone tz;
   EXPECT_TRUE(LoadTimeZone("America/Los_Angeles", &tz));
-  time_point tp;
+  time_point<std::chrono::nanoseconds> tp;
 
   // We can parse a string without a UTC offset if we supply a timezone.
   EXPECT_TRUE(Parse("%Y-%m-%d %H:%M:%S", "2013-06-28 19:08:09", tz, &tp));
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 2013, 6, 28, 19, 8, 9, -7 * 60 * 60, true, "PDT");
-  EXPECT_EQ(duration::zero(), bd.subsecond);
 
   // But the timezone is ignored when a UTC offset is present.
   EXPECT_TRUE(
       Parse("%Y-%m-%d %H:%M:%S %z", "2013-06-28 19:08:09 +0800", tz, &tp));
   bd = BreakTime(tp, UTCTimeZone());
   ExpectTime(bd, 2013, 6, 28, 11, 8, 9, 0, false, "UTC");
-  EXPECT_EQ(duration::zero(), bd.subsecond);
 
   // Check a skipped time (a Spring DST transition).  Parse() returns
   // the preferred-offset result, as defined for ConvertDateTime().
   EXPECT_TRUE(Parse("%Y-%m-%d %H:%M:%S", "2011-03-13 02:15:00", tz, &tp));
   bd = BreakTime(tp, tz);
   ExpectTime(bd, 2011, 3, 13, 3, 15, 0, -7 * 60 * 60, true, "PDT");
-  EXPECT_EQ(duration::zero(), bd.subsecond);
 
   // Check a repeated time (a Fall DST transition).  Parse() returns
   // the preferred-offset result, as defined for ConvertDateTime().
   EXPECT_TRUE(Parse("%Y-%m-%d %H:%M:%S", "2011-11-06 01:15:00", tz, &tp));
   bd = BreakTime(tp, tz);
   ExpectTime(bd, 2011, 11, 6, 1, 15, 0, -7 * 60 * 60, true, "PDT");
-  EXPECT_EQ(duration::zero(), bd.subsecond);
 }
 
 TEST(Parse, LeapSecond) {
   TimeZone tz;
   EXPECT_TRUE(LoadTimeZone("America/Los_Angeles", &tz));
-  time_point tp;
+  time_point<std::chrono::nanoseconds> tp;
 
   // ":59" -> ":59"
   EXPECT_TRUE(Parse(RFC3339_full, "2013-06-28T07:08:59-08:00", tz, &tp));
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 2013, 6, 28, 8, 8, 59, -7 * 60 * 60, true, "PDT");
-  EXPECT_EQ(duration::zero(), bd.subsecond);
 
   // ":59.5" -> ":59.5"
   EXPECT_TRUE(Parse(RFC3339_full, "2013-06-28T07:08:59.5-08:00", tz, &tp));
   bd = BreakTime(tp, tz);
   ExpectTime(bd, 2013, 6, 28, 8, 8, 59, -7 * 60 * 60, true, "PDT");
-  EXPECT_EQ(milliseconds(500), bd.subsecond);
 
   // ":60" -> ":00"
   EXPECT_TRUE(Parse(RFC3339_full, "2013-06-28T07:08:60-08:00", tz, &tp));
   bd = BreakTime(tp, tz);
   ExpectTime(bd, 2013, 6, 28, 8, 9, 0, -7 * 60 * 60, true, "PDT");
-  EXPECT_EQ(duration::zero(), bd.subsecond);
 
   // ":60.5" -> ":00.0"
   EXPECT_TRUE(Parse(RFC3339_full, "2013-06-28T07:08:60.5-08:00", tz, &tp));
   bd = BreakTime(tp, tz);
   ExpectTime(bd, 2013, 6, 28, 8, 9, 0, -7 * 60 * 60, true, "PDT");
-  EXPECT_EQ(duration::zero(), bd.subsecond);
 
   // ":61" -> error
   EXPECT_FALSE(Parse(RFC3339_full, "2013-06-28T07:08:61-08:00", tz, &tp));
@@ -447,7 +439,7 @@ TEST(Parse, LeapSecond) {
 
 TEST(Parse, ErrorCases) {
   const TimeZone tz = UTCTimeZone();
-  time_point tp = system_clock::from_time_t(0);
+  auto tp = system_clock::from_time_t(0);
 
   // Illegal trailing data.
   EXPECT_FALSE(Parse("%S", "123", tz, &tp));
@@ -490,8 +482,8 @@ TEST(Parse, ErrorCases) {
 
 TEST(Parse, PosixConversions) {
   TimeZone tz = UTCTimeZone();
-  time_point tp = system_clock::from_time_t(0);
-  const time_point reset = MakeTime(1977, 6, 28, 9, 8, 7, tz);
+  auto tp = system_clock::from_time_t(0);
+  const auto reset = MakeTime(1977, 6, 28, 9, 8, 7, tz);
 
   tp = reset;
   EXPECT_TRUE(Parse("%d", "15", tz, &tp));
@@ -598,8 +590,8 @@ TEST(Parse, PosixConversions) {
 
 TEST(Parse, LocaleSpecific) {
   TimeZone tz = UTCTimeZone();
-  time_point tp = system_clock::from_time_t(0);
-  const time_point reset = MakeTime(1977, 6, 28, 9, 8, 7, tz);
+  auto tp = system_clock::from_time_t(0);
+  const auto reset = MakeTime(1977, 6, 28, 9, 8, 7, tz);
 
   // %a is parsed but ignored.
   EXPECT_TRUE(Parse("%a", "Mon", tz, &tp));
@@ -730,12 +722,11 @@ TEST(Parse, LocaleSpecific) {
 
 TEST(Parse, ExtendedSeconds) {
   const TimeZone tz = UTCTimeZone();
-  time_point tp;
 
   // Here is a "%E*S" case we got wrong for a while.  The fractional
   // part of the first instant is less than 2^31 and was correctly
   // parsed, while the second (and any subsecond field >=2^31) failed.
-  tp = system_clock::from_time_t(0);
+  auto tp = system_clock::from_time_t(0);
   EXPECT_TRUE(Parse("%E*S", "0.2147483647", tz, &tp));
   EXPECT_EQ(system_clock::from_time_t(0) + nanoseconds(214748364), tp);
   tp = system_clock::from_time_t(0);
@@ -753,12 +744,12 @@ TEST(Parse, ExtendedSeconds) {
 
 TEST(Parse, ExtendedSecondsScan) {
   const TimeZone tz = UTCTimeZone();
-  time_point tp;
+  time_point<std::chrono::nanoseconds> tp;
   for (int64_t ms = 0; ms < 1000; ms += 111) {
     for (int64_t us = 0; us < 1000; us += 27) {
       const int64_t micros = ms * 1000 + us;
       for (int64_t ns = 0; ns < 1000; ns += 9) {
-        const time_point expected =
+        const auto expected =
             system_clock::from_time_t(0) + nanoseconds(micros * 1000 + ns);
         std::ostringstream oss;
         oss << "0." << std::setfill('0') << std::setw(3);
@@ -773,7 +764,7 @@ TEST(Parse, ExtendedSecondsScan) {
 
 TEST(Parse, ExtendedOffset) {
   const TimeZone utc = UTCTimeZone();
-  time_point tp;
+  time_point<seconds64> tp;
 
   // %z against +-HHMM.
   EXPECT_TRUE(Parse("%z", "+0000", utc, &tp));
@@ -824,7 +815,7 @@ TEST(Parse, ExtendedOffset) {
 TEST(Parse, ExtendedYears) {
   const TimeZone utc = UTCTimeZone();
   const char e4y_fmt[] = "%E4Y%m%d";  // no separators
-  time_point tp;
+  time_point<seconds64> tp;
 
   // %E4Y consumes exactly four chars, including any sign.
   EXPECT_TRUE(Parse(e4y_fmt, "-9991127", utc, &tp));
@@ -855,15 +846,13 @@ TEST(Parse, ExtendedYears) {
 
 TEST(Parse, RFC3339Format) {
   const TimeZone tz = UTCTimeZone();
-  time_point tp;
-  time_point tp2;
-
+  time_point<std::chrono::nanoseconds> tp;
   EXPECT_TRUE(Parse(RFC3339_sec, "2014-02-12T20:21:00+00:00", tz, &tp));
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 2014, 2, 12, 20, 21, 0, 0, false, "UTC");
-  EXPECT_EQ(duration::zero(), bd.subsecond);
 
   // Check that %Ez also accepts "Z" as a synonym for "+00:00".
+  time_point<std::chrono::nanoseconds> tp2;
   EXPECT_TRUE(Parse(RFC3339_sec, "2014-02-12T20:21:00Z", tz, &tp2));
   EXPECT_EQ(tp, tp2);
 }
@@ -875,12 +864,12 @@ TEST(Parse, RFC3339Format) {
 TEST(FormatParse, RoundTrip) {
   TimeZone lax;
   EXPECT_TRUE(LoadTimeZone("America/Los_Angeles", &lax));
-  const time_point in = MakeTime(1977, 6, 28, 9, 8, 7, lax);
-  const duration subseconds = nanoseconds(654321);
+  const auto in = MakeTime(1977, 6, 28, 9, 8, 7, lax);
+  const auto subseconds = nanoseconds(654321);
 
   // RFC3339, which renders subseconds.
   {
-    time_point out;
+    time_point<std::chrono::nanoseconds> out;
     const std::string s = Format(RFC3339_full, in + subseconds, lax);
     EXPECT_TRUE(Parse(RFC3339_full, s, lax, &out)) << s;
     EXPECT_EQ(in + subseconds, out);  // RFC3339_full includes %Ez
@@ -888,7 +877,7 @@ TEST(FormatParse, RoundTrip) {
 
   // RFC1123, which only does whole seconds.
   {
-    time_point out;
+    time_point<std::chrono::nanoseconds> out;
     const std::string s = Format(RFC1123_full, in, lax);
     EXPECT_TRUE(Parse(RFC1123_full, s, lax, &out)) << s;
     EXPECT_EQ(in, out);  // RFC1123_full includes %z
@@ -897,7 +886,7 @@ TEST(FormatParse, RoundTrip) {
   // Even though we don't know what %c will produce, it should roundtrip,
   // but only in the 0-offset timezone.
   {
-    time_point out;
+    time_point<std::chrono::nanoseconds> out;
     TimeZone utc = UTCTimeZone();
     const std::string s = Format("%c", in, utc);
     EXPECT_TRUE(Parse("%c", s, utc, &out)) << s;

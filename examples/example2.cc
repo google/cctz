@@ -13,6 +13,7 @@
 //     See the License for the specific language governing permissions and
 //     limitations under the License.
 
+#include <chrono>
 #include <iostream>
 #include <string>
 
@@ -23,7 +24,7 @@ int main() {
 
   cctz::TimeZone lax;
   LoadTimeZone("America/Los_Angeles", &lax);
-  cctz::time_point tp;
+  std::chrono::system_clock::time_point tp;
   const bool ok = cctz::Parse("%Y-%m-%d %H:%M:%S", civil_string, lax, &tp);
   if (!ok) return -1;
 

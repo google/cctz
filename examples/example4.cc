@@ -18,7 +18,9 @@
 
 #include "src/cctz.h"
 
-cctz::time_point FloorDay(cctz::time_point tp, cctz::TimeZone tz) {
+template <typename D>
+cctz::time_point<cctz::seconds64> FloorDay(cctz::time_point<D> tp,
+                                           cctz::TimeZone tz) {
   const cctz::Breakdown bd = cctz::BreakTime(tp, tz);
   const cctz::TimeInfo ti =
       cctz::MakeTimeInfo(bd.year, bd.month, bd.day, 0, 0, 0, tz);

@@ -14,6 +14,7 @@
 //     limitations under the License.
 
 #include "src/cctz.h"
+#include "src/cctz_if.h"
 
 #include <chrono>
 #include <cstdint>
@@ -216,8 +217,8 @@ const int64_t kExp10[kDigits10_64 + 1] = {
 //
 // We also handle the %z and %Z specifiers to accommodate platforms that do
 // not support the tm_gmtoff and tm_zone extensions to std::tm.
-std::string Format(const std::string& format, const time_point& tp,
-                   const TimeZone& tz) {
+std::string Format(const std::string& format, const time_point<seconds64>& tp,
+                   const std::chrono::nanoseconds& ns, const TimeZone& tz) {
   std::string result;
   const Breakdown bd = BreakTime(tp, tz);
   const std::tm tm = ToTM(bd);
@@ -308,10 +309,7 @@ std::string Format(const std::string& format, const time_point& tp,
           result.append(bd.abbr);
           break;
         case 's':
-          bp = Format64(
-              ep, 0, std::chrono::duration_cast<std::chrono::duration<int64_t>>(
-                         tp - std::chrono::system_clock::from_time_t(0))
-                         .count());
+          bp = Format64(ep, 0, ToUnixSeconds(tp));
           result.append(bp, ep - bp);
           break;
       }
@@ -337,8 +335,7 @@ std::string Format(const std::string& format, const time_point& tp,
         FormatTM(&result, std::string(pending, cur - 2), tm);
       }
       char* cp = ep;
-      const int64_t nanoseconds = bd.subsecond.count();
-      bp = Format64(cp, 9, nanoseconds);
+      bp = Format64(cp, 9, ns.count());
       while (cp != bp && cp[-1] == '0') --cp;
       if (cp != bp) *--bp = '.';
       bp = Format02d(bp, bd.second);
@@ -364,9 +361,8 @@ std::string Format(const std::string& format, const time_point& tp,
           bp = ep;
           if (n > 0) {
             if (n > kDigits10_64) n = kDigits10_64;
-            const int64_t nanoseconds = bd.subsecond.count();
-            bp = Format64(bp, n, (n > 9) ? nanoseconds * kExp10[n - 9]
-                                         : nanoseconds / kExp10[9 - n]);
+            bp = Format64(bp, n, (n > 9) ? ns.count() * kExp10[n - 9]
+                                         : ns.count() / kExp10[9 - n]);
             *--bp = '.';
           }
           bp = Format02d(bp, bd.second);
@@ -420,7 +416,7 @@ const char* ParseZone(const char* dp, std::string* zone) {
   return dp;
 }
 
-const char* ParseSubSeconds(const char* dp, duration* subseconds) {
+const char* ParseSubSeconds(const char* dp, std::chrono::nanoseconds* subseconds) {
   if (dp != nullptr) {
     if (*dp == '.') {
       int64_t v = 0;
@@ -471,7 +467,8 @@ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
 // We also handle the %z specifier to accommodate platforms that do not
 // support the tm_gmtoff extension to std::tm.  %Z is parsed but ignored.
 bool Parse(const std::string& format, const std::string& input,
-           const TimeZone& tz, time_point* tpp) {
+           const TimeZone& tz, time_point<seconds64>* tpp,
+           std::chrono::nanoseconds* ns) {
   // The unparsed input.
   const char* data = input.c_str();  // NUL terminated
 
@@ -492,7 +489,7 @@ bool Parse(const std::string& format, const std::string& input,
   tm.tm_wday = 4;  // Thu
   tm.tm_yday = 0;
   tm.tm_isdst = 0;
-  duration subseconds = duration::zero();
+  auto subseconds = std::chrono::nanoseconds(0);
   int offset = kintmin;
   std::string zone = "UTC";
 
@@ -500,7 +497,7 @@ bool Parse(const std::string& format, const std::string& input,
   bool twelve_hour = false;
   bool afternoon = false;
 
-  bool saw_precent_s = false;
+  bool saw_percent_s = false;
   int64_t percent_s_time = 0;
 
   // Steps through format, one specifier at a time.
@@ -569,7 +566,7 @@ bool Parse(const std::string& format, const std::string& input,
         continue;
       case 's':
         data = ParseInt(data, 0, INT64_MIN, INT64_MAX, &percent_s_time);
-        if (data != nullptr) saw_precent_s = true;
+        if (data != nullptr) saw_percent_s = true;
         continue;
       case 'E':
         if (*fmt == 'z') {
@@ -657,8 +654,9 @@ bool Parse(const std::string& format, const std::string& input,
   if (*data != '\0') return false;
 
   // If we saw %s then we ignore anything else and return that time.
-  if (saw_precent_s) {
-    *tpp = time_point(std::chrono::duration<int64_t>(percent_s_time));
+  if (saw_percent_s) {
+    *tpp = FromUnixSeconds(percent_s_time);
+    *ns = {};
     return true;
   }
 
@@ -676,7 +674,7 @@ bool Parse(const std::string& format, const std::string& input,
   if (tm.tm_sec == 60) {
     tm.tm_sec -= 1;
     offset -= 1;
-    subseconds = duration::zero();
+    subseconds = {};
   }
 
   int64_t year = tm.tm_year;
@@ -692,7 +690,8 @@ bool Parse(const std::string& format, const std::string& input,
   // parsing "Sep 31" will not produce the equivalent of "Oct 1".
   if (ti.normalized) return false;
 
-  *tpp = ti.pre - std::chrono::seconds(offset) + subseconds;
+  *tpp = ti.pre - seconds64(offset);
+  *ns = subseconds;
   return true;
 }
 

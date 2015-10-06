@@ -23,7 +23,7 @@ int main() {
   LoadTimeZone("America/Los_Angeles", &lax);
 
   // Time Programming Fundamentals @cppcon
-  const cctz::time_point tp = cctz::MakeTime(2015, 9, 22, 9, 0, 0, lax);
+  const auto tp = cctz::MakeTime(2015, 9, 22, 9, 0, 0, lax);
 
   cctz::TimeZone nyc;
   LoadTimeZone("America/New_York", &nyc);

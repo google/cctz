@@ -688,6 +688,14 @@ TEST(TimeZone, Failures) {
             MakeTime(1970, 1, 1, 0, 0, 0, tz));  // UTC
 }
 
+TEST(StdChronoTimePoint, TimeTAlignment) {
+  // Ensures that the Unix epoch and the system clock epoch are an integral
+  // number of seconds apart. This simplifies conversions to/from time_t.
+  using TP = std::chrono::system_clock::time_point;
+  auto diff = TP() - std::chrono::system_clock::from_time_t(0);
+  EXPECT_EQ(TP::duration::zero(), diff % std::chrono::seconds(1));
+}
+
 TEST(BreakTime, LocalTimeInUTC) {
   const Breakdown bd = BreakTime(system_clock::from_time_t(0), UTCTimeZone());
   ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
@@ -725,7 +733,7 @@ TEST(BreakTime, LocalTimeInSydney) {
 
 TEST(MakeTime, Normalization) {
   const TimeZone tz = LoadZone("America/New_York");
-  const time_point tp = MakeTime(2009, 2, 13, 18, 31, 30, tz);
+  const auto tp = MakeTime(2009, 2, 13, 18, 31, 30, tz);
   EXPECT_EQ(system_clock::from_time_t(1234567890), tp);
 
   // Now requests for the same time_point but with out-of-range fields.
@@ -740,7 +748,7 @@ TEST(TimeZoneEdgeCase, AmericaNewYork) {
   const TimeZone tz = LoadZone("America/New_York");
 
   // Spring 1:59:59 -> 3:00:00
-  time_point tp = MakeTime(2013, 3, 10, 1, 59, 59, tz);
+  auto tp = MakeTime(2013, 3, 10, 1, 59, 59, tz);
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 2013, 3, 10, 1, 59, 59, -5 * 3600, false, "EST");
   tp += std::chrono::seconds(1);
@@ -760,7 +768,7 @@ TEST(TimeZoneEdgeCase, AmericaLosAngeles) {
   const TimeZone tz = LoadZone("America/Los_Angeles");
 
   // Spring 1:59:59 -> 3:00:00
-  time_point tp = MakeTime(2013, 3, 10, 1, 59, 59, tz);
+  auto tp = MakeTime(2013, 3, 10, 1, 59, 59, tz);
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 2013, 3, 10, 1, 59, 59, -8 * 3600, false, "PST");
   tp += std::chrono::seconds(1);
@@ -780,7 +788,7 @@ TEST(TimeZoneEdgeCase, ArizonaNoTransition) {
   const TimeZone tz = LoadZone("America/Phoenix");
 
   // No transition in Spring.
-  time_point tp = MakeTime(2013, 3, 10, 1, 59, 59, tz);
+  auto tp = MakeTime(2013, 3, 10, 1, 59, 59, tz);
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 2013, 3, 10, 1, 59, 59, -7 * 3600, false, "MST");
   tp += std::chrono::seconds(1);
@@ -803,7 +811,7 @@ TEST(TimeZoneEdgeCase, AsiaKathmandu) {
   //
   //   504901799 == Tue, 31 Dec 1985 23:59:59 +0530 (IST)
   //   504901800 == Wed,  1 Jan 1986 00:15:00 +0545 (NPT)
-  time_point tp = MakeTime(1985, 12, 31, 23, 59, 59, tz);
+  auto tp = MakeTime(1985, 12, 31, 23, 59, 59, tz);
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 1985, 12, 31, 23, 59, 59, 5.5 * 3600, false, "IST");
   tp += std::chrono::seconds(1);
@@ -818,7 +826,7 @@ TEST(TimeZoneEdgeCase, PacificChatham) {
   //
   //   1365256799 == Sun,  7 Apr 2013 03:44:59 +1345 (CHADT)
   //   1365256800 == Sun,  7 Apr 2013 02:45:00 +1245 (CHAST)
-  time_point tp = MakeTime(2013, 4, 7, 3, 44, 59, tz);
+  auto tp = MakeTime(2013, 4, 7, 3, 44, 59, tz);
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 2013, 4, 7, 3, 44, 59, 13.75 * 3600, true, "CHADT");
   tp += std::chrono::seconds(1);
@@ -842,7 +850,7 @@ TEST(TimeZoneEdgeCase, AustraliaLordHowe) {
   //
   //   1365260399 == Sun,  7 Apr 2013 01:59:59 +1100 (LHDT)
   //   1365260400 == Sun,  7 Apr 2013 01:30:00 +1030 (LHST)
-  time_point tp = MakeTime(2013, 4, 7, 1, 59, 59, tz);
+  auto tp = MakeTime(2013, 4, 7, 1, 59, 59, tz);
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 2013, 4, 7, 1, 59, 59, 11 * 3600, true, "LHDT");
   tp += std::chrono::seconds(1);
@@ -870,7 +878,7 @@ TEST(TimeZoneEdgeCase, PacificApia) {
   //
   //   1325239199 == Thu, 29 Dec 2011 23:59:59 -1000 (SDT)
   //   1325239200 == Sat, 31 Dec 2011 00:00:00 +1400 (WSDT)
-  time_point tp = MakeTime(2011, 12, 29, 23, 59, 59, tz);
+  auto tp = MakeTime(2011, 12, 29, 23, 59, 59, tz);
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 2011, 12, 29, 23, 59, 59, -10 * 3600, true, "SDT");
   EXPECT_EQ(363, bd.yearday);
@@ -887,7 +895,7 @@ TEST(TimeZoneEdgeCase, AfricaCairo) {
   //
   //   1400191199 == Thu, 15 May 2014 23:59:59 +0200 (EET)
   //   1400191200 == Fri, 16 May 2014 01:00:00 +0300 (EEST)
-  time_point tp = MakeTime(2014, 5, 15, 23, 59, 59, tz);
+  auto tp = MakeTime(2014, 5, 15, 23, 59, 59, tz);
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 2014, 5, 15, 23, 59, 59, 2 * 3600, false, "EET");
   tp += std::chrono::seconds(1);
@@ -902,7 +910,7 @@ TEST(TimeZoneEdgeCase, AfricaMonrovia) {
   //
   //   73529069 == Sun, 30 Apr 1972 23:59:59 -0044 (LRT)
   //   73529070 == Mon,  1 May 1972 00:44:30 +0000 (GMT)
-  time_point tp = MakeTime(1972, 4, 30, 23, 59, 59, tz);
+  auto tp = MakeTime(1972, 4, 30, 23, 59, 59, tz);
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 1972, 4, 30, 23, 59, 59, -44.5 * 60, false, "LRT");
   tp += std::chrono::seconds(1);
@@ -919,7 +927,7 @@ TEST(TimeZoneEdgeCase, AmericaJamaica) {
   const TimeZone tz = LoadZone("America/Jamaica");
 
   // Before the first transition.
-  time_point tp = MakeTime(1889, 12, 31, 0, 0, 0, tz);
+  auto tp = MakeTime(1889, 12, 31, 0, 0, 0, tz);
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 1889, 12, 31, 0, 0, 0, -18431, false, bd.abbr);
 
@@ -954,7 +962,7 @@ TEST(TimeZoneEdgeCase, WET) {
   const TimeZone tz = LoadZone("WET");
 
   // Before the first transition.
-  time_point tp = MakeTime(1977, 1, 1, 0, 0, 0, tz);
+  auto tp = MakeTime(1977, 1, 1, 0, 0, 0, tz);
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 1977, 1, 1, 0, 0, 0, 0, false, "WET");
 
@@ -993,7 +1001,7 @@ TEST(TimeZoneEdgeCase, WET) {
 
 TEST(TimeZoneEdgeCase, FixedOffsets) {
   const TimeZone gmtp5 = LoadZone("Etc/GMT+5");
-  time_point tp = MakeTime(1970, 1, 1, 0, 0, 0, gmtp5);
+  auto tp = MakeTime(1970, 1, 1, 0, 0, 0, gmtp5);
   Breakdown bd = BreakTime(tp, gmtp5);
   ExpectTime(bd, 1970, 1, 1, 0, 0, 0, -5 * 3600, false, "GMT+5");
   EXPECT_EQ(system_clock::from_time_t(5 * 3600), tp);
@@ -1008,7 +1016,7 @@ TEST(TimeZoneEdgeCase, FixedOffsets) {
 TEST(TimeZoneEdgeCase, NegativeYear) {
   // Tests transition from year 0 (aka 1BCE) to year -1.
   const TimeZone tz = UTCTimeZone();
-  time_point tp = MakeTime(0, 1, 1, 0, 0, 0, tz);
+  auto tp = MakeTime(0, 1, 1, 0, 0, 0, tz);
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 0, 1, 1, 0, 0, 0, 0 * 3600, false, "UTC");
   EXPECT_EQ(6, bd.weekday);
@@ -1025,7 +1033,7 @@ TEST(TimeZoneEdgeCase, UTC32bitLimit) {
   //
   //   2147483647 == Tue, 19 Jan 2038 03:14:07 +0000 (UTC)
   //   2147483648 == Tue, 19 Jan 2038 03:14:08 +0000 (UTC)
-  time_point tp = MakeTime(2038, 1, 19, 3, 14, 7, tz);
+  auto tp = MakeTime(2038, 1, 19, 3, 14, 7, tz);
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 2038, 1, 19, 3, 14, 7, 0 * 3600, false, "UTC");
   tp += std::chrono::seconds(1);
@@ -1040,7 +1048,7 @@ TEST(TimeZoneEdgeCase, UTC5DigitYear) {
   //
   //   253402300799 == Fri, 31 Dec 9999 23:59:59 +0000 (UTC)
   //   253402300800 == Sat,  1 Jan 1000 00:00:00 +0000 (UTC)
-  time_point tp = MakeTime(9999, 12, 31, 23, 59, 59, tz);
+  auto tp = MakeTime(9999, 12, 31, 23, 59, 59, tz);
   Breakdown bd = BreakTime(tp, tz);
   ExpectTime(bd, 9999, 12, 31, 23, 59, 59, 0 * 3600, false, "UTC");
   tp += std::chrono::seconds(1);

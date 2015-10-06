@@ -26,8 +26,7 @@ int main() {
   const cctz::Breakdown bd = cctz::BreakTime(now, lax);
 
   // First day of month, 6 months from now.
-  const cctz::time_point then =
-      cctz::MakeTime(bd.year, bd.month + 6, 1, 0, 0, 0, lax);
+  const auto then = cctz::MakeTime(bd.year, bd.month + 6, 1, 0, 0, 0, lax);
 
   std::cout << cctz::Format("Now: %F %T %z\n", now, lax);
   std::cout << cctz::Format("6mo: %F %T %z\n", then, lax);
