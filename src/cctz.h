@@ -314,7 +314,7 @@ inline time_point<seconds64> FloorSeconds(const time_point<D>& tp,
 template <typename Subseconds = std::chrono::nanoseconds>
 inline time_point<seconds64> FloorSeconds(const time_point<seconds64>& sec,
                                           Subseconds* subseconds = nullptr) {
-  if (subseconds) *subseconds = Subseconds{};
+  if (subseconds) *subseconds = {};
   return sec;
 }
 }  // namespace internal
