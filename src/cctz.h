@@ -106,7 +106,7 @@ struct Breakdown {
   int yearday;       // day of year [1:366]
 
   // Note: The following fields exist for backward compatibility with older
-  // APIs. Accessing these fields directly is a sign of misguided logic in the
+  // APIs. Accessing these fields directly is a sign of imprudent logic in the
   // calling code. Modern time-related code should only access this data
   // indirectly by way of cctz::Format().
   int offset;        // seconds east of UTC
