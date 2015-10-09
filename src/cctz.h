@@ -314,7 +314,7 @@ inline time_point<seconds64> FloorSeconds(const time_point<D>& tp,
 template <typename Subseconds = std::chrono::nanoseconds>
 inline time_point<seconds64> FloorSeconds(const time_point<seconds64>& sec,
                                           Subseconds* subseconds = nullptr) {
-  if (subseconds) *subseconds = {};
+  if (subseconds) *subseconds = Subseconds::zero();
   return sec;
 }
 }  // namespace internal
@@ -330,7 +330,7 @@ inline std::string Format(const std::string& format, const time_point<D>& tp,
                           const TimeZone& tz) {
   std::string Format(const std::string&, const time_point<seconds64>&,
                      const std::chrono::nanoseconds&, const TimeZone&);
-  std::chrono::nanoseconds ns{};
+  std::chrono::nanoseconds ns{0};
   const auto sec = internal::FloorSeconds(tp, &ns);
   return Format(format, sec, ns, tz);
 }
@@ -341,7 +341,7 @@ inline bool Parse(const std::string& format, const std::string& input,
   bool Parse(const std::string&, const std::string&, const TimeZone&,
              time_point<seconds64>*, std::chrono::nanoseconds*);
   time_point<seconds64> tp{};
-  std::chrono::nanoseconds ns{};
+  std::chrono::nanoseconds ns{0};
   const bool b = Parse(format, input, tz, &tp, &ns);
   if (b) {
     *tpp = std::chrono::time_point_cast<D>(tp);

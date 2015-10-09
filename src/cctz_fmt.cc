@@ -656,7 +656,7 @@ bool Parse(const std::string& format, const std::string& input,
   // If we saw %s then we ignore anything else and return that time.
   if (saw_percent_s) {
     *tpp = FromUnixSeconds(percent_s_time);
-    *ns = {};
+    *ns = std::chrono::nanoseconds::zero();
     return true;
   }
 
@@ -674,7 +674,7 @@ bool Parse(const std::string& format, const std::string& input,
   if (tm.tm_sec == 60) {
     tm.tm_sec -= 1;
     offset -= 1;
-    subseconds = {};
+    subseconds = std::chrono::nanoseconds::zero();
   }
 
   int64_t year = tm.tm_year;
