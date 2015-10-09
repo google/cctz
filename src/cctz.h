@@ -298,9 +298,9 @@ namespace cctz {
 
 namespace internal {
 // Floors tp to a second boundary. Optionally returns subseconds.
-template <typename D, typename Subseconds = D>
+template <typename D, typename Subseconds>
 inline time_point<seconds64> FloorSeconds(const time_point<D>& tp,
-                                          Subseconds* subseconds = nullptr) {
+                                          Subseconds* subseconds) {
   auto sec = std::chrono::time_point_cast<seconds64>(tp);
   auto sub = tp - sec;
   if (sub.count() < 0) {
@@ -311,9 +311,9 @@ inline time_point<seconds64> FloorSeconds(const time_point<D>& tp,
   return sec;
 }
 // Specialization for when tp is already second aligned.
-template <typename Subseconds = std::chrono::nanoseconds>
+template <typename Subseconds>
 inline time_point<seconds64> FloorSeconds(const time_point<seconds64>& sec,
-                                          Subseconds* subseconds = nullptr) {
+                                          Subseconds* subseconds) {
   if (subseconds) *subseconds = Subseconds::zero();
   return sec;
 }
@@ -322,7 +322,7 @@ inline time_point<seconds64> FloorSeconds(const time_point<seconds64>& sec,
 template <typename D>
 inline Breakdown BreakTime(const time_point<D>& tp, const TimeZone& tz) {
   Breakdown BreakTime(const time_point<seconds64>&, const TimeZone&);
-  return BreakTime(internal::FloorSeconds(tp), tz);
+  return BreakTime(internal::FloorSeconds(tp, static_cast<D*>(nullptr)), tz);
 }
 
 template <typename D>
