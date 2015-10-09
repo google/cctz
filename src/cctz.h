@@ -37,6 +37,7 @@
 #include <chrono>
 #include <cstdint>
 #include <string>
+#include <utility>
 
 namespace cctz {
 
@@ -297,32 +298,29 @@ bool Parse(const std::string& format, const std::string& input,
 namespace cctz {
 
 namespace internal {
-// Floors tp to a second boundary. Optionally returns subseconds.
-template <typename D, typename Subseconds>
-inline time_point<seconds64> FloorSeconds(const time_point<D>& tp,
-                                          Subseconds* subseconds) {
+// Floors tp to a second boundary and sets *subseconds.
+template <typename D>
+inline std::pair<time_point<seconds64>, D>
+FloorSeconds(const time_point<D>& tp) {
   auto sec = std::chrono::time_point_cast<seconds64>(tp);
   auto sub = tp - sec;
   if (sub.count() < 0) {
     sec -= seconds64(1);
     sub += seconds64(1);
   }
-  if (subseconds) *subseconds = std::chrono::duration_cast<Subseconds>(sub);
-  return sec;
+  return {sec, std::chrono::duration_cast<D>(sub)};
 }
-// Specialization for when tp is already second aligned.
-template <typename Subseconds>
-inline time_point<seconds64> FloorSeconds(const time_point<seconds64>& sec,
-                                          Subseconds* subseconds) {
-  if (subseconds) *subseconds = Subseconds::zero();
-  return sec;
+// Overload for when tp is already second aligned.
+inline std::pair<time_point<seconds64>, seconds64>
+FloorSeconds(const time_point<seconds64>& tp) {
+  return {tp, seconds64(0)};
 }
 }  // namespace internal
 
 template <typename D>
 inline Breakdown BreakTime(const time_point<D>& tp, const TimeZone& tz) {
   Breakdown BreakTime(const time_point<seconds64>&, const TimeZone&);
-  return BreakTime(internal::FloorSeconds(tp, static_cast<D*>(nullptr)), tz);
+  return BreakTime(internal::FloorSeconds(tp).first, tz);
 }
 
 template <typename D>
@@ -330,9 +328,9 @@ inline std::string Format(const std::string& format, const time_point<D>& tp,
                           const TimeZone& tz) {
   std::string Format(const std::string&, const time_point<seconds64>&,
                      const std::chrono::nanoseconds&, const TimeZone&);
-  std::chrono::nanoseconds ns{0};
-  const auto sec = internal::FloorSeconds(tp, &ns);
-  return Format(format, sec, ns, tz);
+  const auto p = internal::FloorSeconds(tp);
+  const auto n = std::chrono::duration_cast<std::chrono::nanoseconds>(p.second);
+  return Format(format, p.first, n, tz);
 }
 
 template <typename D>
