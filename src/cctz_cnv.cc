@@ -45,13 +45,13 @@ bool LoadTimeZone(const std::string& name, TimeZone* tz) {
   return TimeZone::Impl::LoadTimeZone(name, tz);
 }
 
-Breakdown BreakTime(const time_point& tp, const TimeZone& tz) {
+Breakdown BreakTime(const time_point<seconds64>& tp, const TimeZone& tz) {
   return TimeZone::Impl::get(tz).BreakTime(tp);
 }
 
-time_point MakeTime(int64_t year, int mon, int day,
-                    int hour, int min, int sec,
-                    const TimeZone& tz) {
+time_point<seconds64> MakeTime(int64_t year, int mon, int day,
+                               int hour, int min, int sec,
+                               const TimeZone& tz) {
   return MakeTimeInfo(year, mon, day, hour, min, sec, tz).pre;
 }
 

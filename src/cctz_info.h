@@ -96,7 +96,7 @@ class TimeZoneInfo : public TimeZoneIf {
   bool Load(const std::string& name);
 
   // TimeZoneIf implementations.
-  Breakdown BreakTime(const time_point& tp) const override;
+  Breakdown BreakTime(const time_point<seconds64>& tp) const override;
   TimeInfo MakeTimeInfo(int64_t year, int mon, int day,
                         int hour, int min, int sec) const override;
 
@@ -121,8 +121,7 @@ class TimeZoneInfo : public TimeZoneIf {
   bool Load(const std::string& name, FILE* fp);
 
   // Helpers for BreakTime() and MakeTimeInfo() respectively.
-  Breakdown LocalTime(int64_t unix_time, duration subsecond,
-                      const TransitionType& tt) const;
+  Breakdown LocalTime(int64_t unix_time, const TransitionType& tt) const;
   TimeInfo TimeLocal(int64_t year, int mon, int day,
                      int hour, int min, int sec, __int128 offset) const;
 

@@ -13,6 +13,11 @@
 
 #include "src/cctz.h"
 
+// Pulls in the aliases from cctz for brevity.
+template <typename D>
+using time_point = cctz::time_point<D>;
+using seconds64 = cctz::seconds64;
+
 // Parse() specifiers for command-line time arguments.
 const char* const kFormats[] = {
   "%Y   %m   %d   %H   %M   %E*S",
@@ -38,10 +43,10 @@ const char* const kFormats[] = {
 };
 
 bool ParseTimeSpec(const std::string& args, cctz::TimeZone zone,
-                   cctz::time_point* when) {
+                   time_point<seconds64>* when) {
   for (const char* const* fmt = kFormats; *fmt != NULL; ++fmt) {
     const std::string format = std::string(*fmt) + " %Ez";
-    cctz::time_point tp;
+    time_point<seconds64> tp;
     if (cctz::Parse(format, args, zone, &tp)) {
       *when = tp;
       return true;
@@ -54,7 +59,7 @@ bool ParseBreakdownSpec(const std::string& args, cctz::TimeZone zone,
                         cctz::Breakdown* when) {
   const cctz::TimeZone utc = cctz::UTCTimeZone();
   for (const char* const* fmt = kFormats; *fmt != NULL; ++fmt) {
-    cctz::time_point tp;
+    time_point<seconds64> tp;
     if (cctz::Parse(*fmt, args, utc, &tp)) {
       *when = cctz::BreakTime(tp, utc);
       return true;
@@ -70,7 +75,7 @@ const char* const kWeekDayNames[] = {
   "Unused", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
 };
 
-std::string FormatTimeInZone(cctz::time_point when, cctz::TimeZone zone) {
+std::string FormatTimeInZone(time_point<seconds64> when, cctz::TimeZone zone) {
   std::ostringstream oss;
   oss << std::setw(33) << std::left << cctz::Format(kFormat, when, zone);
   cctz::Breakdown bd = cctz::BreakTime(when, zone);
@@ -81,7 +86,7 @@ std::string FormatTimeInZone(cctz::time_point when, cctz::TimeZone zone) {
   return oss.str();
 }
 
-void InstantInfo(const std::string& label, cctz::time_point when,
+void InstantInfo(const std::string& label, time_point<seconds64> when,
                  cctz::TimeZone zone) {
   const cctz::TimeZone utc = cctz::UTCTimeZone();  // might == zone
   const std::string time_label = "time_t";
@@ -132,8 +137,8 @@ int BreakdownInfo(const cctz::Breakdown& when, cctz::TimeZone zone) {
   return 0;
 }
 
-// Report everything we know about a time_point.
-int TimeInfo(cctz::time_point when, cctz::TimeZone zone) {
+// Report everything we know about a time_point<seconds64>.
+int TimeInfo(time_point<seconds64> when, cctz::TimeZone zone) {
   std::cout << "kind: UNIQUE\n";
   InstantInfo("when", when, zone);
   return 0;
@@ -193,7 +198,8 @@ int main(int argc, char** argv) {
   }
 
   // Determine the time point.
-  cctz::time_point tp = std::chrono::system_clock::now();
+  time_point<seconds64> tp =
+      std::chrono::time_point_cast<seconds64>(std::chrono::system_clock::now());
   std::string args;
   for (int i = optind; i < argc; ++i) {
     if (i != optind) args += " ";
@@ -209,7 +215,9 @@ int main(int argc, char** argv) {
       std::size_t end;
       const time_t t = std::stoll(spec, &end);
       if (end == spec.size()) {
-        tp = std::chrono::system_clock::from_time_t(t);
+        tp = std::chrono::time_point_cast<cctz::seconds64>(
+                 std::chrono::system_clock::from_time_t(0)) +
+             seconds64(t);
         have_time = true;
       }
     }

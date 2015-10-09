@@ -35,7 +35,7 @@ class TimeZone::Impl {
   static const TimeZone::Impl& get(const TimeZone& tz);
 
   // Breaks a time_point down to civil-time components in this time zone.
-  Breakdown BreakTime(const time_point& tp) const;
+  Breakdown BreakTime(const time_point<seconds64>& tp) const;
 
   // Converts the civil-time components in this time zone into a time_point.
   // That is, the opposite of BreakTime(). The requested civil time may be

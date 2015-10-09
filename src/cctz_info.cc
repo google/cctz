@@ -231,7 +231,7 @@ int64_t TransOffset(bool leap_year, int jan1_weekday,
 // Convert an integer timestamp to a time_point, taking care to map values
 // that are out-of-range to an appropriate extreme.
 template <typename T>
-time_point FromTimeT(T t, bool* normalized) {
+inline time_point<seconds64> FromTimeT(T t, bool* normalized) {
   std::time_t tt = t;
   if (tt != t) {
     *normalized = true;
@@ -241,7 +241,8 @@ time_point FromTimeT(T t, bool* normalized) {
   return FromUnixSeconds(tt);
 }
 
-inline time_point ShiftTime(time_point tp, __int128 offset, bool* normalized) {
+inline time_point<seconds64> ShiftTime(const time_point<seconds64>& tp,
+                                       __int128 offset, bool* normalized) {
   return FromTimeT(ToUnixSeconds(tp) + offset, normalized);
 }
 
@@ -364,8 +365,8 @@ void TimeZoneInfo::ResetToBuiltinUTC(int seconds) {
   transitions_.resize(1);
   transitions_[0].unix_time = -(1LL << 59);  // zic "BIG_BANG"
   transitions_[0].type_index = 0;
-  transitions_[0].date_time.Assign(LocalTime(
-      transitions_[0].unix_time, duration::zero(), transition_types_[0]));
+  transitions_[0].date_time.Assign(
+      LocalTime(transitions_[0].unix_time, transition_types_[0]));
   transitions_[0].prev_date_time = transitions_[0].date_time;
   transitions_[0].prev_date_time.offset -= 1;
   default_transition_type_ = 0;
@@ -569,8 +570,8 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
       const TransitionType& autumn(tt0.is_dst ? tt1 : tt0);
       CheckTransition(name, spring, posix.dst_offset, true, posix.dst_abbr);
       CheckTransition(name, autumn, posix.std_offset, false, posix.std_abbr);
-      last_year_ = LocalTime(tr0.unix_time, duration::zero(), tt0).year;
-      if (LocalTime(tr1.unix_time, duration::zero(), tt1).year != last_year_) {
+      last_year_ = LocalTime(tr0.unix_time, tt0).year;
+      if (LocalTime(tr1.unix_time, tt1).year != last_year_) {
         std::clog << name << ": Final transitions not in same year\n";
       }
 
@@ -603,10 +604,10 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   const TransitionType* ttp = &transition_types_[default_transition_type_];
   for (size_t i = 0; i != transitions_.size(); ++i) {
     Transition& tr(transitions_[i]);
-    tr.prev_date_time.Assign(LocalTime(tr.unix_time, duration::zero(), *ttp));
+    tr.prev_date_time.Assign(LocalTime(tr.unix_time, *ttp));
     tr.prev_date_time.offset -= 1;
     ttp = &transition_types_[tr.type_index];
-    tr.date_time.Assign(LocalTime(tr.unix_time, duration::zero(), *ttp));
+    tr.date_time.Assign(LocalTime(tr.unix_time, *ttp));
     if (i != 0) {
       // Check that the transitions are ordered by date/time. Essentially
       // this means that an offset change cannot cross another such change.
@@ -661,7 +662,7 @@ bool TimeZoneInfo::Load(const std::string& name) {
 }
 
 // BreakTime() translation for a particular transition type.
-Breakdown TimeZoneInfo::LocalTime(int64_t unix_time, duration subsecond,
+Breakdown TimeZoneInfo::LocalTime(int64_t unix_time,
                                   const TransitionType& tt) const {
   Breakdown bd;
 
@@ -747,7 +748,6 @@ Breakdown TimeZoneInfo::LocalTime(int64_t unix_time, duration subsecond,
   seconds %= SECSPERHOUR;
   bd.minute = seconds / SECSPERMIN;
   bd.second = seconds % SECSPERMIN;
-  bd.subsecond = subsecond;
 
   // Shift weekday to [1==Mon, ..., 7=Sun].
   bd.weekday -= 1;
@@ -772,18 +772,12 @@ TimeInfo TimeZoneInfo::TimeLocal(int64_t year, int mon, int day, int hour,
   return ti;
 }
 
-Breakdown TimeZoneInfo::BreakTime(const time_point& tp) const {
+Breakdown TimeZoneInfo::BreakTime(const time_point<seconds64>& tp) const {
   int64_t unix_time = ToUnixSeconds(tp);
-  duration subsecond = tp - FromUnixSeconds(unix_time);
-  if (subsecond < duration::zero()) {
-    unix_time -= 1;
-    subsecond += std::chrono::seconds(1);
-  }
-
   const int32_t timecnt = transitions_.size();
   if (timecnt == 0 || unix_time < transitions_[0].unix_time) {
     const int type_index = default_transition_type_;
-    return LocalTime(unix_time, subsecond, transition_types_[type_index]);
+    return LocalTime(unix_time, transition_types_[type_index]);
   }
   if (unix_time >= transitions_[timecnt - 1].unix_time) {
     // After the last transition. If we extended the transitions using
@@ -792,13 +786,13 @@ Breakdown TimeZoneInfo::BreakTime(const time_point& tp) const {
     if (extended_) {
       const int64_t diff = unix_time - transitions_[timecnt - 1].unix_time;
       const int64_t shift = diff / kSecPer400Years + 1;
-      const duration d = std::chrono::seconds(shift * kSecPer400Years);
+      const auto d = seconds64(shift * kSecPer400Years);
       Breakdown bd = BreakTime(tp - d);
       bd.year += shift * 400;
       return bd;
     }
     const int type_index = transitions_[timecnt - 1].type_index;
-    return LocalTime(unix_time, subsecond, transition_types_[type_index]);
+    return LocalTime(unix_time, transition_types_[type_index]);
   }
 
   const int32_t hint = local_time_hint_.load(std::memory_order_relaxed);
@@ -806,7 +800,7 @@ Breakdown TimeZoneInfo::BreakTime(const time_point& tp) const {
     if (unix_time < transitions_[hint].unix_time) {
       if (!(unix_time < transitions_[hint - 1].unix_time)) {
         const int type_index = transitions_[hint - 1].type_index;
-        return LocalTime(unix_time, subsecond, transition_types_[type_index]);
+        return LocalTime(unix_time, transition_types_[type_index]);
       }
     }
   }
@@ -817,7 +811,7 @@ Breakdown TimeZoneInfo::BreakTime(const time_point& tp) const {
                                           Transition::ByUnixTime());
   local_time_hint_.store(tr - begin, std::memory_order_relaxed);
   const int type_index = (--tr)->type_index;
-  return LocalTime(unix_time, subsecond, transition_types_[type_index]);
+  return LocalTime(unix_time, transition_types_[type_index]);
 }
 
 TimeInfo TimeZoneInfo::MakeTimeInfo(int64_t year, int mon, int day,

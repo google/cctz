@@ -32,7 +32,7 @@ class TimeZoneIf {
 
   virtual ~TimeZoneIf() {}
 
-  virtual Breakdown BreakTime(const time_point& tp) const = 0;
+  virtual Breakdown BreakTime(const time_point<seconds64>& tp) const = 0;
   virtual TimeInfo MakeTimeInfo(int64_t year, int mon, int day,
                                 int hour, int min, int sec) const = 0;
 
@@ -40,18 +40,18 @@ class TimeZoneIf {
   TimeZoneIf() {}
 };
 
-// Convert a time_point to a count of seconds since the Unix epoch.
-inline int64_t ToUnixSeconds(const time_point& tp) {
-  return std::chrono::duration_cast<std::chrono::duration<int64_t>>(
-             tp - std::chrono::system_clock::from_time_t(0))
+// Converts tp to a count of seconds since the Unix epoch.
+inline int64_t ToUnixSeconds(const time_point<seconds64>& tp) {
+  return (tp - std::chrono::time_point_cast<seconds64>(
+                   std::chrono::system_clock::from_time_t(0)))
       .count();
 }
 
-// Convert a count of seconds since the Unix epoch to a time_point.
-inline time_point FromUnixSeconds(int64_t t) {
-  return std::chrono::time_point_cast<time_point::duration>(
+// Converts a count of seconds since the Unix epoch to a time_point<seconds64>.
+inline time_point<seconds64> FromUnixSeconds(int64_t t) {
+  return std::chrono::time_point_cast<seconds64>(
              std::chrono::system_clock::from_time_t(0)) +
-         std::chrono::seconds(t);
+         seconds64(t);
 }
 
 }  // namespace cctz

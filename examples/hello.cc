@@ -24,7 +24,7 @@ int main() {
   if (!cctz::LoadTimeZone("Australia/Sydney", &syd)) return -1;
 
   // Neil Armstrong first walks on the moon
-  const cctz::time_point tp1 = cctz::MakeTime(1969, 7, 21, 12, 56, 0, syd);
+  const auto tp1 = cctz::MakeTime(1969, 7, 21, 12, 56, 0, syd);
 
   const std::string s = cctz::Format("%F %T %z", tp1, syd);
   std::cout << s << "\n";
@@ -32,6 +32,6 @@ int main() {
   cctz::TimeZone nyc;
   cctz::LoadTimeZone("America/New_York", &nyc);
 
-  const cctz::time_point tp2 = cctz::MakeTime(1969, 7, 20, 22, 56, 0, nyc);
+  const auto tp2 = cctz::MakeTime(1969, 7, 20, 22, 56, 0, nyc);
   return tp2 == tp1 ? 0 : 1;
 }

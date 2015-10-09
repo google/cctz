@@ -30,14 +30,9 @@ TimeZoneLibC::TimeZoneLibC(const std::string& name) {
   }
 }
 
-Breakdown TimeZoneLibC::BreakTime(const time_point& tp) const {
+Breakdown TimeZoneLibC::BreakTime(const time_point<seconds64>& tp) const {
   Breakdown bd;
   std::time_t t = ToUnixSeconds(tp);
-  duration subsecond = tp - FromUnixSeconds(t);
-  if (subsecond < duration::zero()) {
-    t -= 1;
-    subsecond += std::chrono::seconds(1);
-  }
   std::tm tm;
   if (local_) {
     localtime_r(&t, &tm);
@@ -53,7 +48,6 @@ Breakdown TimeZoneLibC::BreakTime(const time_point& tp) const {
   bd.hour = tm.tm_hour;
   bd.minute = tm.tm_min;
   bd.second = tm.tm_sec;
-  bd.subsecond = subsecond;
   bd.weekday = (tm.tm_wday ? tm.tm_wday : 7);
   bd.yearday = tm.tm_yday + 1;
   bd.is_dst = tm.tm_isdst;
