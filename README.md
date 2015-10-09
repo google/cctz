@@ -18,7 +18,8 @@ https://github.com/google/googletest
 1. Download/install Bazel http://bazel.io/docs/install.html
 2. Get the cctz source: `git clone https://github.com/google/cctz.git` then `cd cctz`
 3. Build cctz and run the tests: `bazel test ...`
-4. Look at example uses: https://github.com/google/cctz/tree/master/examples
+4. See the CCTZ API, which is defined in the header [cctz.h](https://github.com/google/cctz/blob/master/src/cctz.h)
+5. Look at the examples in https://github.com/google/cctz/tree/master/examples
 
 # Fundamental Concepts
 
@@ -75,8 +76,8 @@ relationships will still exist.
 
 # These concepts in CCTZ
 
-An *absolute* time is represented by a `cctz::time_point`.
-A *civil* time is represented by a `cctz::Breakdown`, or even separate integers.
-A *time zone* is represented by a `cctz::TimeZone`.
+* An *absolute* time is represented by any `std::chrono::time_point` defined on the `std::chrono::system_clock`.
+* A *civil* time is represented by a `cctz::Breakdown`, or even separate integers.
+* A *time zone* is represented by a `cctz::TimeZone`.
 
-See the [cctz.h](https://github.com/google/cctz/blob/master/src/cctz.h) header file for more details.
+For more information, see the full API and documentation are described in the header [cctz.h](https://github.com/google/cctz/blob/master/src/cctz.h).
