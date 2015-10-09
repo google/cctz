@@ -298,7 +298,7 @@ namespace cctz {
 
 namespace internal {
 // Floors tp to a second boundary. Optionally returns subseconds.
-template <typename D, typename Subseconds = std::chrono::nanoseconds>
+template <typename D, typename Subseconds = D>
 inline time_point<seconds64> FloorSeconds(const time_point<D>& tp,
                                           Subseconds* subseconds = nullptr) {
   auto sec = std::chrono::time_point_cast<seconds64>(tp);
