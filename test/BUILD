@@ -4,6 +4,7 @@ cc_library(
     srcs = glob(
         [
             "google*/src/*.cc",
+            "google*/src/*-inl.h",
         ],
         exclude = glob([
             "google*/src/*-all.cc",
