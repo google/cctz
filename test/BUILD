@@ -18,6 +18,7 @@ cc_library(
         "googletest/include",
     ],
     linkopts = ["-pthread"],
+    textual_hdrs = ["googletest/src/gtest-internal-inl.h"],
     visibility = ["//visibility:public"],
 )
 
