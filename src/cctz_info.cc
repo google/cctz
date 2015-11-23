@@ -805,7 +805,7 @@ Breakdown TimeZoneInfo::BreakTime(const time_point<seconds64>& tp) const {
     }
   }
 
-  const Transition target = {unix_time};
+  const Transition target = {unix_time, 0, {0}, {0}};
   const Transition* begin = &transitions_[0];
   const Transition* tr = std::upper_bound(begin, begin + timecnt, target,
                                           Transition::ByUnixTime());
