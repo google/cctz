@@ -55,8 +55,7 @@ bool ParseTimeSpec(const std::string& args, cctz::TimeZone zone,
   return false;
 }
 
-bool ParseBreakdownSpec(const std::string& args, cctz::TimeZone zone,
-                        cctz::Breakdown* when) {
+bool ParseBreakdownSpec(const std::string& args, cctz::Breakdown* when) {
   const cctz::TimeZone utc = cctz::UTCTimeZone();
   for (const char* const* fmt = kFormats; *fmt != NULL; ++fmt) {
     time_point<seconds64> tp;
@@ -223,7 +222,7 @@ int main(int argc, char** argv) {
     }
   }
   cctz::Breakdown when = cctz::BreakTime(tp, zone);
-  bool have_break_down = !have_time && ParseBreakdownSpec(args, zone, &when);
+  bool have_break_down = !have_time && ParseBreakdownSpec(args, &when);
 
   // Show results.
   if (have_break_down) return BreakdownInfo(when, zone);
