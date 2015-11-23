@@ -28,7 +28,7 @@ namespace cctz {
 namespace {
 
 std::tm ToTM(const Breakdown& bd) {
-  std::tm tm = {0};
+  std::tm tm{};
   tm.tm_sec = bd.second;
   tm.tm_min = bd.minute;
   tm.tm_hour = bd.hour;
@@ -479,7 +479,7 @@ bool Parse(const std::string& format, const std::string& input,
   const int kintmin = std::numeric_limits<int>::min();
 
   // Sets default values for unspecified fields.
-  std::tm tm = {0};
+  std::tm tm{};
   tm.tm_year = 1970 - 1900;
   tm.tm_mon = 1 - 1;  // Jan
   tm.tm_mday = 1;
@@ -634,7 +634,7 @@ bool Parse(const std::string& format, const std::string& input,
     if (spec == "%p" && data != nullptr) {
       std::string test_input = "1" + std::string(orig_data, data - orig_data);
       const char* test_data = test_input.c_str();
-      std::tm tmp = {0};
+      std::tm tmp{};
       ParseTM(test_data, "%I%p", &tmp);
       afternoon = (tmp.tm_hour == 13);
     }
