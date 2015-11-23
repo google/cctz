@@ -24,7 +24,7 @@ std::string Format(const std::string& fmt, const std::tm& tm) {
   return buf;
 }
 
-int GetOffset(std::time_t t, const std::string& zone) {
+int GetOffset(std::time_t, const std::string& zone) {
   if (zone == "America/New_York") return -4 * 60 * 60;
   return 0;
 }
