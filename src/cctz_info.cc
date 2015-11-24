@@ -641,6 +641,8 @@ bool TimeZoneInfo::Load(const std::string& name) {
   if (name == "localtime") {
     const char* localtime = std::getenv("LOCALTIME");
     path = localtime ? localtime : "/etc/localtime";
+  } else if (!name.empty() && name[0] == '/') {
+    path = name;
   } else {
     const char* tzdir = std::getenv("TZDIR");
     path = tzdir ? tzdir : "/usr/share/zoneinfo";
