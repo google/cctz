@@ -145,11 +145,6 @@ const int32_t kDaysPerYear[2] = {DAYSPERNYEAR, DAYSPERLYEAR};
 
 inline int DaysPerYear(int year) { return kDaysPerYear[IsLeap(year)]; }
 
-// Year limits beyond which DayOrdinal() may encounter integer overflow.
-// Each is well outside the realistic year range.
-const int64_t kDayOrdYearMax =  25252734927766553LL;
-const int64_t kDayOrdYearMin = -25252734927764584LL;
-
 // Map a (normalized) Y/M/D to the number of days before/after 1970-01-01.
 // See http://howardhinnant.github.io/date_algorithms.html#days_from_civil.
 int64_t DayOrdinal(int64_t year, int month, int day) {
@@ -228,27 +223,9 @@ int64_t TransOffset(bool leap_year, int jan1_weekday,
   return (days * SECSPERDAY) + pt.offset;
 }
 
-// Convert an integer timestamp to a time_point, taking care to map values
-// that are out-of-range to an appropriate extreme.
-template <typename T>
-inline time_point<seconds64> FromTimeT(T t, bool* normalized) {
-  std::time_t tt = t;
-  if (tt != t) {
-    *normalized = true;
-    tt = (t < 0) ? std::numeric_limits<time_t>::min()
-                 : std::numeric_limits<time_t>::max();
-  }
-  return FromUnixSeconds(tt);
-}
-
-inline time_point<seconds64> ShiftTime(const time_point<seconds64>& tp,
-                                       __int128 offset, bool* normalized) {
-  return FromTimeT(ToUnixSeconds(tp) + offset, normalized);
-}
-
-inline TimeInfo MakeUnique(__int128 unix_time, bool normalized) {
+inline TimeInfo MakeUnique(int64_t unix_time, bool normalized) {
   TimeInfo ti;
-  ti.pre = ti.trans = ti.post = FromTimeT(unix_time, &normalized);
+  ti.pre = ti.trans = ti.post = FromUnixSeconds(unix_time);
   ti.kind = TimeInfo::Kind::UNIQUE;
   ti.normalized = normalized;
   return ti;
@@ -257,9 +234,9 @@ inline TimeInfo MakeUnique(__int128 unix_time, bool normalized) {
 inline TimeInfo MakeSkipped(const Transition& tr, const DateTime& dt,
                             bool normalized) {
   TimeInfo ti;
-  ti.pre = FromTimeT(tr.unix_time - 1 + (dt - tr.prev_date_time), &normalized);
-  ti.trans = FromTimeT(tr.unix_time, &normalized);
-  ti.post = FromTimeT(tr.unix_time - (tr.date_time - dt), &normalized);
+  ti.pre = FromUnixSeconds(tr.unix_time - 1 + (dt - tr.prev_date_time));
+  ti.trans = FromUnixSeconds(tr.unix_time);
+  ti.post = FromUnixSeconds(tr.unix_time - (tr.date_time - dt));
   ti.kind = TimeInfo::Kind::SKIPPED;
   ti.normalized = normalized;
   return ti;
@@ -268,9 +245,9 @@ inline TimeInfo MakeSkipped(const Transition& tr, const DateTime& dt,
 inline TimeInfo MakeRepeated(const Transition& tr, const DateTime& dt,
                              bool normalized) {
   TimeInfo ti;
-  ti.pre = FromTimeT(tr.unix_time - 1 - (tr.prev_date_time - dt), &normalized);
-  ti.trans = FromTimeT(tr.unix_time, &normalized);
-  ti.post = FromTimeT(tr.unix_time + (dt - tr.date_time), &normalized);
+  ti.pre = FromUnixSeconds(tr.unix_time - 1 - (tr.prev_date_time - dt));
+  ti.trans = FromUnixSeconds(tr.unix_time);
+  ti.post = FromUnixSeconds(tr.unix_time + (dt - tr.date_time));
   ti.kind = TimeInfo::Kind::REPEATED;
   ti.normalized = normalized;
   return ti;
@@ -336,15 +313,14 @@ bool DateTime::Normalize(int64_t year, int mon, int day,
   // Add the updated eyear back into (year + year_carry).
   year_carry += eyear;
 
-  // Finally, set the DateTime offset. If the requested time is beyond
-  // the limits of our encoding (which is already far beyond the bounds of
-  // time_point), store a saturated offset.
-  if (year > kDayOrdYearMax - year_carry) {
-    offset = static_cast<__int128>(-1) >> 1;
-  } else if (year < kDayOrdYearMin - year_carry) {
-    offset = (static_cast<__int128>(-1) >> 1) + 1;
+  // Finally, set the DateTime offset.
+  offset = DayOrdinal(year + year_carry, mon, day);
+  if (offset < 0) {
+    offset += 1;
+    offset *= SECSPERHOUR * HOURSPERDAY;
+    offset += hour * SECSPERHOUR + min * SECSPERMIN + sec;
+    offset -= SECSPERHOUR * HOURSPERDAY;
   } else {
-    offset = DayOrdinal(year + year_carry, mon, day);
     offset *= SECSPERHOUR * HOURSPERDAY;
     offset += hour * SECSPERHOUR + min * SECSPERMIN + sec;
   }
@@ -766,11 +742,11 @@ Breakdown TimeZoneInfo::LocalTime(int64_t unix_time,
 
 // MakeTimeInfo() translation with a conversion-preserving offset.
 TimeInfo TimeZoneInfo::TimeLocal(int64_t year, int mon, int day, int hour,
-                                 int min, int sec, __int128 offset) const {
+                                 int min, int sec, int64_t offset) const {
   TimeInfo ti = MakeTimeInfo(year, mon, day, hour, min, sec);
-  ti.pre = ShiftTime(ti.pre, offset, &ti.normalized);
-  ti.trans = ShiftTime(ti.trans, offset, &ti.normalized);
-  ti.post = ShiftTime(ti.post, offset, &ti.normalized);
+  ti.pre = FromUnixSeconds(ToUnixSeconds(ti.pre) + offset);
+  ti.trans = FromUnixSeconds(ToUnixSeconds(ti.trans) + offset);
+  ti.post = FromUnixSeconds(ToUnixSeconds(ti.post) + offset);
   return ti;
 }
 
@@ -826,7 +802,7 @@ TimeInfo TimeZoneInfo::MakeTimeInfo(int64_t year, int mon, int day,
   if (timecnt == 0) {
     // Use the default offset.
     int32_t offset = transition_types_[default_transition_type_].utc_offset;
-    __int128 unix_time = (dt - DateTime{0}) - offset;
+    int64_t unix_time = (dt - DateTime{0}) - offset;
     return MakeUnique(unix_time, normalized);
   }
 
@@ -857,7 +833,7 @@ TimeInfo TimeZoneInfo::MakeTimeInfo(int64_t year, int mon, int day,
     if (!(tr->prev_date_time < dt)) {
       // Before first transition, so use the default offset.
       int offset = transition_types_[default_transition_type_].utc_offset;
-      __int128 unix_time = (dt - DateTime{0}) - offset;
+      int64_t unix_time = (dt - DateTime{0}) - offset;
       return MakeUnique(unix_time, normalized);
     }
     // tr->prev_date_time < dt < tr->date_time
@@ -872,9 +848,9 @@ TimeInfo TimeZoneInfo::MakeTimeInfo(int64_t year, int mon, int day,
       if (extended_ && year > last_year_) {
         const int64_t shift = (year - last_year_) / 400 + 1;
         return TimeLocal(year - shift * 400, mon, day, hour, min, sec,
-                         static_cast<__int128>(shift) * kSecPer400Years);
+                         shift * kSecPer400Years);
       }
-      __int128 unix_time = tr->unix_time + (dt - tr->date_time);
+      int64_t unix_time = tr->unix_time + (dt - tr->date_time);
       return MakeUnique(unix_time, normalized);
     }
     // tr->date_time <= dt <= tr->prev_date_time
@@ -892,7 +868,7 @@ TimeInfo TimeZoneInfo::MakeTimeInfo(int64_t year, int mon, int day,
   }
 
   // In between transitions.
-  __int128 unix_time = tr->unix_time + (dt - tr->date_time);
+  int64_t unix_time = tr->unix_time + (dt - tr->date_time);
   return MakeUnique(unix_time, normalized);
 }
 

@@ -36,14 +36,13 @@ namespace cctz {
 // separated by a UTC-offset change in some TimeZone, then the number of
 // seconds between them can be computed as a simple difference of offsets.
 //
-// Note: Because the DateTime epoch does not correspond to the time epoch
-// (even if only because of the unknown UTC offset) there can be valid
-// times that would not be representable as DateTimes if DateTime only had
-// the same number of "seconds" bits. So, we use 128 bits to store the
-// DateTime offset, and defer the question of representation as a time
-// until we know the appropriate UTC offset.
+// Note: Because the DateTime epoch does not correspond to the time_point
+// epoch (even if only because of the unknown UTC offset) there can be valid
+// times that will not be representable as DateTimes when DateTime only has
+// the same number of "seconds" bits. We accept this at the moment (so as
+// to avoid extended arithmetic) and lose a little range as a result.
 struct DateTime {
-  __int128 offset;  // seconds from some epoch DateTime
+  int64_t offset;  // seconds from some epoch DateTime
   bool Normalize(int64_t year, int mon, int day, int hour, int min, int sec);
   void Assign(const Breakdown& bd);
 };
@@ -54,7 +53,7 @@ inline bool operator<(const DateTime& lhs, const DateTime& rhs) {
 
 // The difference between two DateTimes in seconds. Requires that all
 // intervening DateTimes share the same UTC offset (i.e., no transitions).
-inline __int128 operator-(const DateTime& lhs, const DateTime& rhs) {
+inline int64_t operator-(const DateTime& lhs, const DateTime& rhs) {
   return lhs.offset - rhs.offset;
 }
 
@@ -123,7 +122,7 @@ class TimeZoneInfo : public TimeZoneIf {
   // Helpers for BreakTime() and MakeTimeInfo() respectively.
   Breakdown LocalTime(int64_t unix_time, const TransitionType& tt) const;
   TimeInfo TimeLocal(int64_t year, int mon, int day,
-                     int hour, int min, int sec, __int128 offset) const;
+                     int hour, int min, int sec, int64_t offset) const;
 
   std::vector<Transition> transitions_;  // ordered by unix_time and date_time
   std::vector<TransitionType> transition_types_;  // distinct transition types

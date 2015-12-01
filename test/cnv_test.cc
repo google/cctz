@@ -17,6 +17,7 @@
 
 #include <chrono>
 #include <future>
+#include <limits>
 #include <string>
 #include <thread>
 #include <vector>
@@ -1047,15 +1048,15 @@ TEST(TimeZoneEdgeCase, WET) {
 }
 
 TEST(TimeZoneEdgeCase, FixedOffsets) {
-  const TimeZone gmtp5 = LoadZone("Etc/GMT+5");
-  auto tp = MakeTime(1970, 1, 1, 0, 0, 0, gmtp5);
-  Breakdown bd = BreakTime(tp, gmtp5);
+  const TimeZone gmtm5 = LoadZone("Etc/GMT+5");  // -0500
+  auto tp = MakeTime(1970, 1, 1, 0, 0, 0, gmtm5);
+  Breakdown bd = BreakTime(tp, gmtm5);
   ExpectTime(bd, 1970, 1, 1, 0, 0, 0, -5 * 3600, false, "GMT+5");
   EXPECT_EQ(system_clock::from_time_t(5 * 3600), tp);
 
-  const TimeZone gmtm5 = LoadZone("Etc/GMT-5");
-  tp = MakeTime(1970, 1, 1, 0, 0, 0, gmtm5);
-  bd = BreakTime(tp, gmtm5);
+  const TimeZone gmtp5 = LoadZone("Etc/GMT-5");  // +0500
+  tp = MakeTime(1970, 1, 1, 0, 0, 0, gmtp5);
+  bd = BreakTime(tp, gmtp5);
   ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 5 * 3600, false, "GMT-5");
   EXPECT_EQ(system_clock::from_time_t(-5 * 3600), tp);
 }
@@ -1101,6 +1102,26 @@ TEST(TimeZoneEdgeCase, UTC5DigitYear) {
   tp += std::chrono::seconds(1);
   bd = BreakTime(tp, tz);
   ExpectTime(bd, 10000, 1, 1, 0, 0, 0, 0 * 3600, false, "UTC");
+}
+
+TEST(TimeZoneEdgeCase, East64bitLimit) {
+  // For zones with positive offsets we cannot really get all the way to the
+  // maximal time_point as anything closer than the offset will (currently)
+  // result in an internal integer overflow. (Check 15:30:08 with -ftrapv.)
+  const TimeZone tz = LoadZone("Etc/GMT-14");
+  time_point<seconds64> tp = MakeTime(292277026596, 12, 4, 15, 30, 7, tz);
+  EXPECT_EQ(std::numeric_limits<seconds64::rep>::max() - 14 * 3600,
+            tp.time_since_epoch().count());
+}
+
+TEST(TimeZoneEdgeCase, West64bitLimit) {
+  // For zones with negative offsets we cannot really get all the way to the
+  // minimal time_point as anything closer than the offset will (currently)
+  // result in an internal integer overflow. (Check 08:29:51 with -ftrapv.)
+  const TimeZone tz = LoadZone("Etc/GMT+12");
+  time_point<seconds64> tp = MakeTime(-292277022657, 1, 27, 8, 29, 52, tz);
+  EXPECT_EQ(std::numeric_limits<seconds64::rep>::min() + 12 * 3600,
+            tp.time_since_epoch().count());
 }
 
 }  // namespace cctz
