@@ -549,6 +549,7 @@ bool Parse(const std::string& format, const std::string& input,
         data = ParseInt(data, 2, 0, 60, &tm.tm_sec);
         continue;
       case 'I':
+      case 'l':
       case 'r':  // probably uses %I
         twelve_hour = true;
         break;

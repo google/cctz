@@ -149,6 +149,8 @@ TEST(Format, PosixConversions) {
   TestFormatSpecifier(tp, tz, "%F", "1970-01-01");
   TestFormatSpecifier(tp, tz, "%g", "70");
   TestFormatSpecifier(tp, tz, "%G", "1970");
+  TestFormatSpecifier(tp, tz, "%k", " 0");
+  TestFormatSpecifier(tp, tz, "%l", "12");
   TestFormatSpecifier(tp, tz, "%n", "\n");
   TestFormatSpecifier(tp, tz, "%R", "00:00");
   TestFormatSpecifier(tp, tz, "%t", "\t");
@@ -696,6 +698,10 @@ TEST(Parse, LocaleSpecific) {
   tp = reset;
   EXPECT_TRUE(Parse("%h", "Feb", tz, &tp));
   EXPECT_EQ(2, BreakTime(tp, tz).month);  // Equivalent to %b
+
+  tp = reset;
+  EXPECT_TRUE(Parse("%l %p", "5 PM", tz, &tp));
+  EXPECT_EQ(17, BreakTime(tp, tz).hour);
 
   tp = reset;
   EXPECT_TRUE(Parse("%r", "03:44:55 PM", tz, &tp));
