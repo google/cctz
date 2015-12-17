@@ -21,7 +21,7 @@
 #include "src/cctz_if.h"
 
 namespace cctz {
-#ifndef _WIN32 || _WIN64
+#if defined(_WIN32) || defined(_WIN64)
 
 // A time zone backed by gmtime_r(3), localtime_r(3), and mktime(3), and
 // which therefore only supports "localtime" and fixed offsets from UTC.

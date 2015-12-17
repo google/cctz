@@ -45,7 +45,7 @@
 
 #include "src/cctz_posix.h"
 
-#ifdef _WIN32 || _WIN64
+#if defined(_WIN32) || defined(_WIN64)
 #define strerror_r(errno,buf,len) strerror_s(buf,len,errno)
 #endif // _WIN32 || _WIN64
 
@@ -630,7 +630,7 @@ bool TimeZoneInfo::Load(const std::string& name) {
     path += name;
   }
 
-#ifdef _WIN32 || _WIN64
+#if defined(_WIN32) || defined(_WIN64)
   // Switching Linux-path to Windows-path
   size_t pos = 0;
   while ((pos = path.find("/", pos)) != std::string::npos) {
@@ -641,11 +641,7 @@ bool TimeZoneInfo::Load(const std::string& name) {
 
   // Load the time-zone data.
   bool loaded = false;
-#ifdef _WIN32 || _WIN64
   if (FILE* fp = fopen(path.c_str(), "rb")) {
-#else
-  if (FILE* fp = fopen(path.c_str(), "r")) {
-#endif // _WIN32 || _WIN64
     loaded = Load(name, fp);
     fclose(fp);
   } else {

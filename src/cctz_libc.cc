@@ -20,7 +20,7 @@
 #include <ctime>
 
 namespace cctz {
-#ifndef _WIN32 || _WIN64
+#if defined(_WIN32) || defined(_WIN64)
 
 TimeZoneLibC::TimeZoneLibC(const std::string& name) {
   local_ = (name == "localtime");

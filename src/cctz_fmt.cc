@@ -23,7 +23,7 @@
 #include <limits>
 #include <vector>
 
-#ifdef _WIN32 || _WIN64
+#if defined(_WIN32) || defined(_WIN64)
 #include <cctype>
 #include <sstream>
 #include <iomanip>
@@ -449,7 +449,7 @@ const char* ParseSubSeconds(const char* dp, std::chrono::nanoseconds* subseconds
   return dp;
 }
 
-#ifdef _WIN32 || _WIN64
+#if defined(_WIN32) || defined(_WIN64)
 // This function exist only on the POSIX
 const char* strptime(const char* dp, const char* fmt, std::tm* tm) {
   std::istringstream input(dp);
