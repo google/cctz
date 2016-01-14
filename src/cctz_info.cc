@@ -628,7 +628,7 @@ bool TimeZoneInfo::Load(const std::string& name) {
 
   // Load the time-zone data.
   bool loaded = false;
-  if (FILE* fp = fopen(path.c_str(), "r")) {
+  if (FILE* fp = fopen(path.c_str(), "rb")) {
     loaded = Load(name, fp);
     fclose(fp);
   } else {
