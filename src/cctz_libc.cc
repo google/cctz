@@ -19,6 +19,27 @@
 #include <cstdint>
 #include <ctime>
 
+// Define OFFSET(tm) and ABBR(tm) for your platform to return the UTC
+// offset and zone abbreviation after a call to localtime_r().
+#if defined(linux)
+# if defined(__USE_BSD)
+#  define OFFSET(tm) ((tm).tm_gmtoff)
+#  define ABBR(tm)   ((tm).tm_zone)
+# else
+#  define OFFSET(tm) ((tm).__tm_gmtoff)
+#  define ABBR(tm)   ((tm).__tm_zone)
+# endif
+#elif defined(__APPLE__)
+# define OFFSET(tm) ((tm).tm_gmtoff)
+# define ABBR(tm)   ((tm).tm_zone)
+#elif defined(__sun)
+# define OFFSET(tm) ((tm).tm_isdst > 0 ? altzone : timezone)
+# define ABBR(tm)   (tzname[(tm).tm_isdst > 0])
+#else
+# define OFFSET(tm) (timezone + ((tm).tm_isdst > 0 ? 60 * 60 : 0))
+# define ABBR(tm)   (tzname[(tm).tm_isdst > 0])
+#endif
+
 namespace cctz {
 
 TimeZoneLibC::TimeZoneLibC(const std::string& name) {
@@ -36,10 +57,11 @@ Breakdown TimeZoneLibC::BreakTime(const time_point<seconds64>& tp) const {
   std::tm tm;
   if (local_) {
     localtime_r(&t, &tm);
-    bd.abbr = tm.tm_zone;
+    bd.offset = OFFSET(tm);
+    bd.abbr = ABBR(tm);
   } else {
     gmtime_r(&t, &tm);
-    tm.tm_gmtoff += offset_;
+    bd.offset = offset_;
     bd.abbr = abbr_;
   }
   bd.year = tm.tm_year + 1900;
@@ -50,8 +72,7 @@ Breakdown TimeZoneLibC::BreakTime(const time_point<seconds64>& tp) const {
   bd.second = tm.tm_sec;
   bd.weekday = (tm.tm_wday ? tm.tm_wday : 7);
   bd.yearday = tm.tm_yday + 1;
-  bd.is_dst = tm.tm_isdst;
-  bd.offset = tm.tm_gmtoff;
+  bd.is_dst = tm.tm_isdst > 0;
   return bd;
 }
 
