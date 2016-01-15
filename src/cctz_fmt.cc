@@ -13,6 +13,12 @@
 //     See the License for the specific language governing permissions and
 //     limitations under the License.
 
+#if !defined(HAS_STRPTIME)
+# if !defined(_WIN32) && !defined(_WIN64)
+#  define HAS_STRPTIME 1  // assume everyone has strptime() except windows
+# endif
+#endif
+
 #include "src/cctz.h"
 #include "src/cctz_if.h"
 
@@ -22,10 +28,24 @@
 #include <ctime>
 #include <limits>
 #include <vector>
+#if !HAS_STRPTIME
+#include <iomanip>
+#include <sstream>
+#endif
 
 namespace cctz {
 
 namespace {
+
+#if !HAS_STRPTIME
+// Build a strptime() using C++11's std::get_time().
+char* strptime(const char* s, const char* fmt, std::tm* tm) {
+  std::istringstream input(s);
+  input >> std::get_time(tm, fmt);
+  if (input.fail()) return nullptr;
+  return const_cast<char*>(s) + input.tellg();
+}
+#endif
 
 std::tm ToTM(const Breakdown& bd) {
   std::tm tm{};
