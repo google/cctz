@@ -55,6 +55,9 @@ char* errmsg(int errnum, char* buf, size_t buflen) {
 #if defined(_WIN32) || defined(_WIN64)
   strerror_s(buf, buflen, errnum);
   return buf;
+#elif defined(__APPLE__)
+  strerror_r(errnum, buf, buflen);
+  return buf;
 #elif (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! _GNU_SOURCE
   strerror_r(errnum, buf, buflen);
   return buf;
