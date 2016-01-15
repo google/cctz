@@ -33,6 +33,12 @@
 #include <sstream>
 #endif
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <cctype>
+#include <sstream>
+#include <iomanip>
+#endif // _WIN32 || _WIN64
+
 namespace cctz {
 
 namespace {
@@ -462,6 +468,19 @@ const char* ParseSubSeconds(const char* dp, std::chrono::nanoseconds* subseconds
   }
   return dp;
 }
+
+#if defined(_WIN32) || defined(_WIN64)
+// This function exist only on the POSIX
+const char* strptime(const char* dp, const char* fmt, std::tm* tm) {
+  std::istringstream input(dp);
+  input.imbue(std::locale(setlocale(LC_ALL, nullptr)));
+  input >> std::get_time(tm, fmt);
+  if (input.fail()) {
+    return nullptr;
+  }
+  return (char*)(dp + input.tellg());
+}
+#endif // _WIN32 || _WIN64
 
 // Parses a string into a std::tm using strptime(3).
 const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {

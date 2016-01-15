@@ -45,6 +45,10 @@
 
 #include "src/cctz_posix.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+#define strerror_r(errno,buf,len) strerror_s(buf,len,errno)
+#endif // _WIN32 || _WIN64
+
 namespace cctz {
 
 namespace {
@@ -642,6 +646,15 @@ bool TimeZoneInfo::Load(const std::string& name) {
     path += '/';
     path += name;
   }
+
+#if defined(_WIN32) || defined(_WIN64)
+  // Switching Linux-path to Windows-path
+  size_t pos = 0;
+  while ((pos = path.find("/", pos)) != std::string::npos) {
+    path.replace(pos, 1, "\\");
+    pos += 2;
+  }
+#endif // _WIN32 || _WIN64
 
   // Load the time-zone data.
   bool loaded = false;

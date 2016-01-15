@@ -20,11 +20,14 @@
 namespace cctz {
 
 std::unique_ptr<TimeZoneIf> TimeZoneIf::Load(const std::string& name) {
+
+#if !(defined(_WIN32) || defined(_WIN64))
   // Support "libc:localtime" and "libc:*" to access the legacy
   // localtime and UTC support respectively from the C library.
   if (name.compare(0, 5, "libc:") == 0) {
     return std::unique_ptr<TimeZoneIf>(new TimeZoneLibC(name.substr(5)));
   }
+#endif // _WIN32 || _WIN64
 
   // Otherwise use the "zoneinfo" implementation by default.
   std::unique_ptr<TimeZoneInfo> tz(new TimeZoneInfo);

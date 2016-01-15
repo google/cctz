@@ -41,6 +41,7 @@
 #endif
 
 namespace cctz {
+#if !(defined(_WIN32) || defined(_WIN64))
 
 TimeZoneLibC::TimeZoneLibC(const std::string& name) {
   local_ = (name == "localtime");
@@ -173,4 +174,5 @@ TimeInfo TimeZoneLibC::MakeTimeInfo(int64_t year, int mon, int day,
   return ti;
 }
 
+#endif // _WIN32 || _WIN64
 }  // namespace cctz
