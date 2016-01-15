@@ -317,27 +317,27 @@ FloorSeconds(const time_point<seconds64>& tp) {
 }
 }  // namespace internal
 
+Breakdown BreakTime(const time_point<seconds64>&, const TimeZone&);
 template <typename D>
 inline Breakdown BreakTime(const time_point<D>& tp, const TimeZone& tz) {
-  Breakdown BreakTime(const time_point<seconds64>&, const TimeZone&);
   return BreakTime(internal::FloorSeconds(tp).first, tz);
 }
 
+std::string Format(const std::string&, const time_point<seconds64>&,
+                   const std::chrono::nanoseconds&, const TimeZone&);
 template <typename D>
 inline std::string Format(const std::string& format, const time_point<D>& tp,
                           const TimeZone& tz) {
-  std::string Format(const std::string&, const time_point<seconds64>&,
-                     const std::chrono::nanoseconds&, const TimeZone&);
   const auto p = internal::FloorSeconds(tp);
   const auto n = std::chrono::duration_cast<std::chrono::nanoseconds>(p.second);
   return Format(format, p.first, n, tz);
 }
 
+bool Parse(const std::string&, const std::string&, const TimeZone&,
+           time_point<seconds64>*, std::chrono::nanoseconds*);
 template <typename D>
 inline bool Parse(const std::string& format, const std::string& input,
                   const TimeZone& tz, time_point<D>* tpp) {
-  bool Parse(const std::string&, const std::string&, const TimeZone&,
-             time_point<seconds64>*, std::chrono::nanoseconds*);
   time_point<seconds64> tp{};
   std::chrono::nanoseconds ns{0};
   const bool b = Parse(format, input, tz, &tp, &ns);
