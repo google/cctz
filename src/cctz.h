@@ -38,6 +38,7 @@
 #include <cstdint>
 #include <string>
 #include <utility>
+#include "export.h"
 
 namespace cctz {
 
@@ -68,7 +69,7 @@ using seconds64 = std::chrono::duration<int64_t, std::chrono::seconds::period>;
 // See also:
 // - http://www.iana.org/time-zones
 // - http://en.wikipedia.org/wiki/Zoneinfo
-class TimeZone {
+class CCTZ_EXPORT TimeZone {
  public:
   // A value type.
   TimeZone() = default;  // Equivalent to UTC
@@ -85,18 +86,18 @@ class TimeZone {
 // Loads the named zone. May perform I/O on the initial load of the named
 // zone. If the name is invalid, or some other kind of error occurs, returns
 // false and "*tz" is set to the UTC time zone.
-bool LoadTimeZone(const std::string& name, TimeZone* tz);
+CCTZ_EXPORT bool LoadTimeZone(const std::string& name, TimeZone* tz);
 // Convenience method returning the UTC time zone.
-TimeZone UTCTimeZone();
+CCTZ_EXPORT TimeZone UTCTimeZone();
 // Convenience method returning the local time zone, or UTC if there is no
 // configured local zone.
-TimeZone LocalTimeZone();
+CCTZ_EXPORT TimeZone LocalTimeZone();
 
 // The calendar and wall-clock (a.k.a. "civil time") components of a
 // time_point in a certain TimeZone. A better std::tm. This struct is not
 // intended to represent an instant in time. So, rather than passing a
 // Breakdown to a function, pass a time_point and a TimeZone.
-struct Breakdown {
+struct CCTZ_EXPORT Breakdown{
   int64_t year;      // year (e.g., 2013)
   int month;         // month of year [1:12]
   int day;           // day of month [1:31]
@@ -124,7 +125,7 @@ struct Breakdown {
 //   const auto tp = std::chrono::system_clock::now();
 //   const Breakdown bd = cctz::BreakTime(tp, tz);
 template <typename D>
-Breakdown BreakTime(const time_point<D>& tp, const TimeZone& tz);
+CCTZ_EXPORT Breakdown BreakTime(const time_point<D>& tp, const TimeZone& tz);
 
 // Returns the system_clock time_point with 64-bits of seconds corresponding
 // to the given civil time fields in the given TimeZone after normalizing the
@@ -135,7 +136,7 @@ Breakdown BreakTime(const time_point<D>& tp, const TimeZone& tz);
 // Example:
 //   const cctz::TimeZone tz = ...
 //   const auto tp = cctz::MakeTime(2015, 1, 2, 3, 4, 5, tz);
-time_point<seconds64> MakeTime(int64_t year, int mon, int day,
+CCTZ_EXPORT time_point<seconds64> MakeTime(int64_t year, int mon, int day,
                                int hour, int min, int sec,
                                const TimeZone& tz);
 
@@ -191,7 +192,7 @@ time_point<seconds64> MakeTime(int64_t year, int mon, int day,
 //   cctz::TimeInfo ti = cctz::MakeTimeInfo(2013, 10, 32, 8, 30, 0, tz);
 //   // ti.kind == TimeInfo::Kind::UNIQUE && ti.normalized == true
 //   // ti.pre.In(tz).month == 11 && ti.pre.In(tz).day == 1
-struct TimeInfo {
+struct CCTZ_EXPORT TimeInfo {
   enum class Kind {
     UNIQUE,    // the civil time was singular (pre == trans == post)
     SKIPPED,   // the civil time did not exist
@@ -215,7 +216,7 @@ struct TimeInfo {
 //   const auto ti = cctz::MakeTimeInfo(year, month, day, 0, 0, 0, tz);
 //   const auto day_start =
 //       (ti.kind == cctz::TimeInfo::Kind::SKIPPED) ? ti.trans : ti.pre;
-TimeInfo MakeTimeInfo(int64_t year, int mon, int day, int hour,
+CCTZ_EXPORT TimeInfo MakeTimeInfo(int64_t year, int mon, int day, int hour,
                       int min, int sec, const TimeZone& tz);
 
 // Formats the given cctz::time_point in the given cctz::TimeZone according to
@@ -241,8 +242,9 @@ TimeInfo MakeTimeInfo(int64_t year, int mon, int day, int hour,
 //
 //   std::string f = cctz::Format("%H:%M:%S", tp, lax);  // "03:04:05"
 //   f = cctz::Format("%H:%M:%E3S", tp, lax);            // "03:04:05.000"
+
 template <typename D>
-std::string Format(const std::string& format, const time_point<D>& tp,
+CCTZ_EXPORT std::string Format(const std::string& format, const time_point<D>& tp,
                    const TimeZone& tz);
 
 // Parses an input string according to the provided format string and returns
@@ -287,7 +289,7 @@ std::string Format(const std::string& format, const time_point<D>& tp,
 //     ...
 //   }
 template <typename D>
-bool Parse(const std::string& format, const std::string& input,
+CCTZ_EXPORT bool Parse(const std::string& format, const std::string& input,
            const TimeZone& tz, time_point<D>* tpp);
 
 }  // namespace cctz
@@ -311,20 +313,21 @@ FloorSeconds(const time_point<D>& tp) {
   return {sec, std::chrono::duration_cast<D>(sub)};
 }
 // Overload for when tp is already second aligned.
-inline std::pair<time_point<seconds64>, seconds64>
+ inline std::pair<time_point<seconds64>, seconds64>
 FloorSeconds(const time_point<seconds64>& tp) {
   return {tp, seconds64(0)};
 }
 }  // namespace internal
 
-Breakdown BreakTime(const time_point<seconds64>&, const TimeZone&);
+CCTZ_EXPORT Breakdown BreakTime(const time_point<seconds64>&, const TimeZone&);
+
 template <typename D>
 inline Breakdown BreakTime(const time_point<D>& tp, const TimeZone& tz) {
   return BreakTime(internal::FloorSeconds(tp).first, tz);
 }
 
-std::string Format(const std::string&, const time_point<seconds64>&,
-                   const std::chrono::nanoseconds&, const TimeZone&);
+CCTZ_EXPORT std::string Format(const std::string&, const time_point<seconds64>&,
+	const std::chrono::nanoseconds&, const TimeZone&);
 template <typename D>
 inline std::string Format(const std::string& format, const time_point<D>& tp,
                           const TimeZone& tz) {
@@ -333,8 +336,8 @@ inline std::string Format(const std::string& format, const time_point<D>& tp,
   return Format(format, p.first, n, tz);
 }
 
-bool Parse(const std::string&, const std::string&, const TimeZone&,
-           time_point<seconds64>*, std::chrono::nanoseconds*);
+CCTZ_EXPORT bool Parse(const std::string&, const std::string&, const TimeZone&,
+	time_point<seconds64>*, std::chrono::nanoseconds*);
 template <typename D>
 inline bool Parse(const std::string& format, const std::string& input,
                   const TimeZone& tz, time_point<D>* tpp) {
