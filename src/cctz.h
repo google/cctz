@@ -83,6 +83,9 @@ class CCTZ_EXPORT TimeZone {
   const Impl* impl_ = nullptr;
 };
 
+//Set path to time zones database.
+CCTZ_EXPORT void set_path(std::string & str);
+
 // Loads the named zone. May perform I/O on the initial load of the named
 // zone. If the name is invalid, or some other kind of error occurs, returns
 // false and "*tz" is set to the UTC time zone.

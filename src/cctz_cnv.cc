@@ -45,6 +45,10 @@ bool LoadTimeZone(const std::string& name, TimeZone* tz) {
   return TimeZone::Impl::LoadTimeZone(name, tz);
 }
 
+void set_path(std::string & str) {
+    TimeZone::Impl::set_path(str);
+}
+
 Breakdown BreakTime(const time_point<seconds64>& tp, const TimeZone& tz) {
   return TimeZone::Impl::get(tz).BreakTime(tp);
 }

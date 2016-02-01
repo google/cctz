@@ -20,6 +20,8 @@
 
 namespace cctz {
 
+std::string tz_path;
+
 namespace {
 
 // TimeZone::Impls are linked into a map to support fast lookup by name.
@@ -40,6 +42,10 @@ void LoadUTCTimeZone() {
 }
 
 }  // namespace
+
+void TimeZone::Impl::set_path(std::string & str) {
+    tz_path = str;
+}
 
 bool TimeZone::Impl::LoadTimeZone(const std::string& name, TimeZone* tz) {
   const bool is_utc = (name.compare("UTC") == 0);
