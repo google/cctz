@@ -43,7 +43,7 @@ void LoadUTCTimeZone() {
 
 }  // namespace
 
-void TimeZone::Impl::set_path(std::string & str) {
+void TimeZone::Impl::SetPathToTzDatabase(std::string & str) {
     tz_path = str;
 }
 

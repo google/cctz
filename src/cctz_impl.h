@@ -32,7 +32,7 @@ class TimeZone::Impl {
   static bool LoadTimeZone(const std::string& name, TimeZone* tz);
   
   //Set path to timezone database.
-  static void set_path(std::string & str);
+  static void SetPathToTzDatabase(std::string & str);
 
   // Dereferences the TimeZone to obtain its Impl.
   static const TimeZone::Impl& get(const TimeZone& tz);

@@ -84,7 +84,7 @@ class CCTZ_EXPORT TimeZone {
 };
 
 //Set path to time zones database.
-CCTZ_EXPORT void set_path(std::string & str);
+CCTZ_EXPORT void SetPathToTzDatabase(std::string & str);
 
 // Loads the named zone. May perform I/O on the initial load of the named
 // zone. If the name is invalid, or some other kind of error occurs, returns
