@@ -22,6 +22,7 @@
 #include "src/cctz.h"
 #include "src/cctz_if.h"
 
+#include <cctype>
 #include <chrono>
 #include <cstdint>
 #include <cstring>
