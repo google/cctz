@@ -25,16 +25,28 @@
 //     dst_abbr = "PDT"
 //     dst_offset = -25200
 //     dst_start = PosixTransition {
-//       month = 3
-//       week = 2
-//       weekday = 0
-//       offset = 7200
+//       date {
+//         m {
+//           month = 3
+//           week = 2
+//           weekday = 0
+//         }
+//       }
+//       time {
+//         offset = 7200
+//       }
 //     }
 //     dst_end = PosixTransition {
-//       month = 11
-//       week = 1
-//       weekday = 0
-//       offset = 7200
+//       date {
+//         m {
+//           month = 11
+//           week = 1
+//           weekday = 0
+//         }
+//       }
+//       time {
+//         offset = 7200
+//       }
 //     }
 //   }
 
@@ -46,17 +58,34 @@
 
 namespace cctz {
 
-// The date/time of the transition. The date is specified as the Nth day
-// of a month (i.e., an 'M'-style rule). For example, "the 2nd Sunday in
-// March" (M3.2.0) is month=3/week=2/weekday=0. A week number of "5" means
-// the last such weekday of the month. The offset identifies the particular
-// moment of the transition, and may be negative or >= 24h, and in which
-// case it would take us to another day, and perhaps week, or even month.
+// The date/time of the transition. The date is specified as either:
+// (J) the Nth day of the year (1 <= N <= 365), excluding leap days, or
+// (N) the Nth day of the year (0 <= N <= 365), including leap days, or
+// (M) the Nth weekday of a month (e.g., the 2nd Sunday in March).
+// The time, specified as a day offset, identifies the particular moment
+// of the transition, and may be negative or >= 24h, and in which case
+// it would take us to another day, and perhaps week, or even month.
 struct PosixTransition {
-  int8_t month;    // month of year [1:12]
-  int8_t week;     // week of month [1:5] (5==last)
-  int8_t weekday;  // 0==Sun, ..., 6=Sat
-  int offset;      // seconds before/after 00:00:00
+  enum DateFormat { J, N, M };
+  struct {
+    DateFormat fmt;
+    union {
+      struct {
+        int16_t day;  // day of non-leap year [1:365]
+      } j;
+      struct {
+        int16_t day;  // day of year [0:365]
+      } n;
+      struct {
+        int8_t month;    // month of year [1:12]
+        int8_t week;     // week of month [1:5] (5==last)
+        int8_t weekday;  // 0==Sun, ..., 6=Sat
+      } m;
+    };
+  } date;
+  struct {
+    int offset;  // seconds before/after 00:00:00
+  } time;
 };
 
 // The entirety of a POSIX-string specified time-zone rule. The standard
