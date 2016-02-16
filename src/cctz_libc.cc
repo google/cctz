@@ -56,11 +56,19 @@ Breakdown TimeZoneLibC::BreakTime(const time_point<seconds64>& tp) const {
   std::time_t t = ToUnixSeconds(tp);
   std::tm tm;
   if (local_) {
+#if defined(_WIN32) || defined(_WIN64)
+    tm = *localtime(&t);
+#else
     localtime_r(&t, &tm);
+#endif
     bd.offset = OFFSET(tm);
     bd.abbr = ABBR(tm);
   } else {
+#if defined(_WIN32) || defined(_WIN64)
+    tm = *gmtime(&t);
+#else
     gmtime_r(&t, &tm);
+#endif
     bd.offset = offset_;
     bd.abbr = abbr_;
   }
