@@ -3,27 +3,29 @@ This is not an official Google product.
 # Overview
 
 CCTZ (C++ Time Zone) is a library for translating between absolute times and
-civil times (see the [Fundamental Concepts](#fundamental-concepts) section below for an explanation of
-these terms) using the rules defined by a time zone.
+civil times (see the [Fundamental Concepts](#fundamental-concepts) section below
+for an explanation of these terms) using the rules defined by a time zone.
 
-This library currently works on **Linux** and **Mac OS X**,
-using the standard IANA time zone data
-installed on the system in `/usr/share/zoneinfo`.
+This library currently works on **Linux** and **Mac OS X**, using the standard
+IANA time zone data installed on the system in `/usr/share/zoneinfo`.
 
 CCTZ is built using http://bazel.io and tested using
 https://github.com/google/googletest
 
 # Getting Started
 
-1. Download/install Bazel http://bazel.io/docs/install.html
-2. Get the cctz source: `git clone https://github.com/google/cctz.git` then `cd cctz`
-3. Build cctz and run the tests: `bazel test ...`
-4. See the CCTZ API, which is defined in the header [cctz.h](https://github.com/google/cctz/blob/master/src/cctz.h)
-5. Look at the examples in https://github.com/google/cctz/tree/master/examples
+1.  Download/install Bazel http://bazel.io/docs/install.html
+2.  Get the cctz source: `git clone https://github.com/google/cctz.git` then `cd
+    cctz`
+3.  Build cctz and run the tests: `bazel test :all`
+4.  See the CCTZ API, which is defined in the header [time_zone.h]
+    (https://github.com/google/cctz/blob/master/src/time_zone.h)
+5.  Look at the examples in https://github.com/google/cctz/tree/master/examples
 
 # Fundamental Concepts
 
-[ See also the [Time Programming Fundamentals](https://youtu.be/2rnIHsqABfM) talk from CppCon 2015 ([slides available here](http://goo.gl/ofof4N)) ]
+[ See also the [Time Programming Fundamentals](https://youtu.be/2rnIHsqABfM)
+talk from CppCon 2015 ([slides available here](http://goo.gl/ofof4N)) ]
 
 There are two ways to represent time: as an *Absolute Time*, and as a *Civil
 Time*. An absolute time uniquely and universally represents a specific instant
@@ -42,10 +44,10 @@ the values shown on the clock hanging on your wall and the Dilbert calendar on
 your desk. Your friend living across the country may, at the same moment, have a
 different civil time showing on their Far Side calendar and clock. For example,
 if you lived in New York on July 20, 1969 you witnessed Neil Armstrong's small
-step at 10:56 in the evening, whereas your friend in San Francisco saw the
-same thing at 7:56, and your pen pal in Sydney saw it while eating lunch at
-12:56 on July 21. You all would agree on the absolute time of the event, but
-you'd disagree about the civil time.
+step at 10:56 in the evening, whereas your friend in San Francisco saw the same
+thing at 7:56, and your pen pal in Sydney saw it while eating lunch at 12:56 on
+July 21. You all would agree on the absolute time of the event, but you'd
+disagree about the civil time.
 
 Time zones are geo-political regions within which rules are shared to convert
 between absolute times and civil times. The geographical nature of time zones is
@@ -59,8 +61,8 @@ complicated, which is why you should always let a time library do time-zone
 calculations for you.
 
 Time zones define the relationship between absolute and civil times. Given an
-absolute or civil time and a time zone, you can compute the other, as shown
-in the example below.
+absolute or civil time and a time zone, you can compute the other, as shown in
+the example below.
 
 ```
 Civil Time = F(Absolute Time, Time Zone)
@@ -76,8 +78,12 @@ relationships will still exist.
 
 # These concepts in CCTZ
 
-* An *absolute* time is represented by any `std::chrono::time_point` defined on the `std::chrono::system_clock`.
-* A *civil* time is represented by a `cctz::Breakdown`, or even separate integers.
-* A *time zone* is represented by a `cctz::TimeZone`.
+*   An *absolute* time is represented by any `std::chrono::time_point` defined
+    on the `std::chrono::system_clock`.
+*   A *civil* time is represented by a `cctz::Breakdown`, or even separate
+    integers.
+*   A *time zone* is represented by a `cctz::TimeZone`.
 
-For more information, see the full API and documentation are described in the header [cctz.h](https://github.com/google/cctz/blob/master/src/cctz.h).
+For more information, see the full API and documentation are described in the
+header [time_zone.h]
+(https://github.com/google/cctz/blob/master/src/time_zone.h).

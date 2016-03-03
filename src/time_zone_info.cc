@@ -1,17 +1,16 @@
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-//     Unless required by applicable law or agreed to in writing, software
-//     distributed under the License is distributed on an "AS IS" BASIS,
-//     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-//     implied.
-//     See the License for the specific language governing permissions and
-//     limitations under the License.
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
 
 // This file implements the TimeZoneIf interface using the "zoneinfo"
 // data provided by the IANA Time Zone Database (i.e., the only real game
@@ -31,7 +30,7 @@
 // Note that we assume the proleptic Gregorian calendar and 60-second
 // minutes throughout.
 
-#include "src/cctz_info.h"
+#include "time_zone_info.h"
 
 #include <algorithm>
 #include <cerrno>
@@ -43,7 +42,7 @@
 #include <iostream>
 #include <limits>
 
-#include "src/cctz_posix.h"
+#include "time_zone_posix.h"
 
 namespace cctz {
 
@@ -58,7 +57,7 @@ char* errmsg(int errnum, char* buf, size_t buflen) {
 #elif defined(__APPLE__)
   strerror_r(errnum, buf, buflen);
   return buf;
-#elif (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! _GNU_SOURCE
+#elif (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE
   strerror_r(errnum, buf, buflen);
   return buf;
 #else
@@ -259,7 +258,7 @@ int64_t TransOffset(bool leap_year, int jan1_weekday,
 inline TimeInfo MakeUnique(int64_t unix_time, bool normalized) {
   TimeInfo ti;
   ti.pre = ti.trans = ti.post = FromUnixSeconds(unix_time);
-  ti.kind = TimeInfo::Kind::UNIQUE;
+  ti.kind = time_zone::civil_lookup::UNIQUE;
   ti.normalized = normalized;
   return ti;
 }
@@ -270,7 +269,7 @@ inline TimeInfo MakeSkipped(const Transition& tr, const DateTime& dt,
   ti.pre = FromUnixSeconds(tr.unix_time - 1 + (dt - tr.prev_date_time));
   ti.trans = FromUnixSeconds(tr.unix_time);
   ti.post = FromUnixSeconds(tr.unix_time - (tr.date_time - dt));
-  ti.kind = TimeInfo::Kind::SKIPPED;
+  ti.kind = time_zone::civil_lookup::SKIPPED;
   ti.normalized = normalized;
   return ti;
 }
@@ -281,7 +280,7 @@ inline TimeInfo MakeRepeated(const Transition& tr, const DateTime& dt,
   ti.pre = FromUnixSeconds(tr.unix_time - 1 - (tr.prev_date_time - dt));
   ti.trans = FromUnixSeconds(tr.unix_time);
   ti.post = FromUnixSeconds(tr.unix_time + (dt - tr.date_time));
-  ti.kind = TimeInfo::Kind::REPEATED;
+  ti.kind = time_zone::civil_lookup::REPEATED;
   ti.normalized = normalized;
   return ti;
 }
@@ -379,7 +378,7 @@ void TimeZoneInfo::ResetToBuiltinUTC(int seconds) {
   transitions_[0].prev_date_time = transitions_[0].date_time;
   transitions_[0].prev_date_time.offset -= 1;
   default_transition_type_ = 0;
-  abbreviations_ = "UTC";  // TODO: handle non-zero offset
+  abbreviations_ = "UTC";  // TODO: Handle non-zero offset.
   abbreviations_.append(1, '\0');  // add NUL
   future_spec_.clear();  // never needed for a fixed-offset zone
   extended_ = false;
@@ -782,7 +781,7 @@ TimeInfo TimeZoneInfo::TimeLocal(int64_t year, int mon, int day, int hour,
   return ti;
 }
 
-Breakdown TimeZoneInfo::BreakTime(const time_point<seconds64>& tp) const {
+Breakdown TimeZoneInfo::BreakTime(const time_point<sys_seconds>& tp) const {
   int64_t unix_time = ToUnixSeconds(tp);
   const int32_t timecnt = transitions_.size();
   if (timecnt == 0 || unix_time < transitions_[0].unix_time) {
@@ -796,7 +795,7 @@ Breakdown TimeZoneInfo::BreakTime(const time_point<seconds64>& tp) const {
     if (extended_) {
       const int64_t diff = unix_time - transitions_[timecnt - 1].unix_time;
       const int64_t shift = diff / kSecPer400Years + 1;
-      const auto d = seconds64(shift * kSecPer400Years);
+      const auto d = sys_seconds(shift * kSecPer400Years);
       Breakdown bd = BreakTime(tp - d);
       bd.year += shift * 400;
       return bd;
