@@ -32,10 +32,13 @@ cc_library(
         "src/tzfile.h",
     ],
     hdrs = [
-        "src/civil_time.h",
-        "src/time_zone.h",
+        "include/civil_time.h",
+        "include/time_zone.h",
     ],
-    includes = ["src"],
+    includes = [
+        "include",
+        "src",
+    ],
     linkopts = [
         "-lm",
         "-lpthread",
