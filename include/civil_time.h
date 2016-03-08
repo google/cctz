@@ -19,13 +19,9 @@
 #ifndef CCTZ_CIVIL_TIME_H_
 #define CCTZ_CIVIL_TIME_H_
 
-#include <limits>
+#include "civil_time_detail.h"
 
 namespace cctz {
-
-namespace detail {
-#include "civil_time_detail.h"
-}  // namespace detail
 
 // The types civil_year, civil_month, civil_day, civil_hour, civil_minute,
 // and civil_second each implement the concept of a "civil time" that

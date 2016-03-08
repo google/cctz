@@ -12,6 +12,11 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
+#include <limits>
+
+namespace cctz {
+namespace detail {
+
 // Normalized civil-time fields: Y-M-D HH:MM:SS.
 struct fields {
   int y;
@@ -460,3 +465,6 @@ constexpr civil_day prev_weekday(const civil_day& cd, weekday wd) {
 constexpr int get_yearday(const civil_day& cd) {
   return cd - civil_day(cd.year(), 1, 0);
 }
+
+}  // namespace detail
+}  // namespace cctz
