@@ -625,30 +625,19 @@ time_zone LoadZone(const std::string& name) {
 
 // This helper is a macro so that failed expectations show up with the
 // correct line numbers.
-#define ExpectTime(bd, y, m, d, hh, mm, ss, off, isdst, zone) \
-  do {                                                        \
-    EXPECT_EQ(y, bd.cs.year());                               \
-    EXPECT_EQ(m, bd.cs.month());                              \
-    EXPECT_EQ(d, bd.cs.day());                                \
-    EXPECT_EQ(hh, bd.cs.hour());                              \
-    EXPECT_EQ(mm, bd.cs.minute());                            \
-    EXPECT_EQ(ss, bd.cs.second());                            \
-    EXPECT_EQ(off, bd.offset);                                \
-    EXPECT_EQ(isdst, bd.is_dst);                              \
-    EXPECT_EQ(zone, bd.abbr);                                 \
+#define ExpectTime(tp, tz, y, m, d, hh, mm, ss, off, isdst, zone) \
+  do {                                                            \
+    time_zone::absolute_lookup al = tz.lookup(tp);                \
+    EXPECT_EQ(y, al.cs.year());                                   \
+    EXPECT_EQ(m, al.cs.month());                                  \
+    EXPECT_EQ(d, al.cs.day());                                    \
+    EXPECT_EQ(hh, al.cs.hour());                                  \
+    EXPECT_EQ(mm, al.cs.minute());                                \
+    EXPECT_EQ(ss, al.cs.second());                                \
+    EXPECT_EQ(off, al.offset);                                    \
+    EXPECT_EQ(isdst, al.is_dst);                                  \
+    EXPECT_EQ(zone, al.abbr);                                     \
   } while (0)
-
-// Helpers for converting a YMDhms to a time_point.
-time_zone::civil_lookup MakeTimeInfo(int y, int m, int d,
-                                     int hh, int mm, int ss,
-                                     const time_zone& tz) {
-  return tz.lookup(civil_second(y, m, d, hh, mm, ss));
-}
-time_point<sys_seconds> MakeTime(int y, int m, int d,
-                                 int hh, int mm, int ss,
-                                 const time_zone& tz) {
-  return MakeTimeInfo(y, m, d, hh, mm, ss, tz).pre;
-}
 
 }  // namespace
 
@@ -685,19 +674,19 @@ TEST(TimeZone, Failures) {
   tz = LoadZone("America/Los_Angeles");
   EXPECT_FALSE(load_time_zone("Invalid/TimeZone", &tz));
   EXPECT_EQ(system_clock::from_time_t(0),
-            MakeTime(1970, 1, 1, 0, 0, 0, tz));  // UTC
+            convert(civil_second(1970, 1, 1, 0, 0, 0), tz));  // UTC
 
   // Ensures that the load still fails on a subsequent attempt.
   tz = LoadZone("America/Los_Angeles");
   EXPECT_FALSE(load_time_zone("Invalid/TimeZone", &tz));
   EXPECT_EQ(system_clock::from_time_t(0),
-            MakeTime(1970, 1, 1, 0, 0, 0, tz));  // UTC
+            convert(civil_second(1970, 1, 1, 0, 0, 0), tz));  // UTC
 
   // Loading an empty string timezone should fail.
   tz = LoadZone("America/Los_Angeles");
   EXPECT_FALSE(load_time_zone("", &tz));
   EXPECT_EQ(system_clock::from_time_t(0),
-            MakeTime(1970, 1, 1, 0, 0, 0, tz));  // UTC
+            convert(civil_second(1970, 1, 1, 0, 0, 0), tz));  // UTC
 }
 
 TEST(StdChronoTimePoint, TimeTAlignment) {
@@ -712,163 +701,153 @@ TEST(BreakTime, TimePointResolution) {
   using std::chrono::time_point_cast;
   const time_zone utc = utc_time_zone();
   const auto t0 = system_clock::from_time_t(0);
-  time_zone::absolute_lookup bd{};
 
-  bd = utc.lookup(time_point_cast<std::chrono::nanoseconds>(t0));
-  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
-  bd = utc.lookup(time_point_cast<std::chrono::microseconds>(t0));
-  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
-  bd = utc.lookup(time_point_cast<std::chrono::milliseconds>(t0));
-  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
-  bd = utc.lookup(time_point_cast<std::chrono::seconds>(t0));
-  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
-  bd = utc.lookup(time_point_cast<sys_seconds>(t0));
-  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
-  bd = utc.lookup(time_point_cast<std::chrono::minutes>(t0));
-  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
-  bd = utc.lookup(time_point_cast<std::chrono::hours>(t0));
-  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  ExpectTime(time_point_cast<std::chrono::nanoseconds>(t0), utc,
+             1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  ExpectTime(time_point_cast<std::chrono::microseconds>(t0), utc,
+             1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  ExpectTime(time_point_cast<std::chrono::milliseconds>(t0), utc,
+             1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  ExpectTime(time_point_cast<std::chrono::seconds>(t0), utc,
+             1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  ExpectTime(time_point_cast<sys_seconds>(t0), utc,
+             1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  ExpectTime(time_point_cast<std::chrono::minutes>(t0), utc,
+             1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  ExpectTime(time_point_cast<std::chrono::hours>(t0), utc,
+             1970, 1, 1, 0, 0, 0, 0, false, "UTC");
 }
 
 TEST(BreakTime, LocalTimeInUTC) {
-  const time_zone::absolute_lookup bd =
-      utc_time_zone().lookup(system_clock::from_time_t(0));
-  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
-  EXPECT_EQ(weekday::thursday, get_weekday(civil_day(bd.cs)));
+  const auto tp = system_clock::from_time_t(0);
+  const time_zone::absolute_lookup al = utc_time_zone().lookup(tp);
+  ExpectTime(tp, utc_time_zone(), 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  EXPECT_EQ(weekday::thursday,
+            get_weekday(civil_day(convert(tp, utc_time_zone()))));
 }
 
 TEST(BreakTime, LocalTimePosix) {
   // See IEEE Std 1003.1-1988 B.2.3 General Terms, Epoch.
-  const time_zone::absolute_lookup bd =
-      utc_time_zone().lookup(system_clock::from_time_t(536457599));
-  ExpectTime(bd, 1986, 12, 31, 23, 59, 59, 0, false, "UTC");
-  EXPECT_EQ(weekday::wednesday, get_weekday(civil_day(bd.cs)));
+  const auto tp = system_clock::from_time_t(536457599);
+  const time_zone::absolute_lookup al = utc_time_zone().lookup(tp);
+  ExpectTime(tp, utc_time_zone(), 1986, 12, 31, 23, 59, 59, 0, false, "UTC");
+  EXPECT_EQ(weekday::wednesday,
+            get_weekday(civil_day(convert(tp, utc_time_zone()))));
 }
 
 TEST(BreakTime, LocalTimeInNewYork) {
   const time_zone tz = LoadZone("America/New_York");
-  const time_zone::absolute_lookup bd =
-      tz.lookup(system_clock::from_time_t(45));
-  ExpectTime(bd, 1969, 12, 31, 19, 0, 45, -5 * 60 * 60, false, "EST");
-  EXPECT_EQ(weekday::wednesday, get_weekday(civil_day(bd.cs)));
+  const auto tp = system_clock::from_time_t(45);
+  ExpectTime(tp, tz, 1969, 12, 31, 19, 0, 45, -5 * 60 * 60, false, "EST");
+  EXPECT_EQ(weekday::wednesday, get_weekday(civil_day(convert(tp, tz))));
 }
 
 TEST(BreakTime, LocalTimeInMTV) {
   const time_zone tz = LoadZone("America/Los_Angeles");
-  const time_zone::absolute_lookup bd =
-      tz.lookup(system_clock::from_time_t(1380855729));
-  ExpectTime(bd, 2013, 10, 3, 20, 2, 9, -7 * 60 * 60, true, "PDT");
-  EXPECT_EQ(weekday::thursday, get_weekday(civil_day(bd.cs)));
+  const auto tp = system_clock::from_time_t(1380855729);
+  ExpectTime(tp, tz, 2013, 10, 3, 20, 2, 9, -7 * 60 * 60, true, "PDT");
+  EXPECT_EQ(weekday::thursday, get_weekday(civil_day(convert(tp, tz))));
 }
 
 TEST(BreakTime, LocalTimeInSydney) {
   const time_zone tz = LoadZone("Australia/Sydney");
-  const time_zone::absolute_lookup bd =
-      tz.lookup(system_clock::from_time_t(90));
-  ExpectTime(bd, 1970, 1, 1, 10, 1, 30, 10 * 60 * 60, false, "AEST");
-  EXPECT_EQ(weekday::thursday, get_weekday(civil_day(bd.cs)));
+  const auto tp = system_clock::from_time_t(90);
+  const time_zone::absolute_lookup al = tz.lookup(tp);
+  ExpectTime(tp, tz, 1970, 1, 1, 10, 1, 30, 10 * 60 * 60, false, "AEST");
+  EXPECT_EQ(weekday::thursday, get_weekday(civil_day(convert(tp, tz))));
 }
 
 TEST(MakeTime, TimePointResolution) {
   const time_zone utc = utc_time_zone();
   const time_point<std::chrono::nanoseconds> tp_ns =
-      MakeTime(2015, 1, 2, 3, 4, 5, utc);
+      convert(civil_second(2015, 1, 2, 3, 4, 5), utc);
   EXPECT_EQ("04:05", format("%M:%E*S", tp_ns, utc));
   const time_point<std::chrono::microseconds> tp_us =
-      MakeTime(2015, 1, 2, 3, 4, 5, utc);
+      convert(civil_second(2015, 1, 2, 3, 4, 5), utc);
   EXPECT_EQ("04:05", format("%M:%E*S", tp_us, utc));
   const time_point<std::chrono::milliseconds> tp_ms =
-      MakeTime(2015, 1, 2, 3, 4, 5, utc);
+      convert(civil_second(2015, 1, 2, 3, 4, 5), utc);
   EXPECT_EQ("04:05", format("%M:%E*S", tp_ms, utc));
   const time_point<std::chrono::seconds> tp_s =
-      MakeTime(2015, 1, 2, 3, 4, 5, utc);
+      convert(civil_second(2015, 1, 2, 3, 4, 5), utc);
   EXPECT_EQ("04:05", format("%M:%E*S", tp_s, utc));
-  const time_point<sys_seconds> tp_s64 = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  const time_point<sys_seconds> tp_s64 =
+      convert(civil_second(2015, 1, 2, 3, 4, 5), utc);
   EXPECT_EQ("04:05", format("%M:%E*S", tp_s64, utc));
 
   // These next two require time_point_cast because the conversion from a
-  // resolution of seconds (the return value of MakeTime()) to a coarser
+  // resolution of seconds (the return value of convert()) to a coarser
   // resolution requires an explicit cast.
   using std::chrono::time_point_cast;
   const time_point<std::chrono::minutes> tp_m =
-      time_point_cast<std::chrono::minutes>(MakeTime(2015, 1, 2, 3, 4, 5, utc));
+      time_point_cast<std::chrono::minutes>(
+          convert(civil_second(2015, 1, 2, 3, 4, 5), utc));
   EXPECT_EQ("04:00", format("%M:%E*S", tp_m, utc));
   const time_point<std::chrono::hours> tp_h =
-      time_point_cast<std::chrono::hours>(MakeTime(2015, 1, 2, 3, 4, 5, utc));
+      time_point_cast<std::chrono::hours>(
+          convert(civil_second(2015, 1, 2, 3, 4, 5), utc));
   EXPECT_EQ("00:00", format("%M:%E*S", tp_h, utc));
 }
 
 TEST(MakeTime, Normalization) {
   const time_zone tz = LoadZone("America/New_York");
-  const auto tp = MakeTime(2009, 2, 13, 18, 31, 30, tz);
+  const auto tp = convert(civil_second(2009, 2, 13, 18, 31, 30), tz);
   EXPECT_EQ(system_clock::from_time_t(1234567890), tp);
 
   // Now requests for the same time_point but with out-of-range fields.
-  EXPECT_EQ(tp, MakeTime(2008, 14, 13, 18, 31, 30, tz));  // month
-  EXPECT_EQ(tp, MakeTime(2009, 1, 44, 18, 31, 30, tz));   // day
-  EXPECT_EQ(tp, MakeTime(2009, 2, 12, 42, 31, 30, tz));   // hour
-  EXPECT_EQ(tp, MakeTime(2009, 2, 13, 17, 91, 30, tz));   // minute
-  EXPECT_EQ(tp, MakeTime(2009, 2, 13, 18, 30, 90, tz));   // second
+  EXPECT_EQ(tp, convert(civil_second(2008, 14, 13, 18, 31, 30), tz));  // month
+  EXPECT_EQ(tp, convert(civil_second(2009, 1, 44, 18, 31, 30), tz));   // day
+  EXPECT_EQ(tp, convert(civil_second(2009, 2, 12, 42, 31, 30), tz));   // hour
+  EXPECT_EQ(tp, convert(civil_second(2009, 2, 13, 17, 91, 30), tz));   // minute
+  EXPECT_EQ(tp, convert(civil_second(2009, 2, 13, 18, 30, 90), tz));   // second
 }
 
 TEST(TimeZoneEdgeCase, AmericaNewYork) {
   const time_zone tz = LoadZone("America/New_York");
 
   // Spring 1:59:59 -> 3:00:00
-  auto tp = MakeTime(2013, 3, 10, 1, 59, 59, tz);
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 3, 10, 1, 59, 59, -5 * 3600, false, "EST");
+  auto tp = convert(civil_second(2013, 3, 10, 1, 59, 59), tz);
+  ExpectTime(tp, tz, 2013, 3, 10, 1, 59, 59, -5 * 3600, false, "EST");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 3, 10, 3, 0, 0, -4 * 3600, true, "EDT");
+  ExpectTime(tp, tz, 2013, 3, 10, 3, 0, 0, -4 * 3600, true, "EDT");
 
   // Fall 1:59:59 -> 1:00:00
-  tp = MakeTime(2013, 11, 3, 1, 59, 59, tz);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 11, 3, 1, 59, 59, -4 * 3600, true, "EDT");
+  tp = convert(civil_second(2013, 11, 3, 1, 59, 59), tz);
+  ExpectTime(tp, tz, 2013, 11, 3, 1, 59, 59, -4 * 3600, true, "EDT");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 11, 3, 1, 0, 0, -5 * 3600, false, "EST");
+  ExpectTime(tp, tz, 2013, 11, 3, 1, 0, 0, -5 * 3600, false, "EST");
 }
 
 TEST(TimeZoneEdgeCase, AmericaLosAngeles) {
   const time_zone tz = LoadZone("America/Los_Angeles");
 
   // Spring 1:59:59 -> 3:00:00
-  auto tp = MakeTime(2013, 3, 10, 1, 59, 59, tz);
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 3, 10, 1, 59, 59, -8 * 3600, false, "PST");
+  auto tp = convert(civil_second(2013, 3, 10, 1, 59, 59), tz);
+  ExpectTime(tp, tz, 2013, 3, 10, 1, 59, 59, -8 * 3600, false, "PST");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 3, 10, 3, 0, 0, -7 * 3600, true, "PDT");
+  ExpectTime(tp, tz, 2013, 3, 10, 3, 0, 0, -7 * 3600, true, "PDT");
 
   // Fall 1:59:59 -> 1:00:00
-  tp = MakeTime(2013, 11, 3, 1, 59, 59, tz);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 11, 3, 1, 59, 59, -7 * 3600, true, "PDT");
+  tp = convert(civil_second(2013, 11, 3, 1, 59, 59), tz);
+  ExpectTime(tp, tz, 2013, 11, 3, 1, 59, 59, -7 * 3600, true, "PDT");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 11, 3, 1, 0, 0, -8 * 3600, false, "PST");
+  ExpectTime(tp, tz, 2013, 11, 3, 1, 0, 0, -8 * 3600, false, "PST");
 }
 
 TEST(TimeZoneEdgeCase, ArizonaNoTransition) {
   const time_zone tz = LoadZone("America/Phoenix");
 
   // No transition in Spring.
-  auto tp = MakeTime(2013, 3, 10, 1, 59, 59, tz);
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 3, 10, 1, 59, 59, -7 * 3600, false, "MST");
+  auto tp = convert(civil_second(2013, 3, 10, 1, 59, 59), tz);
+  ExpectTime(tp, tz, 2013, 3, 10, 1, 59, 59, -7 * 3600, false, "MST");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 3, 10, 2, 0, 0, -7 * 3600, false, "MST");
+  ExpectTime(tp, tz, 2013, 3, 10, 2, 0, 0, -7 * 3600, false, "MST");
 
   // No transition in Fall.
-  tp = MakeTime(2013, 11, 3, 1, 59, 59, tz);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 11, 3, 1, 59, 59, -7 * 3600, false, "MST");
+  tp = convert(civil_second(2013, 11, 3, 1, 59, 59), tz);
+  ExpectTime(tp, tz, 2013, 11, 3, 1, 59, 59, -7 * 3600, false, "MST");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 11, 3, 2, 0, 0, -7 * 3600, false, "MST");
+  ExpectTime(tp, tz, 2013, 11, 3, 2, 0, 0, -7 * 3600, false, "MST");
 }
 
 TEST(TimeZoneEdgeCase, AsiaKathmandu) {
@@ -878,12 +857,10 @@ TEST(TimeZoneEdgeCase, AsiaKathmandu) {
   //
   //   504901799 == Tue, 31 Dec 1985 23:59:59 +0530 (IST)
   //   504901800 == Wed,  1 Jan 1986 00:15:00 +0545 (NPT)
-  auto tp = MakeTime(1985, 12, 31, 23, 59, 59, tz);
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 1985, 12, 31, 23, 59, 59, 5.5 * 3600, false, "IST");
+  auto tp = convert(civil_second(1985, 12, 31, 23, 59, 59), tz);
+  ExpectTime(tp, tz, 1985, 12, 31, 23, 59, 59, 5.5 * 3600, false, "IST");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 1986, 1, 1, 0, 15, 0, 5.75 * 3600, false, "NPT");
+  ExpectTime(tp, tz, 1986, 1, 1, 0, 15, 0, 5.75 * 3600, false, "NPT");
 }
 
 TEST(TimeZoneEdgeCase, PacificChatham) {
@@ -893,21 +870,18 @@ TEST(TimeZoneEdgeCase, PacificChatham) {
   //
   //   1365256799 == Sun,  7 Apr 2013 03:44:59 +1345 (CHADT)
   //   1365256800 == Sun,  7 Apr 2013 02:45:00 +1245 (CHAST)
-  auto tp = MakeTime(2013, 4, 7, 3, 44, 59, tz);
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 4, 7, 3, 44, 59, 13.75 * 3600, true, "CHADT");
+  auto tp = convert(civil_second(2013, 4, 7, 3, 44, 59), tz);
+  ExpectTime(tp, tz, 2013, 4, 7, 3, 44, 59, 13.75 * 3600, true, "CHADT");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 4, 7, 2, 45, 0, 12.75 * 3600, false, "CHAST");
+  ExpectTime(tp, tz, 2013, 4, 7, 2, 45, 0, 12.75 * 3600, false, "CHAST");
 
   //   1380376799 == Sun, 29 Sep 2013 02:44:59 +1245 (CHAST)
   //   1380376800 == Sun, 29 Sep 2013 03:45:00 +1345 (CHADT)
-  tp = MakeTime(2013, 9, 29, 2, 44, 59, tz);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 9, 29, 2, 44, 59, 12.75 * 3600, false, "CHAST");
+  tp = convert(civil_second(2013, 9, 29, 2, 44, 59), tz);
+  ExpectTime(tp, tz, 2013, 9, 29, 2, 44, 59, 12.75 * 3600, false,
+             "CHAST");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 9, 29, 3, 45, 0, 13.75 * 3600, true, "CHADT");
+  ExpectTime(tp, tz, 2013, 9, 29, 3, 45, 0, 13.75 * 3600, true, "CHADT");
 }
 
 TEST(TimeZoneEdgeCase, AustraliaLordHowe) {
@@ -917,21 +891,17 @@ TEST(TimeZoneEdgeCase, AustraliaLordHowe) {
   //
   //   1365260399 == Sun,  7 Apr 2013 01:59:59 +1100 (LHDT)
   //   1365260400 == Sun,  7 Apr 2013 01:30:00 +1030 (LHST)
-  auto tp = MakeTime(2013, 4, 7, 1, 59, 59, tz);
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 4, 7, 1, 59, 59, 11 * 3600, true, "LHDT");
+  auto tp = convert(civil_second(2013, 4, 7, 1, 59, 59), tz);
+  ExpectTime(tp, tz, 2013, 4, 7, 1, 59, 59, 11 * 3600, true, "LHDT");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 4, 7, 1, 30, 0, 10.5 * 3600, false, "LHST");
+  ExpectTime(tp, tz, 2013, 4, 7, 1, 30, 0, 10.5 * 3600, false, "LHST");
 
   //   1380986999 == Sun,  6 Oct 2013 01:59:59 +1030 (LHST)
   //   1380987000 == Sun,  6 Oct 2013 02:30:00 +1100 (LHDT)
-  tp = MakeTime(2013, 10, 6, 1, 59, 59, tz);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 10, 6, 1, 59, 59, 10.5 * 3600, false, "LHST");
+  tp = convert(civil_second(2013, 10, 6, 1, 59, 59), tz);
+  ExpectTime(tp, tz, 2013, 10, 6, 1, 59, 59, 10.5 * 3600, false, "LHST");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 10, 6, 2, 30, 0, 11 * 3600, true, "LHDT");
+  ExpectTime(tp, tz, 2013, 10, 6, 2, 30, 0, 11 * 3600, true, "LHDT");
 }
 
 TEST(TimeZoneEdgeCase, PacificApia) {
@@ -945,14 +915,12 @@ TEST(TimeZoneEdgeCase, PacificApia) {
   //
   //   1325239199 == Thu, 29 Dec 2011 23:59:59 -1000 (SDT)
   //   1325239200 == Sat, 31 Dec 2011 00:00:00 +1400 (WSDT)
-  auto tp = MakeTime(2011, 12, 29, 23, 59, 59, tz);
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 2011, 12, 29, 23, 59, 59, -10 * 3600, true, "SDT");
-  EXPECT_EQ(363, get_yearday(civil_day(bd.cs)));
+  auto tp = convert(civil_second(2011, 12, 29, 23, 59, 59), tz);
+  ExpectTime(tp, tz, 2011, 12, 29, 23, 59, 59, -10 * 3600, true, "SDT");
+  EXPECT_EQ(363, get_yearday(civil_day(convert(tp, tz))));
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2011, 12, 31, 0, 0, 0, 14 * 3600, true, "WSDT");
-  EXPECT_EQ(365, get_yearday(civil_day(bd.cs)));
+  ExpectTime(tp, tz, 2011, 12, 31, 0, 0, 0, 14 * 3600, true, "WSDT");
+  EXPECT_EQ(365, get_yearday(civil_day(convert(tp, tz))));
 }
 
 TEST(TimeZoneEdgeCase, AfricaCairo) {
@@ -962,12 +930,10 @@ TEST(TimeZoneEdgeCase, AfricaCairo) {
   //
   //   1400191199 == Thu, 15 May 2014 23:59:59 +0200 (EET)
   //   1400191200 == Fri, 16 May 2014 01:00:00 +0300 (EEST)
-  auto tp = MakeTime(2014, 5, 15, 23, 59, 59, tz);
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 2014, 5, 15, 23, 59, 59, 2 * 3600, false, "EET");
+  auto tp = convert(civil_second(2014, 5, 15, 23, 59, 59), tz);
+  ExpectTime(tp, tz, 2014, 5, 15, 23, 59, 59, 2 * 3600, false, "EET");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2014, 5, 16, 1, 0, 0, 3 * 3600, true, "EEST");
+  ExpectTime(tp, tz, 2014, 5, 16, 1, 0, 0, 3 * 3600, true, "EEST");
 }
 
 TEST(TimeZoneEdgeCase, AfricaMonrovia) {
@@ -977,12 +943,10 @@ TEST(TimeZoneEdgeCase, AfricaMonrovia) {
   //
   //   73529069 == Sun, 30 Apr 1972 23:59:59 -0044 (LRT)
   //   73529070 == Mon,  1 May 1972 00:44:30 +0000 (GMT)
-  auto tp = MakeTime(1972, 4, 30, 23, 59, 59, tz);
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 1972, 4, 30, 23, 59, 59, -44.5 * 60, false, "LRT");
+  auto tp = convert(civil_second(1972, 4, 30, 23, 59, 59), tz);
+  ExpectTime(tp, tz, 1972, 4, 30, 23, 59, 59, -44.5 * 60, false, "LRT");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 1972, 5, 1, 0, 44, 30, 0 * 60, false, "GMT");
+  ExpectTime(tp, tz, 1972, 5, 1, 0, 44, 30, 0 * 60, false, "GMT");
 }
 
 TEST(TimeZoneEdgeCase, AmericaJamaica) {
@@ -994,34 +958,28 @@ TEST(TimeZoneEdgeCase, AmericaJamaica) {
   const time_zone tz = LoadZone("America/Jamaica");
 
   // Before the first transition.
-  auto tp = MakeTime(1889, 12, 31, 0, 0, 0, tz);
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 1889, 12, 31, 0, 0, 0, -18431, false, bd.abbr);
+  auto tp = convert(civil_second(1889, 12, 31, 0, 0, 0), tz);
+  ExpectTime(tp, tz, 1889, 12, 31, 0, 0, 0, -18431, false, "LMT");
 
   // Over the first (abbreviation-change only) transition.
   //   -2524503170 == Tue, 31 Dec 1889 23:59:59 -0507 (LMT)
   //   -2524503169 == Wed,  1 Jan 1890 00:00:00 -0507 (KMT)
-  tp = MakeTime(1889, 12, 31, 23, 59, 59, tz);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 1889, 12, 31, 23, 59, 59, -18431, false, bd.abbr);
+  tp = convert(civil_second(1889, 12, 31, 23, 59, 59), tz);
+  ExpectTime(tp, tz, 1889, 12, 31, 23, 59, 59, -18431, false, "LMT");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 1890, 1, 1, 0, 0, 0, -18431, false, "KMT");
+  ExpectTime(tp, tz, 1890, 1, 1, 0, 0, 0, -18431, false, "KMT");
 
   // Over the last (DST) transition.
   //     436341599 == Sun, 30 Oct 1983 01:59:59 -0400 (EDT)
   //     436341600 == Sun, 30 Oct 1983 01:00:00 -0500 (EST)
-  tp = MakeTime(1983, 10, 30, 1, 59, 59, tz);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 1983, 10, 30, 1, 59, 59, -4 * 3600, true, "EDT");
+  tp = convert(civil_second(1983, 10, 30, 1, 59, 59), tz);
+  ExpectTime(tp, tz, 1983, 10, 30, 1, 59, 59, -4 * 3600, true, "EDT");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 1983, 10, 30, 1, 0, 0, -5 * 3600, false, "EST");
+  ExpectTime(tp, tz, 1983, 10, 30, 1, 0, 0, -5 * 3600, false, "EST");
 
   // After the last transition.
-  tp = MakeTime(1983, 12, 31, 23, 59, 59, tz);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 1983, 12, 31, 23, 59, 59, -5 * 3600, false, "EST");
+  tp = convert(civil_second(1983, 12, 31, 23, 59, 59), tz);
+  ExpectTime(tp, tz, 1983, 12, 31, 23, 59, 59, -5 * 3600, false, "EST");
 }
 
 TEST(TimeZoneEdgeCase, WET) {
@@ -1029,66 +987,54 @@ TEST(TimeZoneEdgeCase, WET) {
   const time_zone tz = LoadZone("WET");
 
   // Before the first transition.
-  auto tp = MakeTime(1977, 1, 1, 0, 0, 0, tz);
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 1977, 1, 1, 0, 0, 0, 0, false, "WET");
+  auto tp = convert(civil_second(1977, 1, 1, 0, 0, 0), tz);
+  ExpectTime(tp, tz, 1977, 1, 1, 0, 0, 0, 0, false, "WET");
 
   // Over the first transition.
   //     228877199 == Sun,  3 Apr 1977 00:59:59 +0000 (WET)
   //     228877200 == Sun,  3 Apr 1977 02:00:00 +0100 (WEST)
-  tp = MakeTime(1977, 4, 3, 0, 59, 59, tz);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 1977, 4, 3, 0, 59, 59, 0, false, "WET");
+  tp = convert(civil_second(1977, 4, 3, 0, 59, 59), tz);
+  ExpectTime(tp, tz, 1977, 4, 3, 0, 59, 59, 0, false, "WET");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 1977, 4, 3, 2, 0, 0, 1 * 3600, true, "WEST");
+  ExpectTime(tp, tz, 1977, 4, 3, 2, 0, 0, 1 * 3600, true, "WEST");
 
   // A non-existent time within the first transition.
-  time_zone::civil_lookup ti1 = MakeTimeInfo(1977, 4, 3, 1, 15, 0, tz);
-  EXPECT_EQ(time_zone::civil_lookup::SKIPPED, ti1.kind);
-  bd = tz.lookup(ti1.pre);
-  ExpectTime(bd, 1977, 4, 3, 2, 15, 0, 1 * 3600, true, "WEST");
-  bd = tz.lookup(ti1.trans);
-  ExpectTime(bd, 1977, 4, 3, 2, 0, 0, 1 * 3600, true, "WEST");
-  bd = tz.lookup(ti1.post);
-  ExpectTime(bd, 1977, 4, 3, 0, 15, 0, 0 * 3600, false, "WET");
+  time_zone::civil_lookup cl1 = tz.lookup(civil_second(1977, 4, 3, 1, 15, 0));
+  EXPECT_EQ(time_zone::civil_lookup::SKIPPED, cl1.kind);
+  ExpectTime(cl1.pre, tz, 1977, 4, 3, 2, 15, 0, 1 * 3600, true, "WEST");
+  ExpectTime(cl1.trans, tz, 1977, 4, 3, 2, 0, 0, 1 * 3600, true, "WEST");
+  ExpectTime(cl1.post, tz, 1977, 4, 3, 0, 15, 0, 0 * 3600, false, "WET");
 
   // A non-existent time within the second forward transition.
-  time_zone::civil_lookup ti2 = MakeTimeInfo(1978, 4, 2, 1, 15, 0, tz);
-  EXPECT_EQ(time_zone::civil_lookup::SKIPPED, ti2.kind);
-  bd = tz.lookup(ti2.pre);
-  ExpectTime(bd, 1978, 4, 2, 2, 15, 0, 1 * 3600, true, "WEST");
-  bd = tz.lookup(ti2.trans);
-  ExpectTime(bd, 1978, 4, 2, 2, 0, 0, 1 * 3600, true, "WEST");
-  bd = tz.lookup(ti2.post);
-  ExpectTime(bd, 1978, 4, 2, 0, 15, 0, 0 * 3600, false, "WET");
+  time_zone::civil_lookup cl2 = tz.lookup(civil_second(1978, 4, 2, 1, 15, 0));
+  EXPECT_EQ(time_zone::civil_lookup::SKIPPED, cl2.kind);
+  ExpectTime(cl2.pre, tz, 1978, 4, 2, 2, 15, 0, 1 * 3600, true, "WEST");
+  ExpectTime(cl2.trans, tz, 1978, 4, 2, 2, 0, 0, 1 * 3600, true, "WEST");
+  ExpectTime(cl2.post, tz, 1978, 4, 2, 0, 15, 0, 0 * 3600, false, "WET");
 }
 
 TEST(TimeZoneEdgeCase, FixedOffsets) {
   const time_zone gmtm5 = LoadZone("Etc/GMT+5");  // -0500
-  auto tp = MakeTime(1970, 1, 1, 0, 0, 0, gmtm5);
-  time_zone::absolute_lookup bd = gmtm5.lookup(tp);
-  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, -5 * 3600, false, "GMT+5");
+  auto tp = convert(civil_second(1970, 1, 1, 0, 0, 0), gmtm5);
+  ExpectTime(tp, gmtm5, 1970, 1, 1, 0, 0, 0, -5 * 3600, false, "GMT+5");
   EXPECT_EQ(system_clock::from_time_t(5 * 3600), tp);
 
   const time_zone gmtp5 = LoadZone("Etc/GMT-5");  // +0500
-  tp = MakeTime(1970, 1, 1, 0, 0, 0, gmtp5);
-  bd = gmtp5.lookup(tp);
-  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 5 * 3600, false, "GMT-5");
+  tp = convert(civil_second(1970, 1, 1, 0, 0, 0), gmtp5);
+  ExpectTime(tp, gmtp5, 1970, 1, 1, 0, 0, 0, 5 * 3600, false, "GMT-5");
   EXPECT_EQ(system_clock::from_time_t(-5 * 3600), tp);
 }
 
 TEST(TimeZoneEdgeCase, NegativeYear) {
   // Tests transition from year 0 (aka 1BCE) to year -1.
   const time_zone tz = utc_time_zone();
-  auto tp = MakeTime(0, 1, 1, 0, 0, 0, tz);
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 0, 1, 1, 0, 0, 0, 0 * 3600, false, "UTC");
-  EXPECT_EQ(weekday::saturday, get_weekday(civil_day(bd.cs)));
+  auto tp = convert(civil_second(0, 1, 1, 0, 0, 0), tz);
+  time_zone::absolute_lookup al = tz.lookup(tp);
+  ExpectTime(tp, tz, 0, 1, 1, 0, 0, 0, 0 * 3600, false, "UTC");
+  EXPECT_EQ(weekday::saturday, get_weekday(civil_day(convert(tp, tz))));
   tp -= std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, -1, 12, 31, 23, 59, 59, 0 * 3600, false, "UTC");
-  EXPECT_EQ(weekday::friday, get_weekday(civil_day(bd.cs)));
+  ExpectTime(tp, tz, -1, 12, 31, 23, 59, 59, 0 * 3600, false, "UTC");
+  EXPECT_EQ(weekday::friday, get_weekday(civil_day(convert(tp, tz))));
 }
 
 TEST(TimeZoneEdgeCase, UTC32bitLimit) {
@@ -1098,12 +1044,10 @@ TEST(TimeZoneEdgeCase, UTC32bitLimit) {
   //
   //   2147483647 == Tue, 19 Jan 2038 03:14:07 +0000 (UTC)
   //   2147483648 == Tue, 19 Jan 2038 03:14:08 +0000 (UTC)
-  auto tp = MakeTime(2038, 1, 19, 3, 14, 7, tz);
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 2038, 1, 19, 3, 14, 7, 0 * 3600, false, "UTC");
+  auto tp = convert(civil_second(2038, 1, 19, 3, 14, 7), tz);
+  ExpectTime(tp, tz, 2038, 1, 19, 3, 14, 7, 0 * 3600, false, "UTC");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2038, 1, 19, 3, 14, 8, 0 * 3600, false, "UTC");
+  ExpectTime(tp, tz, 2038, 1, 19, 3, 14, 8, 0 * 3600, false, "UTC");
 }
 
 TEST(TimeZoneEdgeCase, UTC5DigitYear) {
@@ -1113,12 +1057,10 @@ TEST(TimeZoneEdgeCase, UTC5DigitYear) {
   //
   //   253402300799 == Fri, 31 Dec 9999 23:59:59 +0000 (UTC)
   //   253402300800 == Sat,  1 Jan 1000 00:00:00 +0000 (UTC)
-  auto tp = MakeTime(9999, 12, 31, 23, 59, 59, tz);
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 9999, 12, 31, 23, 59, 59, 0 * 3600, false, "UTC");
+  auto tp = convert(civil_second(9999, 12, 31, 23, 59, 59), tz);
+  ExpectTime(tp, tz, 9999, 12, 31, 23, 59, 59, 0 * 3600, false, "UTC");
   tp += std::chrono::seconds(1);
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 10000, 1, 1, 0, 0, 0, 0 * 3600, false, "UTC");
+  ExpectTime(tp, tz, 10000, 1, 1, 0, 0, 0, 0 * 3600, false, "UTC");
 }
 
 }  // namespace cctz

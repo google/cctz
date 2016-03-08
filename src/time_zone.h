@@ -64,7 +64,7 @@ class time_zone {
   // Example:
   //   const cctz::time_zone tz = ...
   //   const auto tp = std::chrono::system_clock::now();
-  //   const cctz::civil_second cs = tz.lookup(tp).cs;
+  //   const cctz::time_zone::absolute_lookup al = tz.lookup(tp);
   struct absolute_lookup {
     civil_second cs;
     // Note: The following fields exist for backward compatibility with
@@ -147,6 +147,24 @@ time_zone utc_time_zone();
 // Returns a time zone representing the local time zone. Falls back to UTC.
 time_zone local_time_zone();
 
+// The full information provided by the time_zone::absolute_lookup and
+// time_zone::civil_lookup structs is frequently not needed by callers.
+// Overloaded non-member convert() functions are provided to simplify the
+// common cases.
+template <typename D>
+inline civil_second convert(const time_point<D>& tp, const time_zone& tz) {
+  return tz.lookup(tp).cs;
+}
+
+// The return value here is chosen such that the relative order of civil
+// times is preserved across conversions.
+inline time_point<sys_seconds> convert(const civil_second& cs,
+                                       const time_zone& tz) {
+  const time_zone::civil_lookup cl = tz.lookup(cs);
+  if (cl.kind == time_zone::civil_lookup::SKIPPED) return cl.trans;
+  return cl.pre;
+}
+
 namespace internal {
 // Floors tp to a second boundary and sets *subseconds.
 template <typename D>
@@ -186,7 +204,7 @@ FloorSeconds(const time_point<sys_seconds>& tp) {
 // Example:
 //   cctz::time_zone lax;
 //   if (!cctz::load_time_zone("America/Los_Angeles", &lax)) { ... }
-//   auto tp = lax.lookup(cctz::civil_second(2013, 1, 2, 3, 4, 5)).pre;
+//   auto tp = cctz::convert(cctz::civil_second(2013, 1, 2, 3, 4, 5), lax);
 //   std::string f = cctz::format("%H:%M:%S", tp, lax);  // "03:04:05"
 //   f = cctz::format("%H:%M:%E3S", tp, lax);            // "03:04:05.000"
 std::string format(const std::string&, const time_point<sys_seconds>&,

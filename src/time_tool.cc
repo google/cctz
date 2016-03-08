@@ -70,13 +70,12 @@ bool ParseTimeSpec(const std::string& args, cctz::time_zone zone,
   return false;
 }
 
-bool ParseBreakdownSpec(const std::string& args,
-                        cctz::time_zone::absolute_lookup* when) {
+bool ParseBreakdownSpec(const std::string& args, cctz::civil_second* when) {
   const cctz::time_zone utc = cctz::utc_time_zone();
   for (const char* const* fmt = kFormats; *fmt != NULL; ++fmt) {
     time_point<sys_seconds> tp;
     if (cctz::parse(*fmt, args, utc, &tp)) {
-      *when = utc.lookup(tp);
+      *when = cctz::convert(tp, utc);
       return true;
     }
   }
@@ -103,12 +102,13 @@ std::string FormatTimeInZone(time_point<sys_seconds> when,
                              cctz::time_zone zone) {
   std::ostringstream oss;
   oss << std::setw(33) << std::left << cctz::format(kFormat, when, zone);
-  cctz::time_zone::absolute_lookup bd = zone.lookup(when);
-  oss << " [wd=" << WeekDayName(cctz::get_weekday(cctz::civil_day(bd.cs)))
-      << " yd=" << std::setw(3) << std::setfill('0') << std::right
-      << cctz::get_yearday(cctz::civil_day(bd.cs))
-      << " dst=" << (bd.is_dst ? 'T' : 'F')
-      << " off=" << std::showpos << bd.offset << std::noshowpos << "]";
+  cctz::time_zone::absolute_lookup al = zone.lookup(when);
+  cctz::civil_day cd(al.cs);
+  oss << " [wd=" << WeekDayName(cctz::get_weekday(cd))
+      << " yd=" << std::setw(3) << std::setfill('0')
+      << std::right << cctz::get_yearday(cd)
+      << " dst=" << (al.is_dst ? 'T' : 'F')
+      << " off=" << std::showpos << al.offset << std::noshowpos << "]";
   return oss.str();
 }
 
@@ -132,30 +132,29 @@ void InstantInfo(const std::string& label, time_point<sys_seconds> when,
   std::cout << "}\n";
 }
 
-// Report everything we know about a time_zone::absolute_lookup (YMDHMS).
-int BreakdownInfo(const cctz::time_zone::absolute_lookup& when,
-                  cctz::time_zone zone) {
-  cctz::time_zone::civil_lookup ti = zone.lookup(when.cs);
-  switch (ti.kind) {
+// Report everything we know about a cctz::civil_second (YMDHMS).
+int BreakdownInfo(const cctz::civil_second& cs, cctz::time_zone zone) {
+  cctz::time_zone::civil_lookup cl = zone.lookup(cs);
+  switch (cl.kind) {
     case cctz::time_zone::civil_lookup::UNIQUE: {
       std::cout << "kind: UNIQUE\n";
-      InstantInfo("when", ti.pre, zone);
+      InstantInfo("when", cl.pre, zone);
       break;
     }
     case cctz::time_zone::civil_lookup::SKIPPED: {
       std::cout << "kind: SKIPPED\n";
-      InstantInfo("post", ti.post, zone);  // might == trans-1
-      InstantInfo("trans-1", ti.trans - std::chrono::seconds(1), zone);
-      InstantInfo("trans", ti.trans, zone);
-      InstantInfo("pre", ti.pre, zone);  // might == trans
+      InstantInfo("post", cl.post, zone);  // might == trans-1
+      InstantInfo("trans-1", cl.trans - std::chrono::seconds(1), zone);
+      InstantInfo("trans", cl.trans, zone);
+      InstantInfo("pre", cl.pre, zone);  // might == trans
       break;
     }
     case cctz::time_zone::civil_lookup::REPEATED: {
       std::cout << "kind: REPEATED\n";
-      InstantInfo("pre", ti.pre, zone);  // might == trans-1
-      InstantInfo("trans-1", ti.trans - std::chrono::seconds(1), zone);
-      InstantInfo("trans", ti.trans, zone);
-      InstantInfo("post", ti.post, zone);  // might == trans
+      InstantInfo("pre", cl.pre, zone);  // might == trans-1
+      InstantInfo("trans-1", cl.trans - std::chrono::seconds(1), zone);
+      InstantInfo("trans", cl.trans, zone);
+      InstantInfo("post", cl.post, zone);  // might == trans
       break;
     }
   }
@@ -247,7 +246,7 @@ int main(int argc, char** argv) {
       }
     }
   }
-  cctz::time_zone::absolute_lookup when = zone.lookup(tp);
+  cctz::civil_second when = cctz::convert(tp, zone);
   bool have_break_down = !have_time && ParseBreakdownSpec(args, &when);
 
   // Show results.

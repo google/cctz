@@ -23,12 +23,11 @@ int main() {
   load_time_zone("America/Los_Angeles", &lax);
 
   const auto now = std::chrono::system_clock::now();
-  const cctz::time_zone::absolute_lookup bd = lax.lookup(now);
+  const cctz::civil_second cs = cctz::convert(now, lax);
 
   // First day of month, 6 months from now.
-  const auto then =
-      lax.lookup(cctz::civil_second(bd.cs.year(), bd.cs.month() + 6, 1,
-                                    0, 0, 0)).pre;
+  const auto then = cctz::convert(
+      cctz::civil_second(cs.year(), cs.month() + 6, 1, 0, 0, 0), lax);
 
   std::cout << cctz::format("Now: %F %T %z\n", now, lax);
   std::cout << cctz::format("6mo: %F %T %z\n", then, lax);

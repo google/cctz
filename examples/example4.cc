@@ -21,11 +21,9 @@
 template <typename D>
 cctz::time_point<cctz::sys_seconds> FloorDay(cctz::time_point<D> tp,
                                              cctz::time_zone tz) {
-  const cctz::time_zone::absolute_lookup bd = tz.lookup(tp);
-  const cctz::time_zone::civil_lookup ti =
-      tz.lookup(cctz::civil_second(bd.cs.year(), bd.cs.month(), bd.cs.day(),
-                                   0, 0, 0));
-  return ti.kind == cctz::time_zone::civil_lookup::SKIPPED ? ti.trans : ti.pre;
+  const cctz::civil_second cs = cctz::convert(tp, tz);
+  const cctz::civil_day cd(cs.year(), cs.month(), cs.day());
+  return cctz::convert(cctz::civil_second(cd), tz);
 }
 
 int main() {

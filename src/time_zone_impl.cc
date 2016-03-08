@@ -101,12 +101,13 @@ time_zone::Impl::Impl(const std::string& name) : name_(name) {}
 time_zone::absolute_lookup time_zone::Impl::BreakTime(
     const time_point<sys_seconds>& tp) const {
   time_zone::absolute_lookup res;
-  Breakdown b = zone_->BreakTime(tp);
+  Breakdown bd = zone_->BreakTime(tp);
   // TODO: Eliminate extra normalization.
-  res.cs = civil_second(b.year, b.month, b.day, b.hour, b.minute, b.second);
-  res.offset = b.offset;
-  res.is_dst = b.is_dst;
-  res.abbr = b.abbr;
+  res.cs =
+      civil_second(bd.year, bd.month, bd.day, bd.hour, bd.minute, bd.second);
+  res.offset = bd.offset;
+  res.is_dst = bd.is_dst;
+  res.abbr = bd.abbr;
   return res;
 }
 

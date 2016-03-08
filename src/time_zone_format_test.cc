@@ -38,17 +38,18 @@ namespace {
 
 // This helper is a macro so that failed expectations show up with the
 // correct line numbers.
-#define ExpectTime(bd, y, m, d, hh, mm, ss, off, isdst, zone) \
-  do {                                                        \
-    EXPECT_EQ(y, bd.cs.year());                               \
-    EXPECT_EQ(m, bd.cs.month());                              \
-    EXPECT_EQ(d, bd.cs.day());                                \
-    EXPECT_EQ(hh, bd.cs.hour());                              \
-    EXPECT_EQ(mm, bd.cs.minute());                            \
-    EXPECT_EQ(ss, bd.cs.second());                            \
-    EXPECT_EQ(off, bd.offset);                                \
-    EXPECT_EQ(isdst, bd.is_dst);                              \
-    EXPECT_EQ(zone, bd.abbr);                                 \
+#define ExpectTime(tp, tz, y, m, d, hh, mm, ss, off, isdst, zone) \
+  do {                                                            \
+    time_zone::absolute_lookup al = tz.lookup(tp);                \
+    EXPECT_EQ(y, al.cs.year());                                   \
+    EXPECT_EQ(m, al.cs.month());                                  \
+    EXPECT_EQ(d, al.cs.day());                                    \
+    EXPECT_EQ(hh, al.cs.hour());                                  \
+    EXPECT_EQ(mm, al.cs.minute());                                \
+    EXPECT_EQ(ss, al.cs.second());                                \
+    EXPECT_EQ(off, al.offset);                                    \
+    EXPECT_EQ(isdst, al.is_dst);                                  \
+    EXPECT_EQ(zone, al.abbr);                                     \
   } while (0)
 
 const char RFC3339_full[] = "%Y-%m-%dT%H:%M:%E*S%Ez";
@@ -66,12 +67,6 @@ void TestFormatSpecifier(time_point<D> tp, time_zone tz, const std::string& fmt,
   EXPECT_EQ("xxx " + ans, format("xxx " + fmt, tp, tz));
   EXPECT_EQ(ans + " yyy", format(fmt + " yyy", tp, tz));
   EXPECT_EQ("xxx " + ans + " yyy", format("xxx " + fmt + " yyy", tp, tz));
-}
-
-// A helper for converting a YMDhms to a time_point.
-time_point<sys_seconds> MakeTime(int y, int m, int d, int hh, int mm, int ss,
-                                 const time_zone& tz) {
-  return tz.lookup(civil_second(y, m, d, hh, mm, ss)).pre;
 }
 
 }  // namespace
@@ -304,31 +299,31 @@ TEST(Format, ExtendedYears) {
   const char e4y_fmt[] = "%E4Y%m%d";  // no separators
 
   // %E4Y zero-pads the year to produce at least 4 chars, including the sign.
-  auto tp = MakeTime(-999, 11, 27, 0, 0, 0, utc);
+  auto tp = convert(civil_second(-999, 11, 27, 0, 0, 0), utc);
   EXPECT_EQ("-9991127", format(e4y_fmt, tp, utc));
-  tp = MakeTime(-99, 11, 27, 0, 0, 0, utc);
+  tp = convert(civil_second(-99, 11, 27, 0, 0, 0), utc);
   EXPECT_EQ("-0991127", format(e4y_fmt, tp, utc));
-  tp = MakeTime(-9, 11, 27, 0, 0, 0, utc);
+  tp = convert(civil_second(-9, 11, 27, 0, 0, 0), utc);
   EXPECT_EQ("-0091127", format(e4y_fmt, tp, utc));
-  tp = MakeTime(-1, 11, 27, 0, 0, 0, utc);
+  tp = convert(civil_second(-1, 11, 27, 0, 0, 0), utc);
   EXPECT_EQ("-0011127", format(e4y_fmt, tp, utc));
-  tp = MakeTime(0, 11, 27, 0, 0, 0, utc);
+  tp = convert(civil_second(0, 11, 27, 0, 0, 0), utc);
   EXPECT_EQ("00001127", format(e4y_fmt, tp, utc));
-  tp = MakeTime(1, 11, 27, 0, 0, 0, utc);
+  tp = convert(civil_second(1, 11, 27, 0, 0, 0), utc);
   EXPECT_EQ("00011127", format(e4y_fmt, tp, utc));
-  tp = MakeTime(9, 11, 27, 0, 0, 0, utc);
+  tp = convert(civil_second(9, 11, 27, 0, 0, 0), utc);
   EXPECT_EQ("00091127", format(e4y_fmt, tp, utc));
-  tp = MakeTime(99, 11, 27, 0, 0, 0, utc);
+  tp = convert(civil_second(99, 11, 27, 0, 0, 0), utc);
   EXPECT_EQ("00991127", format(e4y_fmt, tp, utc));
-  tp = MakeTime(999, 11, 27, 0, 0, 0, utc);
+  tp = convert(civil_second(999, 11, 27, 0, 0, 0), utc);
   EXPECT_EQ("09991127", format(e4y_fmt, tp, utc));
-  tp = MakeTime(9999, 11, 27, 0, 0, 0, utc);
+  tp = convert(civil_second(9999, 11, 27, 0, 0, 0), utc);
   EXPECT_EQ("99991127", format(e4y_fmt, tp, utc));
 
   // When the year is outside [-999:9999], more than 4 chars are produced.
-  tp = MakeTime(-1000, 11, 27, 0, 0, 0, utc);
+  tp = convert(civil_second(-1000, 11, 27, 0, 0, 0), utc);
   EXPECT_EQ("-10001127", format(e4y_fmt, tp, utc));
-  tp = MakeTime(10000, 11, 27, 0, 0, 0, utc);
+  tp = convert(civil_second(10000, 11, 27, 0, 0, 0), utc);
   EXPECT_EQ("100001127", format(e4y_fmt, tp, utc));
 }
 
@@ -336,7 +331,8 @@ TEST(Format, RFC3339Format) {
   time_zone tz;
   EXPECT_TRUE(load_time_zone("America/Los_Angeles", &tz));
 
-  time_point<std::chrono::nanoseconds> tp = MakeTime(1977, 6, 28, 9, 8, 7, tz);
+  time_point<std::chrono::nanoseconds> tp =
+      convert(civil_second(1977, 6, 28, 9, 8, 7), tz);
   EXPECT_EQ("1977-06-28T09:08:07-07:00", format(RFC3339_full, tp, tz));
   EXPECT_EQ("1977-06-28T09:08:07-07:00", format(RFC3339_sec, tp, tz));
 
@@ -382,7 +378,7 @@ TEST(Format, RFC1123Format) {  // locale specific
   time_zone tz;
   EXPECT_TRUE(load_time_zone("America/Los_Angeles", &tz));
 
-  auto tp = MakeTime(1977, 6, 28, 9, 8, 7, tz);
+  auto tp = convert(civil_second(1977, 6, 28, 9, 8, 7), tz);
   EXPECT_EQ("Tue, 28 Jun 1977 09:08:07 -0700", format(RFC1123_full, tp, tz));
   EXPECT_EQ("28 Jun 1977 09:08:07 -0700", format(RFC1123_no_wday, tp, tz));
 }
@@ -448,8 +444,7 @@ TEST(Parse, Basics) {
 
   EXPECT_TRUE(
       parse("%Y-%m-%d %H:%M:%S %z", "2013-06-28 19:08:09 -0800", tz, &tp));
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 6, 29, 3, 8, 9, 0, false, "UTC");
+  ExpectTime(tp, tz, 2013, 6, 29, 3, 8, 9, 0, false, "UTC");
 }
 
 TEST(Parse, WithTimeZone) {
@@ -459,26 +454,22 @@ TEST(Parse, WithTimeZone) {
 
   // We can parse a string without a UTC offset if we supply a timezone.
   EXPECT_TRUE(parse("%Y-%m-%d %H:%M:%S", "2013-06-28 19:08:09", tz, &tp));
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 6, 28, 19, 8, 9, -7 * 60 * 60, true, "PDT");
+  ExpectTime(tp, tz, 2013, 6, 28, 19, 8, 9, -7 * 60 * 60, true, "PDT");
 
   // But the timezone is ignored when a UTC offset is present.
-  EXPECT_TRUE(
-      parse("%Y-%m-%d %H:%M:%S %z", "2013-06-28 19:08:09 +0800", tz, &tp));
-  bd = utc_time_zone().lookup(tp);
-  ExpectTime(bd, 2013, 6, 28, 11, 8, 9, 0, false, "UTC");
+  EXPECT_TRUE(parse("%Y-%m-%d %H:%M:%S %z", "2013-06-28 19:08:09 +0800",
+                    utc_time_zone(), &tp));
+  ExpectTime(tp, tz, 2013, 6, 28, 19 - 8 - 7, 8, 9, -7 * 60 * 60, true, "PDT");
 
   // Check a skipped time (a Spring DST transition).  parse() returns
   // the preferred-offset result, as defined for ConvertDateTime().
   EXPECT_TRUE(parse("%Y-%m-%d %H:%M:%S", "2011-03-13 02:15:00", tz, &tp));
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2011, 3, 13, 3, 15, 0, -7 * 60 * 60, true, "PDT");
+  ExpectTime(tp, tz, 2011, 3, 13, 3, 15, 0, -7 * 60 * 60, true, "PDT");
 
   // Check a repeated time (a Fall DST transition).  parse() returns
   // the preferred-offset result, as defined for ConvertDateTime().
   EXPECT_TRUE(parse("%Y-%m-%d %H:%M:%S", "2011-11-06 01:15:00", tz, &tp));
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2011, 11, 6, 1, 15, 0, -7 * 60 * 60, true, "PDT");
+  ExpectTime(tp, tz, 2011, 11, 6, 1, 15, 0, -7 * 60 * 60, true, "PDT");
 }
 
 TEST(Parse, LeapSecond) {
@@ -488,23 +479,19 @@ TEST(Parse, LeapSecond) {
 
   // ":59" -> ":59"
   EXPECT_TRUE(parse(RFC3339_full, "2013-06-28T07:08:59-08:00", tz, &tp));
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 6, 28, 8, 8, 59, -7 * 60 * 60, true, "PDT");
+  ExpectTime(tp, tz, 2013, 6, 28, 8, 8, 59, -7 * 60 * 60, true, "PDT");
 
   // ":59.5" -> ":59.5"
   EXPECT_TRUE(parse(RFC3339_full, "2013-06-28T07:08:59.5-08:00", tz, &tp));
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 6, 28, 8, 8, 59, -7 * 60 * 60, true, "PDT");
+  ExpectTime(tp, tz, 2013, 6, 28, 8, 8, 59, -7 * 60 * 60, true, "PDT");
 
   // ":60" -> ":00"
   EXPECT_TRUE(parse(RFC3339_full, "2013-06-28T07:08:60-08:00", tz, &tp));
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 6, 28, 8, 9, 0, -7 * 60 * 60, true, "PDT");
+  ExpectTime(tp, tz, 2013, 6, 28, 8, 9, 0, -7 * 60 * 60, true, "PDT");
 
   // ":60.5" -> ":00.0"
   EXPECT_TRUE(parse(RFC3339_full, "2013-06-28T07:08:60.5-08:00", tz, &tp));
-  bd = tz.lookup(tp);
-  ExpectTime(bd, 2013, 6, 28, 8, 9, 0, -7 * 60 * 60, true, "PDT");
+  ExpectTime(tp, tz, 2013, 6, 28, 8, 9, 0, -7 * 60 * 60, true, "PDT");
 
   // ":61" -> error
   EXPECT_FALSE(parse(RFC3339_full, "2013-06-28T07:08:61-08:00", tz, &tp));
@@ -525,8 +512,8 @@ TEST(Parse, ErrorCases) {
 
   // Trailing whitespace is allowed.
   EXPECT_TRUE(parse("%m-%d", "2-3  ", tz, &tp));
-  EXPECT_EQ(2, utc_time_zone().lookup(tp).cs.month());
-  EXPECT_EQ(3, utc_time_zone().lookup(tp).cs.day());
+  EXPECT_EQ(2, convert(tp, utc_time_zone()).month());
+  EXPECT_EQ(3, convert(tp, utc_time_zone()).day());
 
   // Feb 31 requires normalization.
   EXPECT_FALSE(parse("%m-%d", "2-31", tz, &tp));
@@ -556,39 +543,39 @@ TEST(Parse, ErrorCases) {
 TEST(Parse, PosixConversions) {
   time_zone tz = utc_time_zone();
   auto tp = system_clock::from_time_t(0);
-  const auto reset = MakeTime(1977, 6, 28, 9, 8, 7, tz);
+  const auto reset = convert(civil_second(1977, 6, 28, 9, 8, 7), tz);
 
   tp = reset;
   EXPECT_TRUE(parse("%d", "15", tz, &tp));
-  EXPECT_EQ(15, tz.lookup(tp).cs.day());
+  EXPECT_EQ(15, convert(tp, tz).day());
 
   // %e is an extension, but is supported internally.
   tp = reset;
   EXPECT_TRUE(parse("%e", "15", tz, &tp));
-  EXPECT_EQ(15, tz.lookup(tp).cs.day());  // Equivalent to %d
+  EXPECT_EQ(15, convert(tp, tz).day());  // Equivalent to %d
 
   tp = reset;
   EXPECT_TRUE(parse("%H", "17", tz, &tp));
-  EXPECT_EQ(17, tz.lookup(tp).cs.hour());
+  EXPECT_EQ(17, convert(tp, tz).hour());
 
   tp = reset;
   EXPECT_TRUE(parse("%I", "5", tz, &tp));
-  EXPECT_EQ(5, tz.lookup(tp).cs.hour());
+  EXPECT_EQ(5, convert(tp, tz).hour());
 
   // %j is parsed but ignored.
   EXPECT_TRUE(parse("%j", "32", tz, &tp));
 
   tp = reset;
   EXPECT_TRUE(parse("%m", "11", tz, &tp));
-  EXPECT_EQ(11, tz.lookup(tp).cs.month());
+  EXPECT_EQ(11, convert(tp, tz).month());
 
   tp = reset;
   EXPECT_TRUE(parse("%M", "33", tz, &tp));
-  EXPECT_EQ(33, tz.lookup(tp).cs.minute());
+  EXPECT_EQ(33, convert(tp, tz).minute());
 
   tp = reset;
   EXPECT_TRUE(parse("%S", "55", tz, &tp));
-  EXPECT_EQ(55, tz.lookup(tp).cs.second());
+  EXPECT_EQ(55, convert(tp, tz).second());
 
   // %U is parsed but ignored.
   EXPECT_TRUE(parse("%U", "15", tz, &tp));
@@ -601,11 +588,11 @@ TEST(Parse, PosixConversions) {
 
   tp = reset;
   EXPECT_TRUE(parse("%y", "04", tz, &tp));
-  EXPECT_EQ(2004, tz.lookup(tp).cs.year());
+  EXPECT_EQ(2004, convert(tp, tz).year());
 
   tp = reset;
   EXPECT_TRUE(parse("%Y", "2004", tz, &tp));
-  EXPECT_EQ(2004, tz.lookup(tp).cs.year());
+  EXPECT_EQ(2004, convert(tp, tz).year());
 
   EXPECT_TRUE(parse("%%", "%", tz, &tp));
 
@@ -614,28 +601,28 @@ TEST(Parse, PosixConversions) {
 
   tp = reset;
   EXPECT_TRUE(parse("%C", "20", tz, &tp));
-  EXPECT_EQ(2000, tz.lookup(tp).cs.year());
+  EXPECT_EQ(2000, convert(tp, tz).year());
 
   tp = reset;
   EXPECT_TRUE(parse("%D", "02/03/04", tz, &tp));
-  EXPECT_EQ(2, tz.lookup(tp).cs.month());
-  EXPECT_EQ(3, tz.lookup(tp).cs.day());
-  EXPECT_EQ(2004, tz.lookup(tp).cs.year());
+  EXPECT_EQ(2, convert(tp, tz).month());
+  EXPECT_EQ(3, convert(tp, tz).day());
+  EXPECT_EQ(2004, convert(tp, tz).year());
 
   EXPECT_TRUE(parse("%n", "\n", tz, &tp));
 
   tp = reset;
   EXPECT_TRUE(parse("%R", "03:44", tz, &tp));
-  EXPECT_EQ(3, tz.lookup(tp).cs.hour());
-  EXPECT_EQ(44, tz.lookup(tp).cs.minute());
+  EXPECT_EQ(3, convert(tp, tz).hour());
+  EXPECT_EQ(44, convert(tp, tz).minute());
 
   EXPECT_TRUE(parse("%t", "\t\v\f\n\r ", tz, &tp));
 
   tp = reset;
   EXPECT_TRUE(parse("%T", "03:44:55", tz, &tp));
-  EXPECT_EQ(3, tz.lookup(tp).cs.hour());
-  EXPECT_EQ(44, tz.lookup(tp).cs.minute());
-  EXPECT_EQ(55, tz.lookup(tp).cs.second());
+  EXPECT_EQ(3, convert(tp, tz).hour());
+  EXPECT_EQ(44, convert(tp, tz).minute());
+  EXPECT_EQ(55, convert(tp, tz).second());
 
   tp = reset;
   EXPECT_TRUE(parse("%s", "1234567890", tz, &tp));
@@ -664,7 +651,7 @@ TEST(Parse, PosixConversions) {
 TEST(Parse, LocaleSpecific) {
   time_zone tz = utc_time_zone();
   auto tp = system_clock::from_time_t(0);
-  const auto reset = MakeTime(1977, 6, 28, 9, 8, 7, tz);
+  const auto reset = convert(civil_second(1977, 6, 28, 9, 8, 7), tz);
 
   // %a is parsed but ignored.
   EXPECT_TRUE(parse("%a", "Mon", tz, &tp));
@@ -674,68 +661,68 @@ TEST(Parse, LocaleSpecific) {
 
   tp = reset;
   EXPECT_TRUE(parse("%b", "Feb", tz, &tp));
-  EXPECT_EQ(2, tz.lookup(tp).cs.month());
+  EXPECT_EQ(2, convert(tp, tz).month());
 
   tp = reset;
   EXPECT_TRUE(parse("%B", "February", tz, &tp));
-  EXPECT_EQ(2, tz.lookup(tp).cs.month());
+  EXPECT_EQ(2, convert(tp, tz).month());
 
   // %p is parsed but ignored if it's alone.  But it's used with %I.
   EXPECT_TRUE(parse("%p", "AM", tz, &tp));
   tp = reset;
   EXPECT_TRUE(parse("%I %p", "5 PM", tz, &tp));
-  EXPECT_EQ(17, tz.lookup(tp).cs.hour());
+  EXPECT_EQ(17, convert(tp, tz).hour());
 
   tp = reset;
   EXPECT_TRUE(parse("%x", "02/03/04", tz, &tp));
-  EXPECT_EQ(2, tz.lookup(tp).cs.month());
-  EXPECT_EQ(3, tz.lookup(tp).cs.day());
-  EXPECT_EQ(2004, tz.lookup(tp).cs.year());
+  EXPECT_EQ(2, convert(tp, tz).month());
+  EXPECT_EQ(3, convert(tp, tz).day());
+  EXPECT_EQ(2004, convert(tp, tz).year());
 
   tp = reset;
   EXPECT_TRUE(parse("%X", "15:44:55", tz, &tp));
-  EXPECT_EQ(15, tz.lookup(tp).cs.hour());
-  EXPECT_EQ(44, tz.lookup(tp).cs.minute());
-  EXPECT_EQ(55, tz.lookup(tp).cs.second());
+  EXPECT_EQ(15, convert(tp, tz).hour());
+  EXPECT_EQ(44, convert(tp, tz).minute());
+  EXPECT_EQ(55, convert(tp, tz).second());
 
 #if defined(__linux__)
   // SU/C99/TZ extensions
 
   tp = reset;
   EXPECT_TRUE(parse("%h", "Feb", tz, &tp));
-  EXPECT_EQ(2, tz.lookup(tp).cs.month());  // Equivalent to %b
+  EXPECT_EQ(2, convert(tp, tz).month());  // Equivalent to %b
 
   tp = reset;
   EXPECT_TRUE(parse("%l %p", "5 PM", tz, &tp));
-  EXPECT_EQ(17, tz.lookup(tp).cs.hour());
+  EXPECT_EQ(17, convert(tp, tz).hour());
 
   tp = reset;
   EXPECT_TRUE(parse("%r", "03:44:55 PM", tz, &tp));
-  EXPECT_EQ(15, tz.lookup(tp).cs.hour());
-  EXPECT_EQ(44, tz.lookup(tp).cs.minute());
-  EXPECT_EQ(55, tz.lookup(tp).cs.second());
+  EXPECT_EQ(15, convert(tp, tz).hour());
+  EXPECT_EQ(44, convert(tp, tz).minute());
+  EXPECT_EQ(55, convert(tp, tz).second());
 
   tp = reset;
   EXPECT_TRUE(parse("%Ec", "Tue Nov 19 05:06:07 2013", tz, &tp));
-  EXPECT_EQ(MakeTime(2013, 11, 19, 5, 6, 7, tz), tp);
+  EXPECT_EQ(convert(civil_second(2013, 11, 19, 5, 6, 7), tz), tp);
 
   // Modified conversion specifiers %E_
 
   tp = reset;
   EXPECT_TRUE(parse("%EC", "20", tz, &tp));
-  EXPECT_EQ(2000, tz.lookup(tp).cs.year());
+  EXPECT_EQ(2000, convert(tp, tz).year());
 
   tp = reset;
   EXPECT_TRUE(parse("%Ex", "02/03/04", tz, &tp));
-  EXPECT_EQ(2, tz.lookup(tp).cs.month());
-  EXPECT_EQ(3, tz.lookup(tp).cs.day());
-  EXPECT_EQ(2004, tz.lookup(tp).cs.year());
+  EXPECT_EQ(2, convert(tp, tz).month());
+  EXPECT_EQ(3, convert(tp, tz).day());
+  EXPECT_EQ(2004, convert(tp, tz).year());
 
   tp = reset;
   EXPECT_TRUE(parse("%EX", "15:44:55", tz, &tp));
-  EXPECT_EQ(15, tz.lookup(tp).cs.hour());
-  EXPECT_EQ(44, tz.lookup(tp).cs.minute());
-  EXPECT_EQ(55, tz.lookup(tp).cs.second());
+  EXPECT_EQ(15, convert(tp, tz).hour());
+  EXPECT_EQ(44, convert(tp, tz).minute());
+  EXPECT_EQ(55, convert(tp, tz).second());
 
 // %Ey, the year offset from %EC, doesn't really make sense alone as there
 // is no way to represent it in tm_year (%EC is not simply the century).
@@ -745,42 +732,42 @@ TEST(Parse, LocaleSpecific) {
 #if 0
   tp = reset;
   EXPECT_TRUE(parse("%Ey", "04", tz, &tp));
-  EXPECT_EQ(2004, tz.lookup(tp).cs.year());
+  EXPECT_EQ(2004, convert(tp, tz).year());
 #endif
 
   tp = reset;
   EXPECT_TRUE(parse("%EY", "2004", tz, &tp));
-  EXPECT_EQ(2004, tz.lookup(tp).cs.year());
+  EXPECT_EQ(2004, convert(tp, tz).year());
 
   // Modified conversion specifiers %O_
 
   tp = reset;
   EXPECT_TRUE(parse("%Od", "15", tz, &tp));
-  EXPECT_EQ(15, tz.lookup(tp).cs.day());
+  EXPECT_EQ(15, convert(tp, tz).day());
 
   tp = reset;
   EXPECT_TRUE(parse("%Oe", "15", tz, &tp));
-  EXPECT_EQ(15, tz.lookup(tp).cs.day());  // Equivalent to %d
+  EXPECT_EQ(15, convert(tp, tz).day());  // Equivalent to %d
 
   tp = reset;
   EXPECT_TRUE(parse("%OH", "17", tz, &tp));
-  EXPECT_EQ(17, tz.lookup(tp).cs.hour());
+  EXPECT_EQ(17, convert(tp, tz).hour());
 
   tp = reset;
   EXPECT_TRUE(parse("%OI", "5", tz, &tp));
-  EXPECT_EQ(5, tz.lookup(tp).cs.hour());
+  EXPECT_EQ(5, convert(tp, tz).hour());
 
   tp = reset;
   EXPECT_TRUE(parse("%Om", "11", tz, &tp));
-  EXPECT_EQ(11, tz.lookup(tp).cs.month());
+  EXPECT_EQ(11, convert(tp, tz).month());
 
   tp = reset;
   EXPECT_TRUE(parse("%OM", "33", tz, &tp));
-  EXPECT_EQ(33, tz.lookup(tp).cs.minute());
+  EXPECT_EQ(33, convert(tp, tz).minute());
 
   tp = reset;
   EXPECT_TRUE(parse("%OS", "55", tz, &tp));
-  EXPECT_EQ(55, tz.lookup(tp).cs.second());
+  EXPECT_EQ(55, convert(tp, tz).second());
 
   // %OU is parsed but ignored.
   EXPECT_TRUE(parse("%OU", "15", tz, &tp));
@@ -793,7 +780,7 @@ TEST(Parse, LocaleSpecific) {
 
   tp = reset;
   EXPECT_TRUE(parse("%Oy", "04", tz, &tp));
-  EXPECT_EQ(2004, tz.lookup(tp).cs.year());
+  EXPECT_EQ(2004, convert(tp, tz).year());
 #endif
 }
 
@@ -845,47 +832,47 @@ TEST(Parse, ExtendedOffset) {
 
   // %z against +-HHMM.
   EXPECT_TRUE(parse("%z", "+0000", utc, &tp));
-  EXPECT_EQ(MakeTime(1970, 1, 1, 0, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 0, 0, 0), utc), tp);
   EXPECT_TRUE(parse("%z", "-1234", utc, &tp));
-  EXPECT_EQ(MakeTime(1970, 1, 1, 12, 34, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 12, 34, 0), utc), tp);
   EXPECT_TRUE(parse("%z", "+1234", utc, &tp));
-  EXPECT_EQ(MakeTime(1969, 12, 31, 11, 26, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1969, 12, 31, 11, 26, 0), utc), tp);
   EXPECT_FALSE(parse("%z", "-123", utc, &tp));
 
   // %z against +-HH.
   EXPECT_TRUE(parse("%z", "+00", utc, &tp));
-  EXPECT_EQ(MakeTime(1970, 1, 1, 0, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 0, 0, 0), utc), tp);
   EXPECT_TRUE(parse("%z", "-12", utc, &tp));
-  EXPECT_EQ(MakeTime(1970, 1, 1, 12, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 12, 0, 0), utc), tp);
   EXPECT_TRUE(parse("%z", "+12", utc, &tp));
-  EXPECT_EQ(MakeTime(1969, 12, 31, 12, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1969, 12, 31, 12, 0, 0), utc), tp);
   EXPECT_FALSE(parse("%z", "-1", utc, &tp));
 
   // %Ez against +-HH:MM.
   EXPECT_TRUE(parse("%Ez", "+00:00", utc, &tp));
-  EXPECT_EQ(MakeTime(1970, 1, 1, 0, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 0, 0, 0), utc), tp);
   EXPECT_TRUE(parse("%Ez", "-12:34", utc, &tp));
-  EXPECT_EQ(MakeTime(1970, 1, 1, 12, 34, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 12, 34, 0), utc), tp);
   EXPECT_TRUE(parse("%Ez", "+12:34", utc, &tp));
-  EXPECT_EQ(MakeTime(1969, 12, 31, 11, 26, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1969, 12, 31, 11, 26, 0), utc), tp);
   EXPECT_FALSE(parse("%Ez", "-12:3", utc, &tp));
 
   // %Ez against +-HHMM.
   EXPECT_TRUE(parse("%Ez", "+0000", utc, &tp));
-  EXPECT_EQ(MakeTime(1970, 1, 1, 0, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 0, 0, 0), utc), tp);
   EXPECT_TRUE(parse("%Ez", "-1234", utc, &tp));
-  EXPECT_EQ(MakeTime(1970, 1, 1, 12, 34, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 12, 34, 0), utc), tp);
   EXPECT_TRUE(parse("%Ez", "+1234", utc, &tp));
-  EXPECT_EQ(MakeTime(1969, 12, 31, 11, 26, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1969, 12, 31, 11, 26, 0), utc), tp);
   EXPECT_FALSE(parse("%Ez", "-123", utc, &tp));
 
   // %Ez against +-HH.
   EXPECT_TRUE(parse("%Ez", "+00", utc, &tp));
-  EXPECT_EQ(MakeTime(1970, 1, 1, 0, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 0, 0, 0), utc), tp);
   EXPECT_TRUE(parse("%Ez", "-12", utc, &tp));
-  EXPECT_EQ(MakeTime(1970, 1, 1, 12, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 12, 0, 0), utc), tp);
   EXPECT_TRUE(parse("%Ez", "+12", utc, &tp));
-  EXPECT_EQ(MakeTime(1969, 12, 31, 12, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1969, 12, 31, 12, 0, 0), utc), tp);
   EXPECT_FALSE(parse("%Ez", "-1", utc, &tp));
 }
 
@@ -896,25 +883,25 @@ TEST(Parse, ExtendedYears) {
 
   // %E4Y consumes exactly four chars, including any sign.
   EXPECT_TRUE(parse(e4y_fmt, "-9991127", utc, &tp));
-  EXPECT_EQ(MakeTime(-999, 11, 27, 0, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(-999, 11, 27, 0, 0, 0), utc), tp);
   EXPECT_TRUE(parse(e4y_fmt, "-0991127", utc, &tp));
-  EXPECT_EQ(MakeTime(-99, 11, 27, 0, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(-99, 11, 27, 0, 0, 0), utc), tp);
   EXPECT_TRUE(parse(e4y_fmt, "-0091127", utc, &tp));
-  EXPECT_EQ(MakeTime(-9, 11, 27, 0, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(-9, 11, 27, 0, 0, 0), utc), tp);
   EXPECT_TRUE(parse(e4y_fmt, "-0011127", utc, &tp));
-  EXPECT_EQ(MakeTime(-1, 11, 27, 0, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(-1, 11, 27, 0, 0, 0), utc), tp);
   EXPECT_TRUE(parse(e4y_fmt, "00001127", utc, &tp));
-  EXPECT_EQ(MakeTime(0, 11, 27, 0, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(0, 11, 27, 0, 0, 0), utc), tp);
   EXPECT_TRUE(parse(e4y_fmt, "00011127", utc, &tp));
-  EXPECT_EQ(MakeTime(1, 11, 27, 0, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(1, 11, 27, 0, 0, 0), utc), tp);
   EXPECT_TRUE(parse(e4y_fmt, "00091127", utc, &tp));
-  EXPECT_EQ(MakeTime(9, 11, 27, 0, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(9, 11, 27, 0, 0, 0), utc), tp);
   EXPECT_TRUE(parse(e4y_fmt, "00991127", utc, &tp));
-  EXPECT_EQ(MakeTime(99, 11, 27, 0, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(99, 11, 27, 0, 0, 0), utc), tp);
   EXPECT_TRUE(parse(e4y_fmt, "09991127", utc, &tp));
-  EXPECT_EQ(MakeTime(999, 11, 27, 0, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(999, 11, 27, 0, 0, 0), utc), tp);
   EXPECT_TRUE(parse(e4y_fmt, "99991127", utc, &tp));
-  EXPECT_EQ(MakeTime(9999, 11, 27, 0, 0, 0, utc), tp);
+  EXPECT_EQ(convert(civil_second(9999, 11, 27, 0, 0, 0), utc), tp);
 
   // When the year is outside [-999:9999], the parse fails.
   EXPECT_FALSE(parse(e4y_fmt, "-10001127", utc, &tp));
@@ -925,8 +912,7 @@ TEST(Parse, RFC3339Format) {
   const time_zone tz = utc_time_zone();
   time_point<std::chrono::nanoseconds> tp;
   EXPECT_TRUE(parse(RFC3339_sec, "2014-02-12T20:21:00+00:00", tz, &tp));
-  time_zone::absolute_lookup bd = tz.lookup(tp);
-  ExpectTime(bd, 2014, 2, 12, 20, 21, 0, 0, false, "UTC");
+  ExpectTime(tp, tz, 2014, 2, 12, 20, 21, 0, 0, false, "UTC");
 
   // Check that %Ez also accepts "Z" as a synonym for "+00:00".
   time_point<std::chrono::nanoseconds> tp2;
@@ -941,7 +927,7 @@ TEST(Parse, RFC3339Format) {
 TEST(FormatParse, RoundTrip) {
   time_zone lax;
   EXPECT_TRUE(load_time_zone("America/Los_Angeles", &lax));
-  const auto in = MakeTime(1977, 6, 28, 9, 8, 7, lax);
+  const auto in = convert(civil_second(1977, 6, 28, 9, 8, 7), lax);
   const auto subseconds = nanoseconds(654321);
 
   // RFC3339, which renders subseconds.

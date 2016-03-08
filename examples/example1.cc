@@ -23,7 +23,7 @@ int main() {
   load_time_zone("America/Los_Angeles", &lax);
 
   // Time Programming Fundamentals @cppcon
-  const auto tp = lax.lookup(cctz::civil_second(2015, 9, 22, 9, 0, 0)).pre;
+  const auto tp = cctz::convert(cctz::civil_second(2015, 9, 22, 9, 0, 0), lax);
 
   cctz::time_zone nyc;
   load_time_zone("America/New_York", &nyc);

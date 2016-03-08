@@ -47,24 +47,24 @@ char* strptime(const char* s, const char* fmt, std::tm* tm) {
 }
 #endif
 
-std::tm ToTM(const time_zone::absolute_lookup& bd) {
+std::tm ToTM(const time_zone::absolute_lookup& al) {
   std::tm tm{};
-  tm.tm_sec = bd.cs.second();
-  tm.tm_min = bd.cs.minute();
-  tm.tm_hour = bd.cs.hour();
-  tm.tm_mday = bd.cs.day();
-  tm.tm_mon = bd.cs.month() - 1;
+  tm.tm_sec = al.cs.second();
+  tm.tm_min = al.cs.minute();
+  tm.tm_hour = al.cs.hour();
+  tm.tm_mday = al.cs.day();
+  tm.tm_mon = al.cs.month() - 1;
 
   // Saturate tm.tm_year is cases of over/underflow.
-  if (bd.cs.year() < std::numeric_limits<int>::min() + 1900) {
+  if (al.cs.year() < std::numeric_limits<int>::min() + 1900) {
     tm.tm_year = std::numeric_limits<int>::min();
-  } else if (bd.cs.year() - 1900 > std::numeric_limits<int>::max()) {
+  } else if (al.cs.year() - 1900 > std::numeric_limits<int>::max()) {
     tm.tm_year = std::numeric_limits<int>::max();
   } else {
-    tm.tm_year = static_cast<int>(bd.cs.year() - 1900);
+    tm.tm_year = static_cast<int>(al.cs.year() - 1900);
   }
 
-  switch (get_weekday(civil_day(bd.cs))) {
+  switch (get_weekday(civil_day(al.cs))) {
     case weekday::sunday:
       tm.tm_wday = 0;
       break;
@@ -87,8 +87,8 @@ std::tm ToTM(const time_zone::absolute_lookup& bd) {
       tm.tm_wday = 6;
       break;
   }
-  tm.tm_yday = get_yearday(civil_day(bd.cs)) - 1;
-  tm.tm_isdst = bd.is_dst ? 1 : 0;
+  tm.tm_yday = get_yearday(civil_day(al.cs)) - 1;
+  tm.tm_isdst = al.is_dst ? 1 : 0;
   return tm;
 }
 
@@ -262,8 +262,8 @@ const int64_t kExp10[kDigits10_64 + 1] = {
 std::string format(const std::string& format, const time_point<sys_seconds>& tp,
                    const std::chrono::nanoseconds& ns, const time_zone& tz) {
   std::string result;
-  const time_zone::absolute_lookup bd = tz.lookup(tp);
-  const std::tm tm = ToTM(bd);
+  const time_zone::absolute_lookup al = tz.lookup(tp);
+  const std::tm tm = ToTM(al);
 
   // Scratch buffer for internal conversions.
   char buf[3 + kDigits10_64];  // enough for longest conversion
@@ -318,37 +318,37 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
         case 'Y':
           // This avoids the tm_year overflow problem for %Y, however
           // tm.tm_year will still be used by other specifiers like %D.
-          bp = Format64(ep, 0, bd.cs.year());
+          bp = Format64(ep, 0, al.cs.year());
           result.append(bp, ep - bp);
           break;
         case 'm':
-          bp = Format02d(ep, bd.cs.month());
+          bp = Format02d(ep, al.cs.month());
           result.append(bp, ep - bp);
           break;
         case 'd':
         case 'e':
-          bp = Format02d(ep, bd.cs.day());
+          bp = Format02d(ep, al.cs.day());
           if (*cur == 'e' && *bp == '0') *bp = ' ';  // for Windows
           result.append(bp, ep - bp);
           break;
         case 'H':
-          bp = Format02d(ep, bd.cs.hour());
+          bp = Format02d(ep, al.cs.hour());
           result.append(bp, ep - bp);
           break;
         case 'M':
-          bp = Format02d(ep, bd.cs.minute());
+          bp = Format02d(ep, al.cs.minute());
           result.append(bp, ep - bp);
           break;
         case 'S':
-          bp = Format02d(ep, bd.cs.second());
+          bp = Format02d(ep, al.cs.second());
           result.append(bp, ep - bp);
           break;
         case 'z':
-          bp = FormatOffset(ep, bd.offset / 60, '\0');
+          bp = FormatOffset(ep, al.offset / 60, '\0');
           result.append(bp, ep - bp);
           break;
         case 'Z':
-          result.append(bd.abbr);
+          result.append(al.abbr);
           break;
         case 's':
           bp = Format64(ep, 0, ToUnixSeconds(tp));
@@ -368,7 +368,7 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
       if (cur - 2 != pending) {
         FormatTM(&result, std::string(pending, cur - 2), tm);
       }
-      bp = FormatOffset(ep, bd.offset / 60, ':');
+      bp = FormatOffset(ep, al.offset / 60, ':');
       result.append(bp, ep - bp);
       pending = ++cur;
     } else if (*cur == '*' && cur + 1 != end && *(cur + 1) == 'S') {
@@ -380,7 +380,7 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
       bp = Format64(cp, 9, ns.count());
       while (cp != bp && cp[-1] == '0') --cp;
       if (cp != bp) *--bp = '.';
-      bp = Format02d(bp, bd.cs.second());
+      bp = Format02d(bp, al.cs.second());
       result.append(bp, cp - bp);
       pending = cur += 2;
     } else if (*cur == '4' && cur + 1 != end && *(cur + 1) == 'Y') {
@@ -388,7 +388,7 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
       if (cur - 2 != pending) {
         FormatTM(&result, std::string(pending, cur - 2), tm);
       }
-      bp = Format64(ep, 4, bd.cs.year());
+      bp = Format64(ep, 4, al.cs.year());
       result.append(bp, ep - bp);
       pending = cur += 2;
     } else if (std::isdigit(*cur)) {
@@ -407,7 +407,7 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
                                          : ns.count() / kExp10[9 - n]);
             *--bp = '.';
           }
-          bp = Format02d(bp, bd.cs.second());
+          bp = Format02d(bp, al.cs.second());
           result.append(bp, ep - bp);
           pending = cur = np;
         }
