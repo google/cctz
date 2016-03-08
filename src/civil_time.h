@@ -117,7 +117,7 @@ using detail::weekday;
 // Returns the weekday for the given civil_day.
 //
 //   civil_day a(2015, 8, 13);
-//   weekday wd = get_weekday(a);  // a == weekday::thursday
+//   weekday wd = get_weekday(a);  // wd == weekday::thursday
 //
 using detail::get_weekday;
 
@@ -135,7 +135,7 @@ using detail::get_weekday;
 // 23 24 25 26 27 28 29
 // 30 31
 //
-//   civil_day a(2015, 8, 13);  // Thursday
+//   civil_day a(2015, 8, 13);  // get_weekday(a) == weekday::thursday
 //   civil_day b = next_weekday(a, weekday::thursday);  // b = 2015-08-20
 //   civil_day c = prev_weekday(a, weekday::thursday);  // c = 2015-08-06
 //
