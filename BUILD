@@ -35,15 +35,12 @@ cc_library(
         "include/civil_time.h",
         "include/time_zone.h",
     ],
-    includes = [
-        "include",
-        "src",
-    ],
+    includes = ["include"],
     linkopts = [
         "-lm",
         "-lpthread",
     ],
-    textual_hdrs = ["src/civil_time_detail.h"],
+    textual_hdrs = ["include/civil_time_detail.h"],
     visibility = ["//visibility:public"],
 )
 
