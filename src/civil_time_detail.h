@@ -65,7 +65,7 @@ constexpr signed char k_dpC[400] = {
 
 // The number of days in the 4 years starting in the mod-400 index year,
 // stored as a 1460-deficit value (i.e., 0 == 1460, 1 == 1461).
-constexpr signed char k_dp4y[401] = {
+constexpr signed char k_dp4y[400] = {
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
