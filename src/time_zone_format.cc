@@ -34,6 +34,7 @@
 #endif
 
 namespace cctz {
+namespace detail {
 
 namespace {
 
@@ -745,4 +746,5 @@ bool parse(const std::string& format, const std::string& input,
   return true;
 }
 
+}  // namespace detail
 }  // namespace cctz

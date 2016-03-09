@@ -12,10 +12,6 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-// A library for computing with civil times (Y-M-D h:m:s) in a
-// time-zone-independent manner. These classes may help with rounding,
-// iterating, and arithmetic, while avoiding complications like DST.
-
 #ifndef CCTZ_CIVIL_TIME_H_
 #define CCTZ_CIVIL_TIME_H_
 
@@ -23,80 +19,201 @@
 
 namespace cctz {
 
-// The types civil_year, civil_month, civil_day, civil_hour, civil_minute,
-// and civil_second each implement the concept of a "civil time" that
-// is aligned to the boundary of the unit indicated by the type's name.
-// A "civil time" is a time-zone-independent representation of the six
-// fields---year, month, day, hour, minute, and second---that follow the
-// rules of the proleptic Gregorian calendar with exactly 24-hour days,
-// 60-minute hours, and 60-second minutes.
+// The term "civil time" refers to the legally recognized human-scale time
+// that is represented by the six fields YYYY-MM-DD hh:mm:ss. Modern-day civil
+// time follows the Gregorian Calendar and is a time-zone-independent concept.
+// A "date" is perhaps the most common example of a civil time (represented in
+// this library as cctz::civil_day). This library provides six classes and a
+// handful of functions that help with rounding, iterating, and arithmetic on
+// civil times while avoiding complications like daylight-saving time (DST).
 //
-// Each of these six types implement the same API, so learning to use any
-// one of them will translate to all of the others. Some of the following
-// examples will use civil_day and civil_month, but any other civil-time
-// types may be substituted.
+// The core of the Civil-Time Library is based on the following six classes:
+//
+//   * civil_second
+//   * civil_minute
+//   * civil_hour
+//   * civil_day
+//   * civil_month
+//   * civil_year
+//
+// Each class is a simple value type with the same interface for construction
+// and the same six accessors for each of the fields (year, month, day, hour,
+// minute, and second, aka YMDHMS). These classes differ only in their
+// alignment, which is indicated by the type name and specifies the field on
+// which arithmetic operates.
+//
+// Each class can be constructed by passing up to six optional integer
+// arguments representing the YMDHMS fields (in that order) to the
+// constructor. Omitted fields are assigned their minimum valid value. Hours,
+// minutes, and seconds will be set to 0, month and day will be set to 1, and
+// since there is no minimum valid year it will be set to 1970. So, a
+// default-constructed civil-time object will have YMDHMS fields representing
+// "1970-01-01 00:00:00".
+//
+// Each civil-time class is aligned to the civil-time field indicated in the
+// class's name. Alignment is performed by setting all the inferior fields to
+// their minimum valid value (as described above). The following are examples
+// of how each of the six types would align the fields representing November
+// 22, 2015 at 12:34:56 in the afternoon. (Note: the string format used here
+// is not important; it's just a shorthand way of showing the six YMDHMS
+// fields.)
+//
+//   civil_second  2015-11-22 12:34:56
+//   civil_minute  2015-11-22 12:34:00
+//   civil_hour    2015-11-22 12:00:00
+//   civil_day     2015-11-22 00:00:00
+//   civil_month   2015-11-01 00:00:00
+//   civil_year    2015-01-01 00:00:00
+//
+// Each civil-time type performs arithmetic on the field to which it is
+// aligned. This means that adding 1 to a civil_day increments the day field
+// (normalizing as necessary), and subtracting 7 from a civil_month operates
+// on the month field (normalizing as necessary). All arithmetic produces a
+// new value that represents a valid civil time. Difference requires two
+// similarly aligned civil time types and returns the scalar answer in units
+// of the given alignment. For example, the difference between two civil_hour
+// objects will give an answer in hours.
+//
+// In addition to the six civil-time types just described, there are
+// a handful of helper functions and algorithms for performing common
+// calculations. These are described below.
 //
 // CONSTRUCTION:
 //
-// All civil-time types allow convenient construction from various sets
-// of arguments. Unspecified fields default to their minimum value.
-// Specified fields that are out of range are first normalized (e.g.,
-// Oct 32 is normalized to Nov 1). Specified fields that are smaller
-// than the indicated alignment unit are set to their minimum value
-// (i.e., 1 for months and days; 0 for hours, minutes, and seconds).
+// Each of the civil-time types can be constructed in two ways: by directly
+// passing to the constructor up to six (optional) integers representing the
+// YMDHMS fields, or by copying the YMDHMS fields from a differently aligned
+// civil-time type.
 //
-//   civil_day a(2015, 6, 28);  // Construct from Y-M-D
-//   civil_day b(2015, 6, 28, 9, 9, 9);  // H:M:S floored to 00:00:00
-//   civil_day c(2015);   // Defaults to Jan 1
-//   civil_month m(a);    // Floors the given day to a month boundary
+//   civil_day default_value;  // 1970-01-01 00:00:00
 //
-// VALUE SEMANTICS:
+//   civil_day a(2015, 2, 3);           // 2015-02-03 00:00:00
+//   civil_day b(2015, 2, 3, 4, 5, 6);  // 2015-02-03 00:00:00
+//   civil_day c(2015);                 // 2015-01-01 00:00:00
 //
-// All civil-time types are small, value types that should be copied,
-// assigned to, and passed to functions by value.
+//   civil_second ss(2015, 2, 3, 4, 5, 6);  // 2015-02-03 04:05:06
+//   civil_minute mm(ss);                   // 2015-02-03 04:05:00
+//   civil_hour hh(mm);                     // 2015-02-03 04:00:00
+//   civil_day d(hh);                       // 2015-02-03 00:00:00
+//   civil_month m(d);                      // 2015-02-01 00:00:00
+//   civil_year y(m);                       // 2015-01-01 00:00:00
 //
-//   void F(civil_day day);  // Accepts by value, not const reference
-//   civil_day a(2015, 6, 28);
-//   civil_day b;
-//   b = a;                  // Copy
-//   F(b);                   // Passed by value
+//   m = civil_month(y);     // 2015-01-01 00:00:00
+//   d = civil_day(m);       // 2015-01-01 00:00:00
+//   hh = civil_hour(d);     // 2015-01-01 00:00:00
+//   mm = civil_minute(hh);  // 2015-01-01 00:00:00
+//   ss = civil_second(mm);  // 2015-01-01 00:00:00
+//
+// NORMALIZATION:
+//
+// Integer arguments passed to the constructor may be out-of-range, in which
+// case they are normalized to produce a valid civil-time object. This enables
+// natural arithmetic on constructor arguments without worrying about the
+// field's range. Normalization guarantees that there are no invalid
+// civil-time objects.
+//
+//   civil_day d(2016, 10, 32);  // Out-of-range day; normalized to 2016-11-01
+//
+// Note: If normalization is undesired, you can signal an error by comparing
+// the YMDHMS getters to the constructor arguments.
 //
 // PROPERTIES:
 //
-// All civil-time types have accessors for all six of the civil-time
-// fields: year, month, day, hour, minute, and second.
+// All civil-time types have accessors for all six of the civil-time fields:
+// year, month, day, hour, minute, and second. Recall that fields inferior to
+// the type's aligment will be set to their minimum valid value.
 //
-//   civil_day a(2015, 6, 28);
-//   assert(a.year() == 2015);
-//   assert(a.month() == 6);
-//   assert(a.day() == 28);
-//   assert(a.hour() == 0);
-//   assert(a.minute() == 0);
-//   assert(a.second() == 0);
-//
-// ARITHMETIC:
-//
-// All civil-time types allow natural arithmetic expressions that respect
-// the type's indicated alignment. For example, adding 1 to a civil_month
-// adds one month, and adding 1 to a civil_day adds one day.
-//
-//   civil_day a(2015, 6, 28);
-//   ++a;                  // a = 2015-06-29  (--a is also supported)
-//   a++;                  // a = 2015-06-30  (a-- is also supported)
-//   civil_day b = a + 1;  // b = 2015-07-01  (a - 1 is also supported)
-//   civil_day c = 1 + b;  // c = 2015-07-02
-//   int n = c - a;        // n = 2 (days)
+//   civil_day d(2015, 6, 28);
+//   // d.year() == 2015
+//   // d.month() == 2
+//   // d.day() == 3
+//   // d.hour() == 0
+//   // d.minute() == 0
+//   // d.second() == 0
 //
 // COMPARISON:
 //
-// All civil-time types may be compared with each other, regardless of
-// the type's alignment. Comparison is equivalent to comparing all six
-// civil-time fields.
+// Comparison always considers all six YMDHMS fields, regardless of the type's
+// alignment. Comparison between differently aligned civil-time types is
+// allowed.
 //
-//   // Iterates all the days of June.
-//   // (Compares a civil_day with a civil_month)
-//   for (civil_day day(2015, 6, 1); day < civil_month(2015, 7); ++day) {
+//   civil_day feb_3(2015, 2, 3);  // 2015-02-03 00:00:00
+//   civil_day mar_4(2015, 3, 4);  // 2015-03-04 00:00:00
+//   // feb_3 < mar_4
+//   // civil_year(feb_3) == civil_year(mar_4)
+//
+//   civil_second feb_3_noon(2015, 2, 3, 12, 0, 0);  // 2015-02-03 12:00:00
+//   // feb_3 < feb_3_noon
+//   // feb_3 == civil_day(feb_3_noon)
+//
+//   // Iterates all the days of February 2015.
+//   for (civil_day d(2015, 2, 1); d < civil_month(2015, 3); ++d) {
 //     // ...
+//   }
+//
+// ARITHMETIC:
+//
+// Civil-time types support natural arithmetic operators such as addition,
+// subtraction, and difference. Arithmetic operates on the civil-time field
+// indicated in the type's name. Difference requires arguments with the same
+// alignment and returns the answer in units of the alignment.
+//
+//   civil_day a(2015, 2, 3);
+//   ++a;                         // 2015-02-04 00:00:00
+//   --a;                         // 2015-02-03 00:00:00
+//   civil_day b = a + 1;         // 2015-02-04 00:00:00
+//   civil_day c = 1 + b;         // 2015-02-05 00:00:00
+//   int n = c - a;               // n = 2 (days)
+//   int m = c - civil_month(c);  // Won't compile: different types.
+//
+// EXAMPLE: Adding a month to January 31.
+//
+// One of the classic questions that arises when talking about a civil-time
+// library (or a date library or a date/time library) is this: "What happens
+// when you add a month to January 31?" This is an interesting question
+// because there could be a number of possible answers:
+//
+//   1. March 3 (or 2 if a leap year). This may make sense if the operation
+//      wants the equivalent of February 31.
+//   2. February 28 (or 29 if a leap year). This may make sense if the operation
+//      wants the last day of January to go to the last day of February.
+//   3. Error. The caller may get some error, an exception, an invalid date
+//      object, or maybe false is returned. This may make sense because there is
+//      no single unambiguously correct answer to the question.
+//
+// Practically speaking, any answer that is not what the programmer intended
+// is the wrong answer.
+//
+// This civil-time library avoids this problem by making it impossible to ask
+// such an ambiguous question. All civil-time objects are aligned to a
+// particular civil-field boundary (such as aligned to a year, month, day,
+// hour, minute, or second), and arithmetic operates on the field to which the
+// object is aligned. This means that in order to "add a month" the object
+// must first be aligned to a month boundary, which is equivalent to the first
+// day of that month.
+//
+// Of course, there are ways to answer the question at hand using this
+// civil-time library, but they require the programmer to be more explicit
+// so that they get their intended answer. Let's see how to get all three of
+// the above answers:
+//
+//   const civil_day d(2015, 1, 31);
+//
+//   // Answer 1:
+//   // Add 1 to the month field in the constructor, and rely on normalization.
+//   const auto ans_normalized = civil_day(d.year(), d.month() + 1, d.day());
+//   // ans_normalized == 2015-03-03 (aka Feb 31)
+//
+//   // Answer 2:
+//   // Add 1 to month field, capping to the end of next month.
+//   const auto last_day_of_next_month = civil_day(civil_month(d) + 2) - 1;
+//   const auto ans_capped = std::min(ans_normalized, last_day_of_next_month);
+//   // ans_capped == 2015-02-28
+//
+//   // Answer 3:
+//   // Signal an error.
+//   if (civil_month(ans_normalized) - civil_month(d) != 1) {
+//     // error, month overflow
 //   }
 //
 using civil_year = detail::civil_year;

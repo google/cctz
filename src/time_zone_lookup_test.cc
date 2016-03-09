@@ -635,7 +635,7 @@ time_zone LoadZone(const std::string& name) {
     EXPECT_EQ(mm, al.cs.minute());                                \
     EXPECT_EQ(ss, al.cs.second());                                \
     EXPECT_EQ(off, al.offset);                                    \
-    EXPECT_EQ(isdst, al.is_dst);                                  \
+    EXPECT_TRUE(isdst == al.is_dst);                              \
     EXPECT_EQ(zone, al.abbr);                                     \
   } while (0)
 

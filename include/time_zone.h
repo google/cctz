@@ -56,10 +56,10 @@ class time_zone {
   time_zone(const time_zone&) = default;
   time_zone& operator=(const time_zone&) = default;
 
-  // The civil_second denoted by a time_point in a certain time_zone. A
-  // better std::tm. This struct is not intended to represent an instant
-  // in time. So, rather than passing an absolute_lookup to a function,
-  // pass a time_point and a time_zone.
+  // An absolute_lookup represents the civil time (cctz::civil_second) within
+  // this time_zone at the given absolute time (time_point). There are
+  // additionally a few other fields that may be useful when working with
+  // older APIs, such as std::tm.
   //
   // Example:
   //   const cctz::time_zone tz = ...
@@ -67,11 +67,11 @@ class time_zone {
   //   const cctz::time_zone::absolute_lookup al = tz.lookup(tp);
   struct absolute_lookup {
     civil_second cs;
-    // Note: The following fields exist for backward compatibility with
-    // older APIs. Accessing these fields directly is a sign of imprudent
-    // logic in the calling code. Modern time-related code should only
-    // access this data indirectly by way of cctz::format().
-    int offset;        // seconds east of UTC
+    // Note: The following fields exist for backward compatibility with older
+    // APIs. Accessing these fields directly is a sign of imprudent logic in
+    // the calling code. Modern time-related code should only access this data
+    // indirectly by way of cctz::format().
+    int offset;        // civil seconds east of UTC
     bool is_dst;       // is offset non-standard?
     std::string abbr;  // time-zone abbreviation (e.g., "PST")
   };
@@ -81,17 +81,20 @@ class time_zone {
     return lookup(std::chrono::time_point_cast<sys_seconds>(tp));
   }
 
-  // A civil_lookup represents the conversion of a cctz::civil_second in a
-  // particular cctz::time_zone to a time instant, as returned by lookup().
-  // It is possible, though, for a caller to try to convert civil_second
-  // fields that do not represent an actual or unique instant in time
-  // (due to a shift in UTC offset in the time zone, which results in a
-  // discontinuity in the civil-time components).
+  // A civil_lookup represents the absolute time(s) (time_point) that
+  // correspond to the given civil time (cctz::civil_second) within this
+  // time_zone. Usually the given civil time represents a unique instant in
+  // time, in which case the conversion is unambiguous and correct. However,
+  // within this time zone, the given civil time may be skipped (e.g., during
+  // a positive UTC offset shift), or repeated (e.g., during a negative UTC
+  // offset shift). To account for these possibilities, civil_lookup is richer
+  // than just a single output time_point.
   //
-  // To account for these possibilities, civil_lookup is richer than just
-  // a single time_point. When the civil time is skipped or repeated,
-  // lookup() returns times calculated using the pre-transition and post-
-  // transition UTC offsets, plus the transition time itself.
+  // In all cases the civil_lookup::kind enum will indicate the nature of the
+  // given civil-time argument, and the pre, trans, and post, members will
+  // give the absolute time answers using the pre-transition offset, the
+  // transition point itself, and the post-transition offset, respectively
+  // (these are all equal if kind == UNIQUE).
   //
   // Example:
   //   cctz::time_zone lax;
@@ -147,17 +150,20 @@ time_zone utc_time_zone();
 // Returns a time zone representing the local time zone. Falls back to UTC.
 time_zone local_time_zone();
 
-// The full information provided by the time_zone::absolute_lookup and
-// time_zone::civil_lookup structs is frequently not needed by callers.
-// Overloaded non-member convert() functions are provided to simplify the
-// common cases.
+// Returns the civil time (cctz::civil_second) within the given time zone at
+// the given absolute time (time_point). Since the additional fields provided
+// by the time_zone::absolute_lookup struct should rarely be needed in modern
+// code, this convert() function is simpler and should be preferred.
 template <typename D>
 inline civil_second convert(const time_point<D>& tp, const time_zone& tz) {
   return tz.lookup(tp).cs;
 }
 
-// The return value here is chosen such that the relative order of civil
-// times is preserved across conversions.
+// Returns the absolute time (time_point) that corresponds to the given civil
+// time within the given time zone. If the civil time is not unique (i.e., if
+// it was either repeated or non-existent), then the returned time_point is
+// the best estimate that preserves relative order. That is, this function
+// guarantees that if cs1 < cs2, then convert(cs1, tz) <= convert(cs2, tz).
 inline time_point<sys_seconds> convert(const civil_second& cs,
                                        const time_zone& tz) {
   const time_zone::civil_lookup cl = tz.lookup(cs);
@@ -165,11 +171,11 @@ inline time_point<sys_seconds> convert(const civil_second& cs,
   return cl.pre;
 }
 
-namespace internal {
+namespace detail {
 // Floors tp to a second boundary and sets *subseconds.
 template <typename D>
 inline std::pair<time_point<sys_seconds>, D>
-FloorSeconds(const time_point<D>& tp) {
+SplitSeconds(const time_point<D>& tp) {
   auto sec = std::chrono::time_point_cast<sys_seconds>(tp);
   auto sub = tp - sec;
   if (sub.count() < 0) {
@@ -180,10 +186,14 @@ FloorSeconds(const time_point<D>& tp) {
 }
 // Overload for when tp is already second aligned.
 inline std::pair<time_point<sys_seconds>, sys_seconds>
-FloorSeconds(const time_point<sys_seconds>& tp) {
+SplitSeconds(const time_point<sys_seconds>& tp) {
   return {tp, sys_seconds(0)};
 }
-}  // namespace internal
+std::string format(const std::string&, const time_point<sys_seconds>&,
+                   const std::chrono::nanoseconds&, const time_zone&);
+bool parse(const std::string&, const std::string&, const time_zone&,
+           time_point<sys_seconds>*, std::chrono::nanoseconds*);
+}  // namespace detail
 
 // Formats the given time_point in the given cctz::time_zone according to
 // the provided format string. Uses strftime()-like formatting options,
@@ -198,8 +208,8 @@ FloorSeconds(const time_point<sys_seconds>& tp) {
 // year. A year outside of [-999:9999] when formatted with %E4Y will produce
 // more than four characters, just like %Y.
 //
-// Format strings should include %Ez so that the result uniquely identifies
-// a time instant.
+// Tip: Format strings should include the UTC offset (e.g., %z or %Ez) so that
+// the resultng string uniquely identifies an absolute time.
 //
 // Example:
 //   cctz::time_zone lax;
@@ -207,14 +217,12 @@ FloorSeconds(const time_point<sys_seconds>& tp) {
 //   auto tp = cctz::convert(cctz::civil_second(2013, 1, 2, 3, 4, 5), lax);
 //   std::string f = cctz::format("%H:%M:%S", tp, lax);  // "03:04:05"
 //   f = cctz::format("%H:%M:%E3S", tp, lax);            // "03:04:05.000"
-std::string format(const std::string&, const time_point<sys_seconds>&,
-                   const std::chrono::nanoseconds&, const time_zone&);
 template <typename D>
 inline std::string format(const std::string& fmt, const time_point<D>& tp,
                           const time_zone& tz) {
-  const auto p = internal::FloorSeconds(tp);
+  const auto p = detail::SplitSeconds(tp);
   const auto n = std::chrono::duration_cast<std::chrono::nanoseconds>(p.second);
-  return format(fmt, p.first, n, tz);
+  return detail::format(fmt, p.first, n, tz);
 }
 
 // Parses an input string according to the provided format string and
@@ -232,10 +240,10 @@ inline std::string format(const std::string& fmt, const time_point<D>& tp,
 // For example, parsing a string of "15:45" (%H:%M) will return a time_point
 // that represents "1970-01-01 15:45:00.0 +0000".
 //
-// Note that Parse() returns time instants, so it makes most sense to parse
+// Note that parse() returns time instants, so it makes most sense to parse
 // fully-specified date/time strings that include a UTC offset (%z/%Ez).
 //
-// Note also that Parse() only heeds the fields year, month, day, hour,
+// Note also that parse() only heeds the fields year, month, day, hour,
 // minute, (fractional) second, and UTC offset. Other fields, like weekday (%a
 // or %A), while parsed for syntactic validity, are ignored in the conversion.
 //
@@ -243,7 +251,7 @@ inline std::string format(const std::string& fmt, const time_point<D>& tp,
 // than normalizing them like cctz::civil_second() would do. For example, it
 // is an error to parse the date "Oct 32, 2013" because 32 is out of range.
 //
-// A leap second of ":60" is normalized to ":00" of the following minute with
+// A second of ":60" is normalized to ":00" of the following minute with
 // fractional seconds discarded. The following table shows how the given
 // seconds and subseconds will be parsed:
 //
@@ -259,14 +267,12 @@ inline std::string format(const std::string& fmt, const time_point<D>& tp,
 //   if (cctz::parse("%Y-%m-%d", "2015-10-09", tz, &tp)) {
 //     ...
 //   }
-bool parse(const std::string&, const std::string&, const time_zone&,
-           time_point<sys_seconds>*, std::chrono::nanoseconds*);
 template <typename D>
 inline bool parse(const std::string& fmt, const std::string& input,
                   const time_zone& tz, time_point<D>* tpp) {
   time_point<sys_seconds> tp{};
   std::chrono::nanoseconds ns{0};
-  const bool b = parse(fmt, input, tz, &tp, &ns);
+  const bool b = detail::parse(fmt, input, tz, &tp, &ns);
   if (b) {
     *tpp = std::chrono::time_point_cast<D>(tp);
     *tpp += std::chrono::duration_cast<D>(ns);
