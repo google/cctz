@@ -59,10 +59,10 @@ install: $(CCTZ_HDRS) $(CCTZ_LIB)
 	sudo cp -p $(CCTZ_LIB) $(PREFIX)/lib
 
 clean:
-	@$(RM) $(TESTS:=.o) $(TESTS)
-	@$(RM) $(CCTZ_OBJS) $(CCTZ_LIB)
 	@$(RM) -r $(EXAMPLES:=.dSYM) $(EXAMPLES:=.o) $(EXAMPLES)
 	@$(RM) -r $(TOOLS:=.dSYM) $(TOOLS:=.o) $(TOOLS)
+	@$(RM) -r $(TESTS:=.dSYM) $(TESTS:=.o) $(TESTS)
+	@$(RM) $(CCTZ_OBJS) $(CCTZ_LIB)
 
 # dependencies
 
