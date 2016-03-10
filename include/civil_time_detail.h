@@ -389,8 +389,7 @@ constexpr bool operator<(const civil_time<T1>& lhs,
                 (lhs.hour() == rhs.hour() &&
                  (lhs.minute() < rhs.minute() ||
                   (lhs.minute() == rhs.minute() &&
-                   (lhs.second() < rhs.second() ||
-                    (lhs.second() == rhs.second()))))))))))));
+                   (lhs.second() < rhs.second())))))))))));
 }
 template <typename T1, typename T2>
 constexpr bool operator<=(const civil_time<T1>& lhs,

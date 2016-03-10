@@ -440,6 +440,14 @@ TEST(CivilTime, Relational) {
 
 #define TEST_RELATIONAL(OLDER, YOUNGER) \
   do {                                  \
+    EXPECT_FALSE(OLDER < OLDER);        \
+    EXPECT_FALSE(OLDER > OLDER);        \
+    EXPECT_TRUE(OLDER >= OLDER);        \
+    EXPECT_TRUE(OLDER <= OLDER);        \
+    EXPECT_FALSE(YOUNGER < YOUNGER);    \
+    EXPECT_FALSE(YOUNGER > YOUNGER);    \
+    EXPECT_TRUE(YOUNGER >= YOUNGER);    \
+    EXPECT_TRUE(YOUNGER <= YOUNGER);    \
     EXPECT_EQ(OLDER, OLDER);            \
     EXPECT_NE(OLDER, YOUNGER);          \
     EXPECT_LT(OLDER, YOUNGER);          \
