@@ -6,12 +6,12 @@ CCTZ contains two libraries that cooperate with `<chrono>` to give C++
 programmers all the necessary tools for computing with dates, times, and time
 zones in a simple and correct manner. The libraries in CCTZ are:
 
-* **The Civil-Time Library** — This is a header-only library that supports computing
-  with human-scale time, such as dates (which are represented by the
+* **The Civil-Time Library** &mdash; This is a header-only library that supports
+  computing with human-scale time, such as dates (which are represented by the
   `cctz::civil_day` class). This library is declared in `include/civil_time.h`.
-* **The Time-Zone Library** — This library uses the IANA time zone database that is
-  installed on the system to convert between *absolute time* and *civil time*.
-  This library is declared in `include/time_zone.h`.
+* **The Time-Zone Library** &mdash; This library uses the IANA time zone
+  database that is installed on the system to convert between *absolute time*
+  and *civil time*. This library is declared in `include/time_zone.h`.
 
 These libraries are currently known to work on **Linux** and **Mac OS X**. We
 are actively interested in help getting them working on Windows. Please contact
@@ -32,7 +32,7 @@ the sources directly yourself.
 
 Next Steps:
 
-1.  See the CCTZ API:
+1.  See the documentation for the libraries in CCTZ:
   * Civil Time: `include/civil_time.h`
   * Time Zone: `include/time_zone.h`
 2.  Look at the examples in https://github.com/google/cctz/tree/master/examples
@@ -46,12 +46,12 @@ and are library and language agnostic. An understanding of these concepts helps
 the programmer correctly reason about even the most complicated time-programming
 challenges and produce the simplest possible solutions.]*
 
-There are two main ways to think about time in a computer program: As *absolute
+There are two main ways to think about time in a computer program: as *absolute
 time*, and as *civil time*. Both have their uses and it is important to
 understand when each is appropriate. Absolute and civil times may be converted
-back and forth using a time zone — this is the only way to correctly convert
-between them. Let us now look more deeply at the three main concepts of time
-programming: Absolute Time, Civil Time, and Time Zone.
+back and forth using a *time zone* &mdash; this is the only way to correctly
+convert between them. Let us now look more deeply at the three main concepts of
+time programming: Absolute Time, Civil Time, and Time Zone.
 
 *Absolute time* uniquely and universally represents a specific instant in time.
 It has no notion of calendars, or dates, or times of day. Instead, it is a
@@ -63,13 +63,14 @@ types exist to represent absolute times, classically `time_t` and more recently
 
 *Civil time* is the legally recognized representation of time for ordinary
 affairs (cf. http://www.merriam-webster.com/dictionary/civil). It is a
-human-scale representation of time that consists of the six fields — year,
-month, day, hour, minute, and second (sometimes shortened to "YMDHMS") — and it
-follows the rules of the Proleptic Gregorian Calendar, with 24-hour days divided
-into 60-minute hours and 60-second minutes. Like absolute times, civil times are
-also independent of all time zones and their related complexities (e.g., DST).
-While `std::tm` contains the six civil-time fields (YMDHMS), plus a few more, it
-does not have behavior to enforce the rules of civil time.
+human-scale representation of time that consists of the six fields &mdash;
+year, month, day, hour, minute, and second (sometimes shortened to "YMDHMS")
+&mdash; and it follows the rules of the Proleptic Gregorian Calendar, with
+24-hour days divided into 60-minute hours and 60-second minutes. Like absolute
+times, civil times are also independent of all time zones and their related
+complexities (e.g., DST). While `std::tm` contains the six civil-time fields
+(YMDHMS), plus a few more, it does not have behavior to enforce the rules of
+civil time.
 
 *Time zones* are geo-political regions within which human-defined rules are
 shared to convert between the absolute-time and civil-time domains. A time
@@ -83,18 +84,18 @@ currently no C++ standard library supporting arbitrary time zones.
 
 In order for programmers to reason about and program applications that correctly
 deal with these concepts, they must have a library that correctly implements the
-above concepts. The CCTZ library adds to the existing C++11 `<chrono>` library
-to fully implement the above concepts.
+above concepts. CCTZ adds to the existing C++11 `<chrono>` library to fully
+implement the above concepts.
 
-* Absolute time — This is implemented by the existing C++11 `<chrono>` library
-  without modification. For example, and absolute point in time is represented
-  by a `std::chrono::time_point`.
-* Civil time — This is implemented by the `include/civil_time.h` library that is
-  provided as part of the CCTZ library. For example, a "date" is represented by
-  a `cctz::civil_day`.
-* Time zone — This is implemented by the `include/time_zone.h` library that is
-  provided as part of the CCTZ library. For example, a time zone is represented
-  by an instance of the class `cctz::time_zone`.
+* Absolute time &mdash; This is implemented by the existing C++11 `<chrono>`
+  library without modification. For example, an absolute point in time is
+  represented by a `std::chrono::time_point`.
+* Civil time &mdash; This is implemented by the `include/civil_time.h` library
+  that is provided as part of CCTZ. For example, a "date" is represented by a
+  `cctz::civil_day`.
+* Time zone &mdash; This is implemented by the `include/time_zone.h` library
+  that is provided as part of CCTZ. For example, a time zone is represented by
+  an instance of the class `cctz::time_zone`.
 
 # Examples
 
@@ -176,8 +177,8 @@ historic event.
 # References
 
 * See also the [Time Programming Fundamentals](https://youtu.be/2rnIHsqABfM)
-talk from CppCon 2015 ([slides available here](http://goo.gl/ofof4N)). This talk
-mostly describes the older CCTZ v1 API, but the *concepts* are the same.
+  talk from CppCon 2015 ([slides available here](http://goo.gl/ofof4N)). This
+  talk mostly describes the older CCTZ v1 API, but the *concepts* are the same.
 * ISO C++ proposal to standardize the Civil-Time Library:
   https://github.com/devjgm/papers/blob/master/d0215r1.md
 * ISO C++ proposal to standardize the Time-Zone Library:
