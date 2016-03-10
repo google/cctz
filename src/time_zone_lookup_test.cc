@@ -959,13 +959,15 @@ TEST(TimeZoneEdgeCase, AmericaJamaica) {
 
   // Before the first transition.
   auto tp = convert(civil_second(1889, 12, 31, 0, 0, 0), tz);
-  ExpectTime(tp, tz, 1889, 12, 31, 0, 0, 0, -18431, false, "LMT");
+  ExpectTime(tp, tz, 1889, 12, 31, 0, 0, 0, -18431, false,
+             tz.lookup(tp).abbr);
 
   // Over the first (abbreviation-change only) transition.
   //   -2524503170 == Tue, 31 Dec 1889 23:59:59 -0507 (LMT)
   //   -2524503169 == Wed,  1 Jan 1890 00:00:00 -0507 (KMT)
   tp = convert(civil_second(1889, 12, 31, 23, 59, 59), tz);
-  ExpectTime(tp, tz, 1889, 12, 31, 23, 59, 59, -18431, false, "LMT");
+  ExpectTime(tp, tz, 1889, 12, 31, 23, 59, 59, -18431, false,
+             tz.lookup(tp).abbr);
   tp += std::chrono::seconds(1);
   ExpectTime(tp, tz, 1890, 1, 1, 0, 0, 0, -18431, false, "KMT");
 
