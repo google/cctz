@@ -59,6 +59,8 @@ clean:
 	@$(RM) $(TOOLS:=.o) $(TOOLS)
 	@$(RM) $(TESTS:=.o) $(TESTS)
 	@$(RM) $(CCTZ_OBJS) $(CCTZ_LIB)
+	@$(RM) -r $(EXAMPLES:=.dSYM) $(EXAMPLES)
+	@$(RM) -r $(TOOLS:=.dSYM) $(TOOLS)
 
 # dependencies
 
