@@ -240,6 +240,38 @@ TEST(CivilTime, PrevWeekDay) {
   EXPECT_EQ(21, prev.day());
 }
 
+TEST(CivilTime, WeekdayStream) {
+  std::stringstream ss;
+
+  ss << weekday::monday;
+  EXPECT_EQ("Monday", ss.str());
+  ss.str("");
+
+  ss << weekday::tuesday;
+  EXPECT_EQ("Tuesday", ss.str());
+  ss.str("");
+
+  ss << weekday::wednesday;
+  EXPECT_EQ("Wednesday", ss.str());
+  ss.str("");
+
+  ss << weekday::thursday;
+  EXPECT_EQ("Thursday", ss.str());
+  ss.str("");
+
+  ss << weekday::friday;
+  EXPECT_EQ("Friday", ss.str());
+  ss.str("");
+
+  ss << weekday::saturday;
+  EXPECT_EQ("Saturday", ss.str());
+  ss.str("");
+
+  ss << weekday::sunday;
+  EXPECT_EQ("Sunday", ss.str());
+  ss.str("");
+}
+
 TEST(CivilTime, YearDay) {
   constexpr civil_day cd(2016, 1, 28);
   constexpr int yd = get_yearday(cd);

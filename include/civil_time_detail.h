@@ -474,6 +474,25 @@ constexpr weekday get_weekday(const civil_day& cd) {
   return impl::k_weekday_by_thu_off[((cd - civil_day()) % 7 + 7) % 7];
 }
 
+inline std::ostream& operator<<(std::ostream& os, weekday wd) {
+  switch (wd) {
+    case weekday::monday:
+      return os << "Monday";
+    case weekday::tuesday:
+      return os << "Tuesday";
+    case weekday::wednesday:
+      return os << "Wednesday";
+    case weekday::thursday:
+      return os << "Thursday";
+    case weekday::friday:
+      return os << "Friday";
+    case weekday::saturday:
+      return os << "Saturday";
+    case weekday::sunday:
+      return os << "Sunday";
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////
 
 namespace impl {
