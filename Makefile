@@ -16,8 +16,8 @@ CC = $(CXX)
 OPT = -g
 # TEST_FLAGS =
 # TEST_LIBS =
-CPPFLAGS = -Isrc $(TEST_FLAGS) -Wall -std=c++11 -pthread $(OPT) -fPIC
-VPATH = examples:src
+CPPFLAGS = -Iinclude $(TEST_FLAGS) -Wall -std=c++11 -pthread $(OPT) -fPIC
+VPATH = include:src:examples
 LDFLAGS = -pthread
 LDLIBS = $(TEST_LIBS) -lm
 ARFLAGS = rcs
