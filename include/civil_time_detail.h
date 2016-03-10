@@ -375,6 +375,7 @@ using civil_minute = civil_time<minute_tag>;
 using civil_second = civil_time<second_tag>;
 
 ////////////////////////////////////////////////////////////////////////
+
 // Output stream operators output a format matching YYYY-MM-DDThh:mm:ss,
 // while omitting fields inferior to the type's alignment. For example,
 // civil_day is formatted only as YYYY-MM-DD.
