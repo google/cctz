@@ -172,10 +172,9 @@ inline time_point<sys_seconds> convert(const civil_second& cs,
 }
 
 namespace detail {
-// Floors tp to a second boundary and sets *subseconds.
 template <typename D>
 inline std::pair<time_point<sys_seconds>, D>
-SplitSeconds(const time_point<D>& tp) {
+split_seconds(const time_point<D>& tp) {
   auto sec = std::chrono::time_point_cast<sys_seconds>(tp);
   auto sub = tp - sec;
   if (sub.count() < 0) {
@@ -184,9 +183,8 @@ SplitSeconds(const time_point<D>& tp) {
   }
   return {sec, std::chrono::duration_cast<D>(sub)};
 }
-// Overload for when tp is already second aligned.
 inline std::pair<time_point<sys_seconds>, sys_seconds>
-SplitSeconds(const time_point<sys_seconds>& tp) {
+split_seconds(const time_point<sys_seconds>& tp) {
   return {tp, sys_seconds(0)};
 }
 std::string format(const std::string&, const time_point<sys_seconds>&,
@@ -220,7 +218,7 @@ bool parse(const std::string&, const std::string&, const time_zone&,
 template <typename D>
 inline std::string format(const std::string& fmt, const time_point<D>& tp,
                           const time_zone& tz) {
-  const auto p = detail::SplitSeconds(tp);
+  const auto p = detail::split_seconds(tp);
   const auto n = std::chrono::duration_cast<std::chrono::nanoseconds>(p.second);
   return detail::format(fmt, p.first, n, tz);
 }
@@ -241,7 +239,7 @@ inline std::string format(const std::string& fmt, const time_point<D>& tp,
 // that represents "1970-01-01 15:45:00.0 +0000".
 //
 // Note that parse() returns time instants, so it makes most sense to parse
-// fully-specified date/time strings that include a UTC offset (%z/%Ez).
+// fully-specified date/time strings that include a UTC offset (%z or %Ez).
 //
 // Note also that parse() only heeds the fields year, month, day, hour,
 // minute, (fractional) second, and UTC offset. Other fields, like weekday (%a

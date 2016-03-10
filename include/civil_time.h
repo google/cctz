@@ -27,7 +27,7 @@ namespace cctz {
 // handful of functions that help with rounding, iterating, and arithmetic on
 // civil times while avoiding complications like daylight-saving time (DST).
 //
-// The core of the Civil-Time Library is based on the following six classes:
+// The following six classes form the core of this civil-time library:
 //
 //   * civil_second
 //   * civil_minute
@@ -37,8 +37,8 @@ namespace cctz {
 //   * civil_year
 //
 // Each class is a simple value type with the same interface for construction
-// and the same six accessors for each of the fields (year, month, day, hour,
-// minute, and second, aka YMDHMS). These classes differ only in their
+// and the same six accessors for each of the civil fields (year, month, day,
+// hour, minute, and second, aka YMDHMS). These classes differ only in their
 // alignment, which is indicated by the type name and specifies the field on
 // which arithmetic operates.
 //
@@ -46,17 +46,19 @@ namespace cctz {
 // arguments representing the YMDHMS fields (in that order) to the
 // constructor. Omitted fields are assigned their minimum valid value. Hours,
 // minutes, and seconds will be set to 0, month and day will be set to 1, and
-// since there is no minimum valid year it will be set to 1970. So, a
+// since there is no minimum valid year, it will be set to 1970. So, a
 // default-constructed civil-time object will have YMDHMS fields representing
-// "1970-01-01 00:00:00".
+// "1970-01-01 00:00:00". Fields that are out-of-range are normalized (e.g.,
+// October 32 -> November 1) so that all civil-time objects represent valid
+// values.
 //
 // Each civil-time class is aligned to the civil-time field indicated in the
-// class's name. Alignment is performed by setting all the inferior fields to
-// their minimum valid value (as described above). The following are examples
-// of how each of the six types would align the fields representing November
-// 22, 2015 at 12:34:56 in the afternoon. (Note: the string format used here
-// is not important; it's just a shorthand way of showing the six YMDHMS
-// fields.)
+// class's name after normalization. Alignment is performed by setting all the
+// inferior fields to their minimum valid value (as described above). The
+// following are examples of how each of the six types would align the fields
+// representing November 22, 2015 at 12:34:56 in the afternoon. (Note: the
+// string format used here is not important; it's just a shorthand way of
+// showing the six YMDHMS fields.)
 //
 //   civil_second  2015-11-22 12:34:56
 //   civil_minute  2015-11-22 12:34:00
@@ -69,10 +71,10 @@ namespace cctz {
 // aligned. This means that adding 1 to a civil_day increments the day field
 // (normalizing as necessary), and subtracting 7 from a civil_month operates
 // on the month field (normalizing as necessary). All arithmetic produces a
-// new value that represents a valid civil time. Difference requires two
-// similarly aligned civil time types and returns the scalar answer in units
-// of the given alignment. For example, the difference between two civil_hour
-// objects will give an answer in hours.
+// valid civil time. Difference requires two similarly aligned civil-time
+// objects and returns the scalar answer in units of the objects' alignment.
+// For example, the difference between two civil_hour objects will give an
+// answer in units of civil hours.
 //
 // In addition to the six civil-time types just described, there are
 // a handful of helper functions and algorithms for performing common
@@ -115,7 +117,8 @@ namespace cctz {
 //   civil_day d(2016, 10, 32);  // Out-of-range day; normalized to 2016-11-01
 //
 // Note: If normalization is undesired, you can signal an error by comparing
-// the YMDHMS getters to the constructor arguments.
+// the constructor arguments to the normalized values returned by the YMDHMS
+// properties.
 //
 // PROPERTIES:
 //
@@ -125,8 +128,8 @@ namespace cctz {
 //
 //   civil_day d(2015, 6, 28);
 //   // d.year() == 2015
-//   // d.month() == 2
-//   // d.day() == 3
+//   // d.month() == 6
+//   // d.day() == 28
 //   // d.hour() == 0
 //   // d.minute() == 0
 //   // d.second() == 0
@@ -163,12 +166,12 @@ namespace cctz {
 //   --a;                         // 2015-02-03 00:00:00
 //   civil_day b = a + 1;         // 2015-02-04 00:00:00
 //   civil_day c = 1 + b;         // 2015-02-05 00:00:00
-//   int n = c - a;               // n = 2 (days)
+//   int n = c - a;               // n = 2 (civil days)
 //   int m = c - civil_month(c);  // Won't compile: different types.
 //
 // EXAMPLE: Adding a month to January 31.
 //
-// One of the classic questions that arises when talking about a civil-time
+// One of the classic questions that arises when considering a civil-time
 // library (or a date library or a date/time library) is this: "What happens
 // when you add a month to January 31?" This is an interesting question
 // because there could be a number of possible answers:
@@ -184,18 +187,19 @@ namespace cctz {
 // Practically speaking, any answer that is not what the programmer intended
 // is the wrong answer.
 //
-// This civil-time library avoids this problem by making it impossible to ask
-// such an ambiguous question. All civil-time objects are aligned to a
-// particular civil-field boundary (such as aligned to a year, month, day,
-// hour, minute, or second), and arithmetic operates on the field to which the
-// object is aligned. This means that in order to "add a month" the object
-// must first be aligned to a month boundary, which is equivalent to the first
-// day of that month.
+// This civil-time library avoids the problem by making it impossible to ask
+// ambiguous questions. All civil-time objects are aligned to a particular
+// civil-field boundary (such as aligned to a year, month, day, hour, minute,
+// or second), and arithmetic operates on the field to which the object is
+// aligned. This means that in order to "add a month" the object must first be
+// aligned to a month boundary, which is equivalent to the first day of that
+// month.
 //
-// Of course, there are ways to answer the question at hand using this
-// civil-time library, but they require the programmer to be more explicit
-// so that they get their intended answer. Let's see how to get all three of
-// the above answers:
+// Of course, there are ways to compute an answer the question at hand using
+// this civil-time library, but they require the programmer to be explicit
+// about the answer they expect. To illustrate, let's see how to compute all
+// three of the above possible answers to the question of "Jan 31 plus 1
+// month":
 //
 //   const civil_day d(2015, 1, 31);
 //
@@ -206,13 +210,14 @@ namespace cctz {
 //
 //   // Answer 2:
 //   // Add 1 to month field, capping to the end of next month.
-//   const auto last_day_of_next_month = civil_day(civil_month(d) + 2) - 1;
+//   const auto next_month = civil_month(d) + 1;
+//   const auto last_day_of_next_month = civil_day(next_month + 1) - 1;
 //   const auto ans_capped = std::min(ans_normalized, last_day_of_next_month);
 //   // ans_capped == 2015-02-28
 //
 //   // Answer 3:
-//   // Signal an error.
-//   if (civil_month(ans_normalized) - civil_month(d) != 1) {
+//   // Signal an error if the normalized answer is not in next month.
+//   if (civil_month(ans_normalized) != next_month) {
 //     // error, month overflow
 //   }
 //
@@ -254,9 +259,9 @@ using detail::get_weekday;
 //
 //   civil_day d = ...
 //   // Gets the following Thursday if d is not already Thursday
-//   civil_day thurs1 = PrevWeekday(d, weekday::thursday) + 7;
+//   civil_day thurs1 = prev_weekday(d, weekday::thursday) + 7;
 //   // Gets the previous Thursday if d is not already Thursday
-//   civil_day thurs2 = NextWeekday(d, weekday::thursday) - 7;
+//   civil_day thurs2 = next_weekday(d, weekday::thursday) - 7;
 //
 using detail::next_weekday;
 using detail::prev_weekday;
