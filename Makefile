@@ -12,6 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+# While Bazel (http://bazel.io) is the primary build system used by cctz, this
+# Makefile is provided as a convenience for those who can't use Bazel and can't
+# compile the sources in their own build system.
+
 CC = $(CXX)
 OPT = -g
 # TEST_FLAGS =
