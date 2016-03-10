@@ -6,10 +6,10 @@ CCTZ contains two libraries that cooperate with `<chrono>` to give C++
 programmers all the necessary tools for computing with dates, times, and time
 zones in a simple and correct manner. The libraries in CCTZ are:
 
-* The Civil-Time Library — This is a header-only library that supports computing
+* **The Civil-Time Library** — This is a header-only library that supports computing
   with human-scale time, such as dates (which are represented by the
   `cctz::civil_day` class). This library is declared in `include/civil_time.h`.
-* The Time-Zone Library — This library uses the IANA time zone database that is
+* **The Time-Zone Library** — This library uses the IANA time zone database that is
   installed on the system to convert between *absolute time* and *civil time*.
   This library is declared in `include/time_zone.h`.
 
@@ -36,6 +36,8 @@ Next Steps:
   * Civil Time: `include/civil_time.h`
   * Time Zone: `include/time_zone.h`
 2.  Look at the examples in https://github.com/google/cctz/tree/master/examples
+3.  Join our mailing list to ask questions and keep informed of changes: 
+  * https://groups.google.com/forum/#!forum/cctz
 
 # Fundamental Concepts
 
