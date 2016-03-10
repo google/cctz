@@ -17,6 +17,7 @@
 #include <cstdio>
 #include <limits>
 #include <string>
+#include <sstream>
 
 #include "gtest/gtest.h"
 
@@ -24,44 +25,11 @@ namespace cctz {
 
 namespace {
 
-std::string Format(const civil_second& cs) {
-  char buf[sizeof "-2147483648-12-31T23:59:59"];
-  std::snprintf(buf, sizeof buf, "%d-%02d-%02dT%02d:%02d:%02d", cs.year(),
-                cs.month(), cs.day(), cs.hour(), cs.minute(), cs.second());
-  return std::string(buf);
-}
-
-std::string Format(const civil_minute& cm) {
-  char buf[sizeof "-2147483648-12-31T23:59"];
-  std::snprintf(buf, sizeof buf, "%d-%02d-%02dT%02d:%02d", cm.year(),
-                cm.month(), cm.day(), cm.hour(), cm.minute());
-  return std::string(buf);
-}
-
-std::string Format(const civil_hour& ch) {
-  char buf[sizeof "-2147483648-12-31T23"];
-  std::snprintf(buf, sizeof buf, "%d-%02d-%02dT%02d", ch.year(), ch.month(),
-                ch.day(), ch.hour());
-  return std::string(buf);
-}
-
-std::string Format(const civil_day& cd) {
-  char buf[sizeof "-2147483648-12-31"];
-  std::snprintf(buf, sizeof buf, "%d-%02d-%02d", cd.year(), cd.month(),
-                cd.day());
-  return std::string(buf);
-}
-
-std::string Format(const civil_month& cm) {
-  char buf[sizeof "-2147483648-12"];
-  std::snprintf(buf, sizeof buf, "%d-%02d", cm.year(), cm.month());
-  return std::string(buf);
-}
-
-std::string Format(const civil_year& cy) {
-  char buf[sizeof "-2147483648"];
-  std::snprintf(buf, sizeof buf, "%d", cy.year());
-  return std::string(buf);
+template <typename T>
+std::string Format(const T& t) {
+  std::stringstream ss;
+  ss << t;
+  return ss.str();
 }
 
 }  // namespace
@@ -276,6 +244,48 @@ TEST(CivilTime, YearDay) {
   constexpr civil_day cd(2016, 1, 28);
   constexpr int yd = get_yearday(cd);
   EXPECT_EQ(28, yd);
+}
+
+TEST(CivilTime, OutputStream) {
+  std::stringstream ss;
+
+  // Tests formatting civil_year, which does not pad.
+  ss << civil_year(2016);
+  EXPECT_EQ("2016", ss.str());
+  ss.str("");
+
+  ss << civil_year(123);
+  EXPECT_EQ("123", ss.str());
+  ss.str("");
+
+  ss << civil_year(0);
+  EXPECT_EQ("0", ss.str());
+  ss.str("");
+
+  ss << civil_year(-1);
+  EXPECT_EQ("-1", ss.str());
+  ss.str("");
+
+  // Tests formatting of sub-year types, which pad to 2 digits
+  ss << civil_month(2016, 2);
+  EXPECT_EQ("2016-02", ss.str());
+  ss.str("");
+
+  ss << civil_day(2016, 2, 3);
+  EXPECT_EQ("2016-02-03", ss.str());
+  ss.str("");
+
+  ss << civil_hour(2016, 2, 3, 4);
+  EXPECT_EQ("2016-02-03T04", ss.str());
+  ss.str("");
+
+  ss << civil_minute(2016, 2, 3, 4, 5);
+  EXPECT_EQ("2016-02-03T04:05", ss.str());
+  ss.str("");
+
+  ss << civil_second(2016, 2, 3, 4, 5, 6);
+  EXPECT_EQ("2016-02-03T04:05:06", ss.str());
+  ss.str("");
 }
 
 // START OF google3 TESTS

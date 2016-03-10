@@ -12,7 +12,9 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
+#include <iomanip>
 #include <limits>
+#include <ostream>
 
 namespace cctz {
 namespace detail {
@@ -371,6 +373,34 @@ using civil_day = civil_time<day_tag>;
 using civil_hour = civil_time<hour_tag>;
 using civil_minute = civil_time<minute_tag>;
 using civil_second = civil_time<second_tag>;
+
+////////////////////////////////////////////////////////////////////////
+// Output stream operators output a format matching YYYY-MM-DDThh:mm:ss,
+// while omitting fields inferior to the type's alignment. For example,
+// civil_day is formatted only as YYYY-MM-DD.
+inline std::ostream& operator<<(std::ostream& os, civil_year y) {
+  return os << y.year();  // No padding.
+}
+inline std::ostream& operator<<(std::ostream& os, civil_month m) {
+  return os << civil_year(m) << '-' << std::setfill('0') << std::setw(2)
+            << m.month();
+}
+inline std::ostream& operator<<(std::ostream& os, civil_day d) {
+  return os << civil_month(d) << '-' << std::setfill('0') << std::setw(2)
+            << d.day();
+}
+inline std::ostream& operator<<(std::ostream& os, civil_hour h) {
+  return os << civil_day(h) << 'T' << std::setfill('0') << std::setw(2)
+            << h.hour();
+}
+inline std::ostream& operator<<(std::ostream& os, civil_minute m) {
+  return os << civil_hour(m) << ':' << std::setfill('0') << std::setw(2)
+            << m.minute();
+}
+inline std::ostream& operator<<(std::ostream& os, civil_second s) {
+  return os << civil_minute(s) << ':' << std::setfill('0') << std::setw(2)
+            << s.second();
+}
 
 ////////////////////////////////////////////////////////////////////////
 
