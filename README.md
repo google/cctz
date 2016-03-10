@@ -102,7 +102,7 @@ This "hello world" example uses a for-loop to iterate the days from the first of
 February until the month of March. Each day is streamed to output, and if the
 day happens to be the 29th, we also output the day of the week.
 
-```
+```cpp
 #include <iostream>
 #include "civil_time.h"
 int main() {
@@ -135,7 +135,7 @@ time zone) together. In this example, we know that viewers in New York watched
 Neil Armstrong first walk on the moon on July 20, 1969 at 10:56 PM. But we'd
 like to see what time it was for our friend watching in Sydney Australia.
 
-```
+```cpp
 #include <iostream>
 #include "civil_time.h"
 #include "time_zone.h"
