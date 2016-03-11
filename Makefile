@@ -33,7 +33,7 @@ PREFIX = /usr/local
 VPATH = $(SRC)include:$(SRC)src:$(SRC)examples
 CC = $(CXX)
 CPPFLAGS = -Wall -I$(SRC)include -std=$(STD) -pthread \
-	   $(TEST_FLAGS) $(OPT) -fPIC -MD
+	   $(TEST_FLAGS) $(OPT) -fPIC -MMD
 ARFLAGS = rcs
 LDFLAGS = -pthread
 LDLIBS = $(TEST_LIBS)
