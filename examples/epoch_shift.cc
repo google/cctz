@@ -17,7 +17,7 @@
 #include <iomanip>
 #include <iostream>
 
-std::string Format(const std::string& fmt, const std::tm& tm) {
+std::string format(const std::string& fmt, const std::tm& tm) {
   char buf[100];
   std::strftime(buf, sizeof(buf), fmt.c_str(), &tm);
   return buf;
@@ -36,7 +36,7 @@ int main() {
   const std::time_t now_nyc = now + off;
   std::tm tm_nyc;
   gmtime_r(&now_nyc, &tm_nyc);
-  std::cout << Format("NYC: %F %T\n", tm_nyc);
+  std::cout << format("NYC: %F %T\n", tm_nyc);
 
   // Shift back: "local time_t" to UTC
   off = GetOffset(now_nyc, "America/New_York");
