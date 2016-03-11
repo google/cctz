@@ -20,8 +20,8 @@
 #   make -C build -f ../Makefile SRC=../ -j `nproc`
 
 # local configuration
-CXX = clang++-3.6
-STD = c++14
+CXX = g++
+STD = c++11
 OPT = -O
 PREFIX = /usr/local
 
