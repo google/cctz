@@ -201,19 +201,19 @@ namespace impl {
 
 // Map a (normalized) Y/M/D to the number of days before/after 1970-01-01.
 // Will overflow outside of the range [-5877641-06-23 ... 5881580-07-11].
-inline constexpr int doy(int m, int d) {
+constexpr int doy(int m, int d) {
   return (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;
 }
-inline constexpr int doe(int yoe, int m, int d) {
+constexpr int doe(int yoe, int m, int d) {
   return yoe * 365 + yoe / 4 - yoe / 100 + doy(m, d);
 }
-inline constexpr int era_eymd_ord(int era, int eyear, int m, int d) {
+constexpr int era_eymd_ord(int era, int eyear, int m, int d) {
   return era * 146097 + doe(eyear - era * 400, m, d) - 719468;
 }
-inline constexpr int eymd_ord(int eyear, int m, int d) {
+constexpr int eymd_ord(int eyear, int m, int d) {
   return era_eymd_ord((eyear >= 0 ? eyear : eyear - 399) / 400, eyear, m, d);
 }
-inline constexpr int ymd_ord(int y, int m, int d) {
+constexpr int ymd_ord(int y, int m, int d) {
   return eymd_ord(m <= 2 ? y - 1 : y, m, d);
 }
 
@@ -222,44 +222,44 @@ inline constexpr int ymd_ord(int y, int m, int d) {
 ////////////////////////////////////////////////////////////////////////
 
 // Aligns the (normalized) fields struct to the indicated field.
-inline constexpr fields align(second_tag, fields f) {
+constexpr fields align(second_tag, fields f) {
   return f;
 }
-inline constexpr fields align(minute_tag, fields f) {
+constexpr fields align(minute_tag, fields f) {
   return fields{f.y, f.m, f.d, f.hh, f.mm, 0};
 }
-inline constexpr fields align(hour_tag, fields f) {
+constexpr fields align(hour_tag, fields f) {
   return fields{f.y, f.m, f.d, f.hh, 0, 0};
 }
-inline constexpr fields align(day_tag, fields f) {
+constexpr fields align(day_tag, fields f) {
   return fields{f.y, f.m, f.d, 0, 0, 0};
 }
-inline constexpr fields align(month_tag, fields f) {
+constexpr fields align(month_tag, fields f) {
   return fields{f.y, f.m, 1, 0, 0, 0};
 }
-inline constexpr fields align(year_tag, fields f) {
+constexpr fields align(year_tag, fields f) {
   return fields{f.y, 1, 1, 0, 0, 0};
 }
 
 ////////////////////////////////////////////////////////////////////////
 
 // Increments the indicated (normalized) field by "n".
-inline constexpr fields step(second_tag, fields f, int n) {
+constexpr fields step(second_tag, fields f, int n) {
   return impl::n_ss(f.y, f.m, f.d, f.hh, f.mm + n / 60, f.ss + n % 60);
 }
-inline constexpr fields step(minute_tag, fields f, int n) {
+constexpr fields step(minute_tag, fields f, int n) {
   return impl::n_mm(f.y, f.m, f.d, f.hh + n / 60, f.mm + n % 60, f.ss);
 }
-inline constexpr fields step(hour_tag, fields f, int n) {
+constexpr fields step(hour_tag, fields f, int n) {
   return impl::n_hh(f.y, f.m, f.d + n / 24, f.hh + n % 24, f.mm, f.ss);
 }
-inline constexpr fields step(day_tag, fields f, int n) {
+constexpr fields step(day_tag, fields f, int n) {
   return impl::n_C4c(f.y, f.m, f.d, n, f.hh, f.mm, f.ss);
 }
-inline constexpr fields step(month_tag, fields f, int n) {
+constexpr fields step(month_tag, fields f, int n) {
   return impl::n_m(f.y + n / 12, f.m + n % 12, f.d, f.hh, f.mm, f.ss);
 }
-inline constexpr fields step(year_tag, fields f, int n) {
+constexpr fields step(year_tag, fields f, int n) {
   return fields{f.y + n, f.m, f.d, f.hh, f.mm, f.ss};
 }
 
