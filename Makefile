@@ -12,20 +12,31 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-# While Bazel (http://bazel.io) is the primary build system used by cctz, this
-# Makefile is provided as a convenience for those who can't use Bazel and can't
-# compile the sources in their own build system.
+# While Bazel (http://bazel.io) is the primary build system used by cctz,
+# this Makefile is provided as a convenience for those who can't use Bazel
+# and can't compile the sources in their own build system.
+#
+# Suggested usage:
+#   make -C build -f ../Makefile SRC=../ -j `nproc`
 
-CC = $(CXX)
-OPT = -g
-# TEST_FLAGS =
-# TEST_LIBS =
-CPPFLAGS = -Iinclude $(TEST_FLAGS) -Wall -std=c++11 -pthread $(OPT) -fPIC
-VPATH = include:src:examples
-LDFLAGS = -pthread
-LDLIBS = $(TEST_LIBS) -lm
-ARFLAGS = rcs
+# local configuration
+CXX = clang++-3.6
+STD = c++14
+OPT = -O
 PREFIX = /usr/local
+
+# possible support for googletest
+## TESTS = civil_time_test time_zone_lookup_test time_zone_format_test
+## TEST_FLAGS = ...
+## TEST_LIBS = ...
+
+VPATH = $(SRC)include:$(SRC)src:$(SRC)examples
+CC = $(CXX)
+CPPFLAGS = -Wall -I$(SRC)include -std=$(STD) -pthread \
+	   $(TEST_FLAGS) $(OPT) -fPIC -MD
+ARFLAGS = rcs
+LDFLAGS = -pthread
+LDLIBS = $(TEST_LIBS)
 
 CCTZ_LIB = libcctz.a
 
@@ -43,7 +54,6 @@ CCTZ_OBJS =			\
 	time_zone_lookup.o	\
 	time_zone_posix.o
 
-# TESTS = civil_time_test time_zone_lookup_test time_zone_format_test
 TOOLS = time_tool
 EXAMPLES = classic epoch_shift hello example1 example2 example3 example4
 
@@ -59,36 +69,9 @@ install: $(CCTZ_HDRS) $(CCTZ_LIB)
 	sudo cp -p $(CCTZ_LIB) $(PREFIX)/lib
 
 clean:
-	@$(RM) -r $(EXAMPLES:=.dSYM) $(EXAMPLES:=.o) $(EXAMPLES)
-	@$(RM) -r $(TOOLS:=.dSYM) $(TOOLS:=.o) $(TOOLS)
-	@$(RM) -r $(TESTS:=.dSYM) $(TESTS:=.o) $(TESTS)
-	@$(RM) $(CCTZ_OBJS) $(CCTZ_LIB)
+	@$(RM) -r $(EXAMPLES:=.dSYM) $(EXAMPLES:=.o) $(EXAMPLES:=.d) $(EXAMPLES)
+	@$(RM) -r $(TOOLS:=.dSYM) $(TOOLS:=.o) $(TOOLS:=.d) $(TOOLS)
+	@$(RM) -r $(TESTS:=.dSYM) $(TESTS:=.o) $(TESTS:=.d) $(TESTS)
+	@$(RM) $(CCTZ_OBJS) $(CCTZ_OBJS:.o=.d) $(CCTZ_LIB)
 
-# dependencies
-
-time_zone_format.o: time_zone.h civil_time.h time_zone_if.h
-time_zone_if.o: time_zone_if.h time_zone.h civil_time.h \
- time_zone_info.h time_zone_libc.h tzfile.h
-time_zone_impl.o: time_zone_impl.h time_zone.h civil_time.h \
- time_zone_info.h time_zone_if.h tzfile.h
-time_zone_info.o: time_zone_info.h time_zone.h civil_time.h \
- time_zone_posix.h time_zone_if.h tzfile.h
-time_zone_libc.o: time_zone_libc.h time_zone.h civil_time.h \
-  time_zone_if.h
-time_zone_lookup.o: time_zone.h civil_time.h \
-  time_zone_impl.h time_zone_info.h time_zone_if.h tzfile.h
-time_zone_posix.o: time_zone_posix.h
-
-civil_time_test.o: civil_time.h
-time_zone_lookup_test.o: time_zone.h civil_time.h
-time_zone_format_test.o: time_zone.h civil_time.h
-
-time_tool.o: time_zone.h civil_time.h
-
-hello.o: time_zone.h civil_time.h
-example1.o: time_zone.h civil_time.h
-example2.o: time_zone.h civil_time.h
-example3.o: time_zone.h civil_time.h
-example4.o: time_zone.h civil_time.h
-
-civil_time.h: civil_time_detail.h
+-include $(CCTZ_OBJS:.o=.d) $(TESTS:=.d) $(TOOLS:=.d) $(EXAMPLES:=.d)

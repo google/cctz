@@ -1,2 +1,4 @@
 # ignore all files in the bazel directories
 /bazel-*
+# ignore non-bazel build products
+/build
