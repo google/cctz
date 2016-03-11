@@ -27,8 +27,9 @@ the [Google Test](https://github.com/google/googletest) framework.
     cctz`
 3.  Build cctz and run the tests: `bazel test :all`
 
-Note that when using CCTZ in your own code, you might find it easiest to compile
-the sources directly yourself.
+Note: If you're unable to use bazel, there is also a `Makefile` that should help
+get you started. When using CCTZ in your own project, you might find it easiest
+to compile the sources using your existing build system.
 
 Next Steps:
 
@@ -131,7 +132,7 @@ Hello 2016-02-28
 Hello 2016-02-29 <- leap day is a Monday
 ```
 
-## One giant leap.
+## One giant leap
 
 This example shows how to use all three libraries (`<chrono>`, civil time, and
 time zone) together. In this example, we know that viewers in New York watched
@@ -176,6 +177,7 @@ historic event.
 
 # References
 
+* CCTZ [FAQ](https://github.com/google/cctz/wiki/FAQ)
 * See also the [Time Programming Fundamentals](https://youtu.be/2rnIHsqABfM)
   talk from CppCon 2015 ([slides available here](http://goo.gl/ofof4N)). This
   talk mostly describes the older CCTZ v1 API, but the *concepts* are the same.
