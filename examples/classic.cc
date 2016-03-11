@@ -19,7 +19,7 @@
 #include <chrono>
 #include <string>
 
-std::string Format(const std::string& fmt, const std::tm& tm) {
+std::string format(const std::string& fmt, const std::tm& tm) {
   char buf[100];
   std::strftime(buf, sizeof(buf), fmt.c_str(), &tm);
   return buf;
@@ -30,9 +30,9 @@ int main() {
 
   std::tm tm_utc;
   gmtime_r(&now, &tm_utc);
-  std::cout << Format("UTC: %F %T\n", tm_utc);
+  std::cout << format("UTC: %F %T\n", tm_utc);
 
   std::tm tm_local;
   localtime_r(&now, &tm_local);
-  std::cout << Format("Local: %F %T\n", tm_local);
+  std::cout << format("Local: %F %T\n", tm_local);
 }
