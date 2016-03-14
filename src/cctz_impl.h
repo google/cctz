@@ -30,6 +30,9 @@ class TimeZone::Impl {
   // Load a named time zone. Returns false if the name is invalid, or if
   // some other kind of error occurs. Note that loading "UTC" never fails.
   static bool LoadTimeZone(const std::string& name, TimeZone* tz);
+  
+  //Set path to timezone database.
+  static void SetPathToTzDatabase(std::string & str);
 
   // Dereferences the TimeZone to obtain its Impl.
   static const TimeZone::Impl& get(const TimeZone& tz);

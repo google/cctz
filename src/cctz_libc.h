@@ -16,6 +16,7 @@
 #ifndef CCTZ_LIBC_H_
 #define CCTZ_LIBC_H_
 
+#if !(defined(_WIN32) || defined(_WIN64))
 #include <string>
 
 #include "src/cctz_if.h"
@@ -41,4 +42,5 @@ class TimeZoneLibC : public TimeZoneIf {
 
 }  // namespace cctz
 
+#endif // _WIN32 || _WIN64
 #endif  // CCTZ_LIBC_H_

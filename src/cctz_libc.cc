@@ -12,6 +12,7 @@
 //     implied.
 //     See the License for the specific language governing permissions and
 //     limitations under the License.
+#if !(defined(_WIN32) || defined(_WIN64))
 
 #include "src/cctz_libc.h"
 
@@ -182,3 +183,4 @@ TimeInfo TimeZoneLibC::MakeTimeInfo(int64_t year, int mon, int day,
 }
 
 }  // namespace cctz
+#endif // _WIN32 || _WIN64

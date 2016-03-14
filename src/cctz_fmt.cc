@@ -31,6 +31,7 @@
 #include <vector>
 #if !HAS_STRPTIME
 #include <iomanip>
+#include <cctype>
 #include <sstream>
 #endif
 

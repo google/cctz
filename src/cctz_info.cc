@@ -47,6 +47,8 @@
 
 namespace cctz {
 
+extern std::string tz_path;
+
 namespace {
 
 // Convert errnum to a message, using buf[buflen] if necessary.
@@ -645,17 +647,21 @@ bool TimeZoneInfo::Load(const std::string& name) {
     return true;
   }
 
+  std::string path = tz_path;
   // Map time-zone name to its machine-specific path.
-  std::string path;
-  if (name == "localtime") {
-    const char* localtime = std::getenv("LOCALTIME");
-    path = localtime ? localtime : "/etc/localtime";
-  } else if (!name.empty() && name[0] == '/') {
-    path = name;
+  if (path.empty()) {
+    if (name == "localtime") {
+      const char* localtime = std::getenv("LOCALTIME");
+      path = localtime ? localtime : "/etc/localtime";
+    } else if (!name.empty() && name[0] == '/') {
+      path = name;
+    } else {
+      const char* tzdir = std::getenv("TZDIR");
+      path = tzdir ? tzdir : "/usr/share/zoneinfo";
+      path += '/';
+      path += name;
+    }
   } else {
-    const char* tzdir = std::getenv("TZDIR");
-    path = tzdir ? tzdir : "/usr/share/zoneinfo";
-    path += '/';
     path += name;
   }
 
