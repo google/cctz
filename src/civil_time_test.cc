@@ -14,7 +14,6 @@
 
 #include "civil_time.h"
 
-#include <cstdio>
 #include <limits>
 #include <string>
 #include <sstream>
@@ -34,293 +33,231 @@ std::string Format(const T& t) {
 
 }  // namespace
 
-// Construction tests
+// Construction constexpr tests
 
 TEST(CivilTime, Normal) {
   constexpr civil_second css(2016, 1, 28, 17, 14, 12);
+  static_assert(css.second() == 12, "Normal.second");
   constexpr civil_minute cmm(2016, 1, 28, 17, 14);
+  static_assert(cmm.minute() == 14, "Normal.minute");
   constexpr civil_hour chh(2016, 1, 28, 17);
+  static_assert(chh.hour() == 17, "Normal.hour");
   constexpr civil_day cd(2016, 1, 28);
+  static_assert(cd.day() == 28, "Normal.day");
   constexpr civil_month cm(2016, 1);
+  static_assert(cm.month() == 1, "Normal.month");
   constexpr civil_year cy(2016);
+  static_assert(cy.year() == 2016, "Normal.year");
 }
 
 TEST(CivilTime, Conversion) {
   constexpr civil_year cy(2016);
+  static_assert(cy.year() == 2016, "Conversion.year");
   constexpr civil_month cm(cy);
+  static_assert(cm.month() == 1, "Conversion.month");
   constexpr civil_day cd(cm);
+  static_assert(cd.day() == 1, "Conversion.day");
   constexpr civil_hour chh(cd);
+  static_assert(chh.hour() == 0, "Conversion.hour");
   constexpr civil_minute cmm(chh);
+  static_assert(cmm.minute() == 0, "Conversion.minute");
   constexpr civil_second css(cmm);
+  static_assert(css.second() == 0, "Conversion.second");
 }
 
-// Normalization tests
+// Normalization constexpr tests
 
 TEST(CivilTime, Normalized) {
   constexpr civil_second cs(2016, 1, 28, 17, 14, 12);
-  EXPECT_EQ(2016, cs.year());
-  EXPECT_EQ(1, cs.month());
-  EXPECT_EQ(28, cs.day());
-  EXPECT_EQ(17, cs.hour());
-  EXPECT_EQ(14, cs.minute());
-  EXPECT_EQ(12, cs.second());
+  static_assert(cs.year() == 2016, "Normalized.year");
+  static_assert(cs.month() == 1, "Normalized.month");
+  static_assert(cs.day() == 28, "Normalized.day");
+  static_assert(cs.hour() == 17, "Normalized.hour");
+  static_assert(cs.minute() == 14, "Normalized.minute");
+  static_assert(cs.second() == 12, "Normalized.second");
 }
 
 TEST(CivilTime, SecondOverflow) {
   constexpr civil_second cs(2016, 1, 28, 17, 14, 121);
-  EXPECT_EQ(2016, cs.year());
-  EXPECT_EQ(1, cs.month());
-  EXPECT_EQ(28, cs.day());
-  EXPECT_EQ(17, cs.hour());
-  EXPECT_EQ(16, cs.minute());
-  EXPECT_EQ(1, cs.second());
+  static_assert(cs.year() == 2016, "SecondOverflow.year");
+  static_assert(cs.month() == 1, "SecondOverflow.month");
+  static_assert(cs.day() == 28, "SecondOverflow.day");
+  static_assert(cs.hour() == 17, "SecondOverflow.hour");
+  static_assert(cs.minute() == 16, "SecondOverflow.minute");
+  static_assert(cs.second() == 1, "SecondOverflow.second");
 }
 
 TEST(CivilTime, SecondUnderflow) {
   constexpr civil_second cs(2016, 1, 28, 17, 14, -121);
-  EXPECT_EQ(2016, cs.year());
-  EXPECT_EQ(1, cs.month());
-  EXPECT_EQ(28, cs.day());
-  EXPECT_EQ(17, cs.hour());
-  EXPECT_EQ(11, cs.minute());
-  EXPECT_EQ(59, cs.second());
+  static_assert(cs.year() == 2016, "SecondUnderflow.year");
+  static_assert(cs.month() == 1, "SecondUnderflow.month");
+  static_assert(cs.day() == 28, "SecondUnderflow.day");
+  static_assert(cs.hour() == 17, "SecondUnderflow.hour");
+  static_assert(cs.minute() == 11, "SecondUnderflow.minute");
+  static_assert(cs.second() == 59, "SecondUnderflow.second");
 }
 
 TEST(CivilTime, MinuteOverflow) {
   constexpr civil_second cs(2016, 1, 28, 17, 121, 12);
-  EXPECT_EQ(2016, cs.year());
-  EXPECT_EQ(1, cs.month());
-  EXPECT_EQ(28, cs.day());
-  EXPECT_EQ(19, cs.hour());
-  EXPECT_EQ(1, cs.minute());
-  EXPECT_EQ(12, cs.second());
+  static_assert(cs.year() == 2016, "MinuteOverflow.year");
+  static_assert(cs.month() == 1, "MinuteOverflow.month");
+  static_assert(cs.day() == 28, "MinuteOverflow.day");
+  static_assert(cs.hour() == 19, "MinuteOverflow.hour");
+  static_assert(cs.minute() == 1, "MinuteOverflow.minute");
+  static_assert(cs.second() == 12, "MinuteOverflow.second");
 }
 
 TEST(CivilTime, MinuteUnderflow) {
   constexpr civil_second cs(2016, 1, 28, 17, -121, 12);
-  EXPECT_EQ(2016, cs.year());
-  EXPECT_EQ(1, cs.month());
-  EXPECT_EQ(28, cs.day());
-  EXPECT_EQ(14, cs.hour());
-  EXPECT_EQ(59, cs.minute());
-  EXPECT_EQ(12, cs.second());
+  static_assert(cs.year() == 2016, "MinuteUnderflow.year");
+  static_assert(cs.month() == 1, "MinuteUnderflow.month");
+  static_assert(cs.day() == 28, "MinuteUnderflow.day");
+  static_assert(cs.hour() == 14, "MinuteUnderflow.hour");
+  static_assert(cs.minute() == 59, "MinuteUnderflow.minute");
+  static_assert(cs.second() == 12, "MinuteUnderflow.second");
 }
 
 TEST(CivilTime, HourOverflow) {
   constexpr civil_second cs(2016, 1, 28, 49, 14, 12);
-  EXPECT_EQ(2016, cs.year());
-  EXPECT_EQ(1, cs.month());
-  EXPECT_EQ(30, cs.day());
-  EXPECT_EQ(1, cs.hour());
-  EXPECT_EQ(14, cs.minute());
-  EXPECT_EQ(12, cs.second());
+  static_assert(cs.year() == 2016, "HourOverflow.year");
+  static_assert(cs.month() == 1, "HourOverflow.month");
+  static_assert(cs.day() == 30, "HourOverflow.day");
+  static_assert(cs.hour() == 1, "HourOverflow.hour");
+  static_assert(cs.minute() == 14, "HourOverflow.minute");
+  static_assert(cs.second() == 12, "HourOverflow.second");
 }
 
 TEST(CivilTime, HourUnderflow) {
   constexpr civil_second cs(2016, 1, 28, -49, 14, 12);
-  EXPECT_EQ(2016, cs.year());
-  EXPECT_EQ(1, cs.month());
-  EXPECT_EQ(25, cs.day());
-  EXPECT_EQ(23, cs.hour());
-  EXPECT_EQ(14, cs.minute());
-  EXPECT_EQ(12, cs.second());
+  static_assert(cs.year() == 2016, "HourUnderflow.year");
+  static_assert(cs.month() == 1, "HourUnderflow.month");
+  static_assert(cs.day() == 25, "HourUnderflow.day");
+  static_assert(cs.hour() == 23, "HourUnderflow.hour");
+  static_assert(cs.minute() == 14, "HourUnderflow.minute");
+  static_assert(cs.second() == 12, "HourUnderflow.second");
 }
 
 TEST(CivilTime, MonthOverflow) {
   constexpr civil_second cs(2016, 25, 28, 17, 14, 12);
-  EXPECT_EQ(2018, cs.year());
-  EXPECT_EQ(1, cs.month());
-  EXPECT_EQ(28, cs.day());
-  EXPECT_EQ(17, cs.hour());
-  EXPECT_EQ(14, cs.minute());
-  EXPECT_EQ(12, cs.second());
+  static_assert(cs.year() == 2018, "MonthOverflow.year");
+  static_assert(cs.month() == 1, "MonthOverflow.month");
+  static_assert(cs.day() == 28, "MonthOverflow.day");
+  static_assert(cs.hour() == 17, "MonthOverflow.hour");
+  static_assert(cs.minute() == 14, "MonthOverflow.minute");
+  static_assert(cs.second() == 12, "MonthOverflow.second");
 }
 
 TEST(CivilTime, MonthUnderflow) {
   constexpr civil_second cs(2016, -25, 28, 17, 14, 12);
-  EXPECT_EQ(2013, cs.year());
-  EXPECT_EQ(11, cs.month());
-  EXPECT_EQ(28, cs.day());
-  EXPECT_EQ(17, cs.hour());
-  EXPECT_EQ(14, cs.minute());
-  EXPECT_EQ(12, cs.second());
+  static_assert(cs.year() == 2013, "MonthUnderflow.year");
+  static_assert(cs.month() == 11, "MonthUnderflow.month");
+  static_assert(cs.day() == 28, "MonthUnderflow.day");
+  static_assert(cs.hour() == 17, "MonthUnderflow.hour");
+  static_assert(cs.minute() == 14, "MonthUnderflow.minute");
+  static_assert(cs.second() == 12, "MonthUnderflow.second");
 }
 
 TEST(CivilTime, C4Overflow) {
   constexpr civil_second cs(2016, 1, 292195, 17, 14, 12);
-  EXPECT_EQ(2816, cs.year());
-  EXPECT_EQ(1, cs.month());
-  EXPECT_EQ(1, cs.day());
-  EXPECT_EQ(17, cs.hour());
-  EXPECT_EQ(14, cs.minute());
-  EXPECT_EQ(12, cs.second());
+  static_assert(cs.year() == 2816, "C4Overflow.year");
+  static_assert(cs.month() == 1, "C4Overflow.month");
+  static_assert(cs.day() == 1, "C4Overflow.day");
+  static_assert(cs.hour() == 17, "C4Overflow.hour");
+  static_assert(cs.minute() == 14, "C4Overflow.minute");
+  static_assert(cs.second() == 12, "C4Overflow.second");
 }
 
 TEST(CivilTime, C4Underflow) {
   constexpr civil_second cs(2016, 1, -292195, 17, 14, 12);
-  EXPECT_EQ(1215, cs.year());
-  EXPECT_EQ(12, cs.month());
-  EXPECT_EQ(30, cs.day());
-  EXPECT_EQ(17, cs.hour());
-  EXPECT_EQ(14, cs.minute());
-  EXPECT_EQ(12, cs.second());
+  static_assert(cs.year() == 1215, "C4Underflow.year");
+  static_assert(cs.month() == 12, "C4Underflow.month");
+  static_assert(cs.day() == 30, "C4Underflow.day");
+  static_assert(cs.hour() == 17, "C4Underflow.hour");
+  static_assert(cs.minute() == 14, "C4Underflow.minute");
+  static_assert(cs.second() == 12, "C4Underflow.second");
 }
 
 TEST(CivilTime, MixedNormalization) {
   constexpr civil_second cs(2016, -42, 122, 99, -147, 4949);
-  EXPECT_EQ(2012, cs.year());
-  EXPECT_EQ(10, cs.month());
-  EXPECT_EQ(4, cs.day());
-  EXPECT_EQ(1, cs.hour());
-  EXPECT_EQ(55, cs.minute());
-  EXPECT_EQ(29, cs.second());
+  static_assert(cs.year() == 2012, "MixedNormalization.year");
+  static_assert(cs.month() == 10, "MixedNormalization.month");
+  static_assert(cs.day() == 4, "MixedNormalization.day");
+  static_assert(cs.hour() == 1, "MixedNormalization.hour");
+  static_assert(cs.minute() == 55, "MixedNormalization.minute");
+  static_assert(cs.second() == 29, "MixedNormalization.second");
 }
 
-// Relational tests
+// Relational constexpr tests
 
 TEST(CivilTime, Less) {
   constexpr civil_second cs1(2016, 1, 28, 17, 14, 12);
   constexpr civil_second cs2(2016, 1, 28, 17, 14, 13);
   constexpr bool less = cs1 < cs2;
-  EXPECT_TRUE(less);
+  static_assert(less, "Less");
 }
 
-// Arithmetic tests
+// Arithmetic constexpr tests
 
 TEST(CivilTime, Addition) {
   constexpr civil_second cs1(2016, 1, 28, 17, 14, 12);
   constexpr civil_second cs2 = cs1 + 50;
-  EXPECT_EQ(2016, cs2.year());
-  EXPECT_EQ(1, cs2.month());
-  EXPECT_EQ(28, cs2.day());
-  EXPECT_EQ(17, cs2.hour());
-  EXPECT_EQ(15, cs2.minute());
-  EXPECT_EQ(2, cs2.second());
+  static_assert(cs2.year() == 2016, "Addition.year");
+  static_assert(cs2.month() == 1, "Addition.month");
+  static_assert(cs2.day() == 28, "Addition.day");
+  static_assert(cs2.hour() == 17, "Addition.hour");
+  static_assert(cs2.minute() == 15, "Addition.minute");
+  static_assert(cs2.second() == 2, "Addition.second");
 }
 
 TEST(CivilTime, Subtraction) {
   constexpr civil_second cs1(2016, 1, 28, 17, 14, 12);
   constexpr civil_second cs2 = cs1 - 50;
-  EXPECT_EQ(2016, cs2.year());
-  EXPECT_EQ(1, cs2.month());
-  EXPECT_EQ(28, cs2.day());
-  EXPECT_EQ(17, cs2.hour());
-  EXPECT_EQ(13, cs2.minute());
-  EXPECT_EQ(22, cs2.second());
+  static_assert(cs2.year() == 2016, "Subtraction.year");
+  static_assert(cs2.month() == 1, "Subtraction.month");
+  static_assert(cs2.day() == 28, "Subtraction.day");
+  static_assert(cs2.hour() == 17, "Subtraction.hour");
+  static_assert(cs2.minute() == 13, "Subtraction.minute");
+  static_assert(cs2.second() == 22, "Subtraction.second");
 }
 
 TEST(CivilTime, Diff) {
   constexpr civil_day cd1(2016, 1, 28);
   constexpr civil_day cd2(2015, 1, 28);
   constexpr int diff = cd1 - cd2;
-  EXPECT_EQ(365, diff);
+  static_assert(diff == 365, "Diff");
 }
 
-// Helper tests
+// Helper constexpr tests
 
 TEST(CivilTime, WeekDay) {
   constexpr civil_day cd(2016, 1, 28);
   constexpr weekday wd = get_weekday(cd);
-  EXPECT_EQ(weekday::thursday, wd);
+  static_assert(wd == weekday::thursday, "Weekday");
 }
 
 TEST(CivilTime, NextWeekDay) {
   constexpr civil_day cd(2016, 1, 28);
   constexpr civil_day next = next_weekday(cd, weekday::thursday);
-  EXPECT_EQ(2016, next.year());
-  EXPECT_EQ(2, next.month());
-  EXPECT_EQ(4, next.day());
+  static_assert(next.year() == 2016, "NextWeekDay.year");
+  static_assert(next.month() == 2, "NextWeekDay.month");
+  static_assert(next.day() == 4, "NextWeekDay.day");
 }
 
 TEST(CivilTime, PrevWeekDay) {
   constexpr civil_day cd(2016, 1, 28);
   constexpr civil_day prev = prev_weekday(cd, weekday::thursday);
-  EXPECT_EQ(2016, prev.year());
-  EXPECT_EQ(1, prev.month());
-  EXPECT_EQ(21, prev.day());
-}
-
-TEST(CivilTime, WeekdayStream) {
-  std::stringstream ss;
-
-  ss << weekday::monday;
-  EXPECT_EQ("Monday", ss.str());
-  ss.str("");
-
-  ss << weekday::tuesday;
-  EXPECT_EQ("Tuesday", ss.str());
-  ss.str("");
-
-  ss << weekday::wednesday;
-  EXPECT_EQ("Wednesday", ss.str());
-  ss.str("");
-
-  ss << weekday::thursday;
-  EXPECT_EQ("Thursday", ss.str());
-  ss.str("");
-
-  ss << weekday::friday;
-  EXPECT_EQ("Friday", ss.str());
-  ss.str("");
-
-  ss << weekday::saturday;
-  EXPECT_EQ("Saturday", ss.str());
-  ss.str("");
-
-  ss << weekday::sunday;
-  EXPECT_EQ("Sunday", ss.str());
-  ss.str("");
+  static_assert(prev.year() == 2016, "PrevWeekDay.year");
+  static_assert(prev.month() == 1, "PrevWeekDay.month");
+  static_assert(prev.day() == 21, "PrevWeekDay.day");
 }
 
 TEST(CivilTime, YearDay) {
   constexpr civil_day cd(2016, 1, 28);
   constexpr int yd = get_yearday(cd);
-  EXPECT_EQ(28, yd);
+  static_assert(yd == 28, "YearDay");
 }
 
-TEST(CivilTime, OutputStream) {
-  std::stringstream ss;
-
-  // Tests formatting civil_year, which does not pad.
-  ss << civil_year(2016);
-  EXPECT_EQ("2016", ss.str());
-  ss.str("");
-
-  ss << civil_year(123);
-  EXPECT_EQ("123", ss.str());
-  ss.str("");
-
-  ss << civil_year(0);
-  EXPECT_EQ("0", ss.str());
-  ss.str("");
-
-  ss << civil_year(-1);
-  EXPECT_EQ("-1", ss.str());
-  ss.str("");
-
-  // Tests formatting of sub-year types, which pad to 2 digits
-  ss << civil_month(2016, 2);
-  EXPECT_EQ("2016-02", ss.str());
-  ss.str("");
-
-  ss << civil_day(2016, 2, 3);
-  EXPECT_EQ("2016-02-03", ss.str());
-  ss.str("");
-
-  ss << civil_hour(2016, 2, 3, 4);
-  EXPECT_EQ("2016-02-03T04", ss.str());
-  ss.str("");
-
-  ss << civil_minute(2016, 2, 3, 4, 5);
-  EXPECT_EQ("2016-02-03T04:05", ss.str());
-  ss.str("");
-
-  ss << civil_second(2016, 2, 3, 4, 5, 6);
-  EXPECT_EQ("2016-02-03T04:05:06", ss.str());
-  ss.str("");
-}
-
-// START OF google3 TESTS
+// The remaining tests do not use constexpr.
 
 TEST(CivilTime, DefaultConstruction) {
   civil_second ss;
@@ -589,8 +526,8 @@ TEST(CivilTime, Arithmetic) {
 }
 
 TEST(CivilTime, ArithmeticLimits) {
-  constexpr int kIntMax = std::numeric_limits<int>::max();
-  constexpr int kIntMin = std::numeric_limits<int>::min();
+  const int kIntMax = std::numeric_limits<int>::max();
+  const int kIntMin = std::numeric_limits<int>::min();
 
   civil_second second(1970, 1, 1, 0, 0, 0);
   second += kIntMax;
@@ -739,6 +676,7 @@ TEST(CivilTime, Properties) {
   EXPECT_EQ(0, d.minute());
   EXPECT_EQ(0, d.second());
   EXPECT_EQ(weekday::tuesday, get_weekday(d));
+  EXPECT_EQ(34, get_yearday(d));
 
   civil_month m(2015, 2, 3, 4, 5, 6);
   EXPECT_EQ(2015, m.year());
@@ -757,10 +695,34 @@ TEST(CivilTime, Properties) {
   EXPECT_EQ(0, y.second());
 }
 
+TEST(CivilTime, OutputStream) {
+  // Tests formatting of civil_year, which does not pad.
+  EXPECT_EQ("2016", Format(civil_year(2016)));
+  EXPECT_EQ("123", Format(civil_year(123)));
+  EXPECT_EQ("0", Format(civil_year(0)));
+  EXPECT_EQ("-1", Format(civil_year(-1)));
+
+  // Tests formatting of sub-year types, which pad to 2 digits
+  EXPECT_EQ("2016-02", Format(civil_month(2016, 2)));
+  EXPECT_EQ("2016-02-03", Format(civil_day(2016, 2, 3)));
+  EXPECT_EQ("2016-02-03T04", Format(civil_hour(2016, 2, 3, 4)));
+  EXPECT_EQ("2016-02-03T04:05", Format(civil_minute(2016, 2, 3, 4, 5)));
+  EXPECT_EQ("2016-02-03T04:05:06", Format(civil_second(2016, 2, 3, 4, 5, 6)));
+
+  // Tests formatting of weekday.
+  EXPECT_EQ("Monday", Format(weekday::monday));
+  EXPECT_EQ("Tuesday", Format(weekday::tuesday));
+  EXPECT_EQ("Wednesday", Format(weekday::wednesday));
+  EXPECT_EQ("Thursday", Format(weekday::thursday));
+  EXPECT_EQ("Friday", Format(weekday::friday));
+  EXPECT_EQ("Saturday", Format(weekday::saturday));
+  EXPECT_EQ("Sunday", Format(weekday::sunday));
+}
+
 TEST(CivilTime, NextPrevWeekday) {
   // Jan 1, 1970 was a Thursday.
   const civil_day thursday(1970, 1, 1);
-  EXPECT_EQ(weekday::thursday, get_weekday(thursday)) << Format(thursday);
+  EXPECT_EQ(weekday::thursday, get_weekday(thursday));
 
   // Thursday -> Thursday
   civil_day d = next_weekday(thursday, weekday::thursday);
