@@ -34,6 +34,9 @@
 #elif defined(__sun)
 # define OFFSET(tm) ((tm).tm_isdst > 0 ? altzone : timezone)
 # define ABBR(tm)   (tzname[(tm).tm_isdst > 0])
+#elif defined(_WIN32) || defined(_WIN64)
+# define OFFSET(tm) (_timezone + ((tm).tm_isdst > 0 ? 60 * 60 : 0))
+# define ABBR(tm)   (_tzname[(tm).tm_isdst > 0])
 #else
 # define OFFSET(tm) (timezone + ((tm).tm_isdst > 0 ? 60 * 60 : 0))
 # define ABBR(tm)   (tzname[(tm).tm_isdst > 0])
@@ -56,7 +59,7 @@ Breakdown TimeZoneLibC::BreakTime(const time_point<sys_seconds>& tp) const {
   std::tm tm;
   if (local_) {
 #if defined(_WIN32) || defined(_WIN64)
-    tm = *localtime(&t);
+    localtime_s(&tm, &t);
 #else
     localtime_r(&t, &tm);
 #endif
@@ -64,7 +67,7 @@ Breakdown TimeZoneLibC::BreakTime(const time_point<sys_seconds>& tp) const {
     bd.abbr = ABBR(tm);
   } else {
 #if defined(_WIN32) || defined(_WIN64)
-    tm = *gmtime(&t);
+    gmtime_s(&tm, &t);
 #else
     gmtime_r(&t, &tm);
 #endif
@@ -115,7 +118,7 @@ const int kDaysPerYear[2] = {365, 366};
 std::time_t DayOrdinal(int64_t year, int month, int day) {
   year -= (month <= 2 ? 1 : 0);
   const std::time_t era = (year >= 0 ? year : year - 399) / 400;
-  const int yoe = year - era * 400;
+  const int yoe = static_cast<int>(year - era * 400);
   const int doy = (153 * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;
   const int doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
   return era * 146097 + doe - 719468;  // shift epoch to 1970-01-01

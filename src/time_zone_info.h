@@ -132,8 +132,8 @@ class TimeZoneInfo : public TimeZoneIf {
   bool extended_;            // future_spec_ was used to generate transitions
   int64_t last_year_;        // the final year of the generated transitions
 
-  mutable std::atomic<int32_t> local_time_hint_;  // BreakTime() search hint
-  mutable std::atomic<int32_t> time_local_hint_;  // MakeTimeInfo() search hint
+  mutable std::atomic<size_t> local_time_hint_;  // BreakTime() search hint
+  mutable std::atomic<size_t> time_local_hint_;  // MakeTimeInfo() search hint
 };
 
 }  // namespace cctz
