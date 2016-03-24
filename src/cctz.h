@@ -61,10 +61,19 @@ struct Breakdown {
 };
 template <typename D>
 inline Breakdown BreakTime(const time_point<D>& tp, const TimeZone& tz) {
-  // Warn if the time point might require a civil-year value that is greater
-  // than a signed 32-bit value can hold. Note that
-  // 67767976233446399 == 2147483647-12-30 23:59:59 +00:00
-  assert(std::chrono::system_clock::to_time_t(tp) < 67767976233446399);
+  // Assert that the time point does not require a civil year beyond
+  // the limits of a signed 32-bit value, as dictated by the v2 API.
+  // -67768100567884800 == -2147483648-01-02 00:00:00 +00:00
+  //  67767976233446399 ==  2147483647-12-30 23:59:59 +00:00
+  assert(std::chrono::time_point_cast<sys_seconds>(tp) >=
+         std::chrono::time_point_cast<sys_seconds>(
+             std::chrono::system_clock::from_time_t(0)) +
+             sys_seconds(-67768100567884800));
+  assert(std::chrono::time_point_cast<sys_seconds>(tp) <=
+         std::chrono::time_point_cast<sys_seconds>(
+             std::chrono::system_clock::from_time_t(0)) +
+             sys_seconds(67767976233446399));
+
   const auto al = tz.lookup(tp);
   const auto cs = al.cs;
   const auto yd = get_yearday(civil_day(cs));
