@@ -15,7 +15,7 @@
 ### libraries
 
 cc_library(
-    name = "cctz_civil_time",
+    name = "civil_time",
     hdrs = [
         "include/civil_time.h",
     ],
@@ -25,7 +25,7 @@ cc_library(
 )
 
 cc_library(
-    name = "cctz_time_zone",
+    name = "time_zone",
     srcs = [
         "src/time_zone_format.cc",
         "src/time_zone_if.cc",
@@ -50,7 +50,20 @@ cc_library(
         "-lpthread",
     ],
     visibility = ["//visibility:public"],
-    deps = [":cctz_civil_time"],
+    deps = [":civil_time"],
+)
+
+cc_library(
+    name = "cctz_v1",
+    hdrs = [
+        "src/cctz.h",
+    ],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":civil_time",
+        ":time_zone",
+    ],
 )
 
 ### tests
@@ -85,7 +98,7 @@ cc_test(
     srcs = ["src/civil_time_test.cc"],
     deps = [
         "@gtest//:gtest",
-        ":cctz_civil_time",
+        ":civil_time",
     ],
 )
 
@@ -95,8 +108,8 @@ cc_test(
     srcs = ["src/time_zone_format_test.cc"],
     deps = [
         "@gtest//:gtest",
-        ":cctz_civil_time",
-        ":cctz_time_zone",
+        ":civil_time",
+        ":time_zone",
     ],
 )
 
@@ -106,8 +119,19 @@ cc_test(
     srcs = ["src/time_zone_lookup_test.cc"],
     deps = [
         "@gtest//:gtest",
-        ":cctz_civil_time",
-        ":cctz_time_zone",
+        ":civil_time",
+        ":time_zone",
+    ],
+)
+
+cc_test(
+    name = "cctz_v1_test",
+    size = "small",
+    srcs = ["src/cctz_v1_test.cc"],
+    defines = ["CCTZ_ACK_V1_DEPRECATION=1"],
+    deps = [
+        "@gtest//:gtest",
+        ":cctz_v1",
     ],
 )
 
@@ -122,8 +146,8 @@ cc_binary(
     name = "epoch_shift",
     srcs = ["examples/epoch_shift.cc"],
     deps = [
-        ":cctz_civil_time",
-        ":cctz_time_zone",
+        ":civil_time",
+        ":time_zone",
     ],
 )
 
@@ -131,8 +155,8 @@ cc_binary(
     name = "example1",
     srcs = ["examples/example1.cc"],
     deps = [
-        ":cctz_civil_time",
-        ":cctz_time_zone",
+        ":civil_time",
+        ":time_zone",
     ],
 )
 
@@ -140,8 +164,8 @@ cc_binary(
     name = "example2",
     srcs = ["examples/example2.cc"],
     deps = [
-        ":cctz_civil_time",
-        ":cctz_time_zone",
+        ":civil_time",
+        ":time_zone",
     ],
 )
 
@@ -149,8 +173,8 @@ cc_binary(
     name = "example3",
     srcs = ["examples/example3.cc"],
     deps = [
-        ":cctz_civil_time",
-        ":cctz_time_zone",
+        ":civil_time",
+        ":time_zone",
     ],
 )
 
@@ -158,8 +182,8 @@ cc_binary(
     name = "example4",
     srcs = ["examples/example4.cc"],
     deps = [
-        ":cctz_civil_time",
-        ":cctz_time_zone",
+        ":civil_time",
+        ":time_zone",
     ],
 )
 
@@ -167,8 +191,8 @@ cc_binary(
     name = "hello",
     srcs = ["examples/hello.cc"],
     deps = [
-        ":cctz_civil_time",
-        ":cctz_time_zone",
+        ":civil_time",
+        ":time_zone",
     ],
 )
 
@@ -178,7 +202,7 @@ cc_binary(
     name = "time_tool",
     srcs = ["src/time_tool.cc"],
     deps = [
-        ":cctz_civil_time",
-        ":cctz_time_zone",
+        ":civil_time",
+        ":time_zone",
     ],
 )
