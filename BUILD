@@ -56,7 +56,7 @@ cc_library(
 cc_library(
     name = "cctz_v1",
     hdrs = [
-        "src/cctz.h",
+        "include/cctz.h",
     ],
     includes = ["include"],
     visibility = ["//visibility:public"],
