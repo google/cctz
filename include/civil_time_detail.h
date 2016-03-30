@@ -15,6 +15,7 @@
 #include <iomanip>
 #include <limits>
 #include <ostream>
+#include <type_traits>
 
 // Disable constexpr support unless we are using clang in C++14 mode.
 #if !__clang__ || __cpp_constexpr < 201304
@@ -34,12 +35,12 @@ struct fields {
   int ss;
 };
 
-struct year_tag {};
-struct month_tag {};
-struct day_tag {};
-struct hour_tag {};
-struct minute_tag {};
 struct second_tag {};
+struct minute_tag : second_tag {};
+struct hour_tag : minute_tag {};
+struct day_tag : hour_tag {};
+struct month_tag : day_tag {};
+struct year_tag : month_tag {};
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -324,9 +325,20 @@ class civil_time {
   constexpr civil_time(const civil_time&) = default;
   civil_time& operator=(const civil_time&) = default;
 
-  // Explicit conversion between civil times of different alignment.
+  // Conversion between civil times of different alignment. Conversion to
+  // a more precise alignment is allowed implicitly (e.g., day -> hour),
+  // but conversion where information is discarded must be explicit
+  // (e.g., second -> minute).
+  template <typename U, typename S>
+  using preserves_data =
+      typename std::enable_if<std::is_base_of<U, S>::value>::type;
   template <typename U>
-  explicit constexpr civil_time(civil_time<U> ct) : civil_time(ct.f_) {}
+  civil_time(const civil_time<U>& ct, preserves_data<T, U>* = nullptr)
+      : civil_time(ct.f_) {}
+  template <typename U>
+  explicit constexpr civil_time(const civil_time<U>& ct,
+                                preserves_data<U, T>* = nullptr)
+      : civil_time(ct.f_) {}
 
   // Field accessors.
   constexpr int year() const { return f_.y; }

@@ -21,8 +21,7 @@
 template <typename D>
 cctz::time_point<cctz::sys_seconds> FloorDay(cctz::time_point<D> tp,
                                              cctz::time_zone tz) {
-  const cctz::civil_day cd(cctz::convert(tp, tz));
-  return cctz::convert(cctz::civil_second(cd), tz);
+  return cctz::convert(cctz::civil_day(cctz::convert(tp, tz)), tz);
 }
 
 int main() {

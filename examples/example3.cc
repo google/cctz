@@ -26,8 +26,7 @@ int main() {
   const cctz::civil_second cs = cctz::convert(now, lax);
 
   // First day of month, 6 months from now.
-  const auto then = cctz::convert(
-      cctz::civil_second(cs.year(), cs.month() + 6, 1, 0, 0, 0), lax);
+  const auto then = cctz::convert(cctz::civil_month(cs) + 6, lax);
 
   std::cout << cctz::format("Now: %F %T %z\n", now, lax);
   std::cout << cctz::format("6mo: %F %T %z\n", then, lax);

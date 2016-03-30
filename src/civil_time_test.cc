@@ -17,6 +17,7 @@
 #include <limits>
 #include <string>
 #include <sstream>
+#include <type_traits>
 
 #include "gtest/gtest.h"
 
@@ -359,6 +360,71 @@ TEST(CivilTime, FieldsConstructionLimits) {
   EXPECT_EQ(
       "-185083747-10-31T10:37:52",
       Format(civil_second(1970, kIntMin, kIntMin, kIntMin, kIntMin, kIntMin)));
+}
+
+TEST(CivilTime, ImplicitCrossAlignment) {
+  civil_year year(2015);
+  civil_month month = year;
+  civil_day day = month;
+  civil_hour hour = day;
+  civil_minute minute = hour;
+  civil_second second = minute;
+
+  second = year;
+  EXPECT_EQ(second, year);
+  second = month;
+  EXPECT_EQ(second, month);
+  second = day;
+  EXPECT_EQ(second, day);
+  second = hour;
+  EXPECT_EQ(second, hour);
+  second = minute;
+  EXPECT_EQ(second, minute);
+
+  minute = year;
+  EXPECT_EQ(minute, year);
+  minute = month;
+  EXPECT_EQ(minute, month);
+  minute = day;
+  EXPECT_EQ(minute, day);
+  minute = hour;
+  EXPECT_EQ(minute, hour);
+
+  hour = year;
+  EXPECT_EQ(hour, year);
+  hour = month;
+  EXPECT_EQ(hour, month);
+  hour = day;
+  EXPECT_EQ(hour, day);
+
+  day = year;
+  EXPECT_EQ(day, year);
+  day = month;
+  EXPECT_EQ(day, month);
+
+  month = year;
+  EXPECT_EQ(month, year);
+
+  // Ensures unsafe conversions are not allowed.
+  EXPECT_FALSE((std::is_convertible<civil_second, civil_minute>::value));
+  EXPECT_FALSE((std::is_convertible<civil_second, civil_hour>::value));
+  EXPECT_FALSE((std::is_convertible<civil_second, civil_day>::value));
+  EXPECT_FALSE((std::is_convertible<civil_second, civil_month>::value));
+  EXPECT_FALSE((std::is_convertible<civil_second, civil_year>::value));
+
+  EXPECT_FALSE((std::is_convertible<civil_minute, civil_hour>::value));
+  EXPECT_FALSE((std::is_convertible<civil_minute, civil_day>::value));
+  EXPECT_FALSE((std::is_convertible<civil_minute, civil_month>::value));
+  EXPECT_FALSE((std::is_convertible<civil_minute, civil_year>::value));
+
+  EXPECT_FALSE((std::is_convertible<civil_hour, civil_day>::value));
+  EXPECT_FALSE((std::is_convertible<civil_hour, civil_month>::value));
+  EXPECT_FALSE((std::is_convertible<civil_hour, civil_year>::value));
+
+  EXPECT_FALSE((std::is_convertible<civil_day, civil_month>::value));
+  EXPECT_FALSE((std::is_convertible<civil_day, civil_year>::value));
+
+  EXPECT_FALSE((std::is_convertible<civil_month, civil_year>::value));
 }
 
 TEST(CivilTime, ExplicitCrossAlignment) {
