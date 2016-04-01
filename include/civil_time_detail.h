@@ -117,26 +117,36 @@ inline CONSTEXPR int dpy(int y, int m) {
 
 inline CONSTEXPR fields n_ymn(int y, int m, int d, int n, int hh, int mm,
                               int ss) {
-  return (d <= n)
-             ? fields{y, m, d, hh, mm, ss}
-             : (m == 12) ? n_ymn(y + 1, 1, d - n, dpm(y + 1, 1), hh, mm, ss)
-                         : n_ymn(y, m + 1, d - n, dpm(y, m + 1), hh, mm, ss);
+  while (d > n) {
+    d -= n;
+    n = (m == 12) ? dpm(++y, m = 1) : dpm(y, ++m);
+  }
+  return fields{y, m, d, hh, mm, ss};
 }
 inline CONSTEXPR fields n_1yn(int y, int m, int d, int n, int hh, int mm,
                               int ss) {
-  return (d > n) ? n_1yn(y + 1, m, d - n, dpy(y + 1, m), hh, mm, ss)
-                 : n_ymn(y, m, d, dpm(y, m), hh, mm, ss);
+  while (d > n) {
+    d -= n;
+    n = dpy(++y, m);
+  }
+  return n_ymn(y, m, d, dpm(y, m), hh, mm, ss);
 }
 inline CONSTEXPR fields n_4yn(int y, int m, int d, int n, int hh, int mm,
                               int ss) {
-  return (d > n) ? n_4yn(y + 4, m, d - n, dp4y(y + 4, m), hh, mm, ss)
-                 : n_1yn(y, m, d, dpy(y, m), hh, mm, ss);
+  while (d > n) {
+    d -= n;
+    n = dp4y(y += 4, m);
+  }
+  return n_1yn(y, m, d, dpy(y, m), hh, mm, ss);
 }
 
 inline CONSTEXPR fields n_Cn(int y, int m, int d, int n, int hh, int mm,
                              int ss) {
-  return (d > n) ? n_Cn(y + 100, m, d - n, dpC(y + 100, m), hh, mm, ss)
-                 : n_4yn(y, m, d, dp4y(y, m), hh, mm, ss);
+  while (d > n) {
+    d -= n;
+    n = dpC(y += 100, m);
+  }
+  return n_4yn(y, m, d, dp4y(y, m), hh, mm, ss);
 }
 inline CONSTEXPR fields n_C(int y, int m, int d, int hh, int mm, int ss) {
   return n_Cn(y, m, d, dpC(y, m), hh, mm, ss);
