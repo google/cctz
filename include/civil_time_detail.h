@@ -53,13 +53,6 @@ namespace impl {
 inline CONSTEXPR bool is_leap(int y) {
   return y % 4 == 0 && (y % 100 != 0 || y % 400 == 0);
 }
-inline CONSTEXPR int dpm(int y, int m) {
-  // The month lengths in non-leap years.
-  CONSTEXPR const signed char k_dpm[12] = {
-    31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
-  };
-  return k_dpm[m - 1] + (m == 2 && is_leap(y));
-}
 inline CONSTEXPR int year_index(int y, int m) {
   return (((y + (m > 2)) % 400) + 400) % 400;
 }
@@ -114,42 +107,36 @@ inline CONSTEXPR int dp4y(int y, int m) {
 inline CONSTEXPR int dpy(int y, int m) {
   return is_leap(y + (m > 2)) ? 366 : 365;
 }
+inline CONSTEXPR int dpm(int y, int m) {
+  // The month lengths in non-leap years.
+  CONSTEXPR const signed char k_dpm[12] = {
+    31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+  };
+  return k_dpm[m - 1] + (m == 2 && is_leap(y));
+}
 
-inline CONSTEXPR fields n_ymn(int y, int m, int d, int n, int hh, int mm,
-                              int ss) {
+inline CONSTEXPR fields n_C(int y, int m, int d, int hh, int mm, int ss) {
+  int n = dpC(y, m);
+  while (d > n) {
+    d -= n;
+    n = dpC(y += 100, m);
+  }
+  n = dp4y(y, m);
+  while (d > n) {
+    d -= n;
+    n = dp4y(y += 4, m);
+  }
+  n = dpy(y, m);
+  while (d > n) {
+    d -= n;
+    n = dpy(++y, m);
+  }
+  n = dpm(y, m);
   while (d > n) {
     d -= n;
     n = (m == 12) ? dpm(++y, m = 1) : dpm(y, ++m);
   }
   return fields{y, m, d, hh, mm, ss};
-}
-inline CONSTEXPR fields n_1yn(int y, int m, int d, int n, int hh, int mm,
-                              int ss) {
-  while (d > n) {
-    d -= n;
-    n = dpy(++y, m);
-  }
-  return n_ymn(y, m, d, dpm(y, m), hh, mm, ss);
-}
-inline CONSTEXPR fields n_4yn(int y, int m, int d, int n, int hh, int mm,
-                              int ss) {
-  while (d > n) {
-    d -= n;
-    n = dp4y(y += 4, m);
-  }
-  return n_1yn(y, m, d, dpy(y, m), hh, mm, ss);
-}
-
-inline CONSTEXPR fields n_Cn(int y, int m, int d, int n, int hh, int mm,
-                             int ss) {
-  while (d > n) {
-    d -= n;
-    n = dpC(y += 100, m);
-  }
-  return n_4yn(y, m, d, dp4y(y, m), hh, mm, ss);
-}
-inline CONSTEXPR fields n_C(int y, int m, int d, int hh, int mm, int ss) {
-  return n_Cn(y, m, d, dpC(y, m), hh, mm, ss);
 }
 
 inline CONSTEXPR fields n_C4d2(int y, int m, int d, int hh, int mm, int ss) {
