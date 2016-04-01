@@ -331,7 +331,8 @@ class civil_time {
   using preserves_data =
       typename std::enable_if<std::is_base_of<U, S>::value>::type;
   template <typename U>
-  civil_time(const civil_time<U>& ct, preserves_data<T, U>* = nullptr)
+  CONSTEXPR civil_time(const civil_time<U>& ct,
+                       preserves_data<T, U>* = nullptr)
       : civil_time(ct.f_) {}
   template <typename U>
   explicit CONSTEXPR civil_time(const civil_time<U>& ct,
