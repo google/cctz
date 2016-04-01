@@ -152,61 +152,47 @@ inline CONSTEXPR fields n_C4c(int y, int m, int d, int c, int hh, int mm,
   return fields{y, m, d, hh, mm, ss};
 }
 
-inline CONSTEXPR fields n_m_n(int y, int cy, int m, int d, int cd, int hh,
-                              int mm, int ss) {
-  return (m < 0) ? n_C4c(y + cy - 1, m + 12, d, cd, hh, mm, ss)
-                 : (m == 0) ? n_C4c(y + cy - 1, 12, d, cd, hh, mm, ss)
-                            : n_C4c(y + cy, m, d, cd, hh, mm, ss);
-}
-inline CONSTEXPR fields n_m(int y, int m, int d, int hh, int mm, int ss) {
-  return n_m_n(y, m / 12, m % 12, d, 0, hh, mm, ss);
-}
-inline CONSTEXPR fields n_m_c(int y, int m, int d, int c, int hh, int mm,
+inline CONSTEXPR fields n_m_n(int y, int m, int d, int cd, int hh, int mm,
                               int ss) {
-  return n_m_n(y, m / 12, m % 12, d, c, hh, mm, ss);
+  y += m / 12;
+  m %= 12;
+  if (m <= 0) {
+    y -= 1;
+    m += 12;
+  }
+  return n_C4c(y, m, d, cd, hh, mm, ss);
 }
 
-inline CONSTEXPR fields n_hh_n(int y, int m, int d, int c, int hh, int mm,
-                               int ss) {
-  return (hh < 0) ? n_m_c(y, m, d, c - 1, hh + 24, mm, ss)
-                  : n_m_c(y, m, d, c, hh, mm, ss);
-}
-inline CONSTEXPR fields n_hh(int y, int m, int d, int hh, int mm, int ss) {
-  return n_hh_n(y, m, d, hh / 24, hh % 24, mm, ss);
-}
 inline CONSTEXPR fields n_hh_c2(int y, int m, int d, int c, int hh, int mm,
                                 int ss) {
-  return n_hh_n(y, m, d, hh / 24 + c, hh % 24, mm, ss);
+  c += hh / 24;
+  hh %= 24;
+  if (hh < 0) {
+    c -= 1;
+    hh += 24;
+  }
+  return n_m_n(y, m, d, c, hh, mm, ss);
 }
-inline CONSTEXPR fields n_hh_c(int y, int m, int d, int hh, int c, int mm,
-                               int ss) {
+
+inline CONSTEXPR fields n_mm_c2(int y, int m, int d, int hh, int c, int mm,
+                                int ss) {
+  c += mm / 60;
+  mm %= 60;
+  if (mm < 0) {
+    c -= 1;
+    mm += 60;
+  }
   return n_hh_c2(y, m, d, hh / 24 + c / 24, hh % 24 + c % 24, mm, ss);
 }
 
-inline CONSTEXPR fields n_mm_n(int y, int m, int d, int hh, int c, int mm,
-                               int ss) {
-  return (mm < 0) ? n_hh_c(y, m, d, hh, c - 1, mm + 60, ss)
-                  : n_hh_c(y, m, d, hh, c, mm, ss);
-}
-inline CONSTEXPR fields n_mm(int y, int m, int d, int hh, int mm, int ss) {
-  return n_mm_n(y, m, d, hh, mm / 60, mm % 60, ss);
-}
-inline CONSTEXPR fields n_mm_c2(int y, int m, int d, int hh, int c, int mm,
-                                int ss) {
-  return n_mm_n(y, m, d, hh, mm / 60 + c, mm % 60, ss);
-}
-inline CONSTEXPR fields n_mm_c(int y, int m, int d, int hh, int mm, int c,
-                               int ss) {
-  return n_mm_c2(y, m, d, hh, mm / 60 + c / 60, mm % 60 + c % 60, ss);
-}
-
-inline CONSTEXPR fields n_ss_n(int y, int m, int d, int hh, int mm, int c,
-                               int ss) {
-  return (ss < 0) ? n_mm_c(y, m, d, hh, mm, c - 1, ss + 60)
-                  : n_mm_c(y, m, d, hh, mm, c, ss);
-}
 inline CONSTEXPR fields n_ss(int y, int m, int d, int hh, int mm, int ss) {
-  return n_ss_n(y, m, d, hh, mm, ss / 60, ss % 60);
+  int c = ss / 60;
+  ss %= 60;
+  if (ss < 0) {
+    c -= 1;
+    ss += 60;
+  }
+  return n_mm_c2(y, m, d, hh, mm / 60 + c / 60, mm % 60 + c % 60, ss);
 }
 
 }  // namespace impl
@@ -264,16 +250,16 @@ inline CONSTEXPR fields step(second_tag, fields f, int n) {
   return impl::n_ss(f.y, f.m, f.d, f.hh, f.mm + n / 60, f.ss + n % 60);
 }
 inline CONSTEXPR fields step(minute_tag, fields f, int n) {
-  return impl::n_mm(f.y, f.m, f.d, f.hh + n / 60, f.mm + n % 60, f.ss);
+  return impl::n_mm_c2(f.y, f.m, f.d, f.hh + n / 60, 0, f.mm + n % 60, f.ss);
 }
 inline CONSTEXPR fields step(hour_tag, fields f, int n) {
-  return impl::n_hh(f.y, f.m, f.d + n / 24, f.hh + n % 24, f.mm, f.ss);
+  return impl::n_hh_c2(f.y, f.m, f.d + n / 24, 0, f.hh + n % 24, f.mm, f.ss);
 }
 inline CONSTEXPR fields step(day_tag, fields f, int n) {
   return impl::n_C4c(f.y, f.m, f.d, n, f.hh, f.mm, f.ss);
 }
 inline CONSTEXPR fields step(month_tag, fields f, int n) {
-  return impl::n_m(f.y + n / 12, f.m + n % 12, f.d, f.hh, f.mm, f.ss);
+  return impl::n_m_n(f.y + n / 12, f.m + n % 12, f.d, 0, f.hh, f.mm, f.ss);
 }
 inline CONSTEXPR fields step(year_tag, fields f, int n) {
   return fields{f.y + n, f.m, f.d, f.hh, f.mm, f.ss};
