@@ -115,7 +115,20 @@ inline CONSTEXPR int dpm(int y, int m) {
   return k_dpm[m - 1] + (m == 2 && is_leap(y));
 }
 
-inline CONSTEXPR fields n_C(int y, int m, int d, int hh, int mm, int ss) {
+inline CONSTEXPR fields n_C4c(int y, int m, int d, int c, int hh, int mm,
+                              int ss) {
+  y += (c / 146097) * 400;
+  c %= 146097;
+  if (c < 0) {
+    y -= 400;
+    c += 146097;
+  }
+  y += (d / 146097) * 400;
+  d = d % 146097 + c;
+  if (d <= 0) {
+    y -= 400;
+    d += 146097;
+  }
   int n = dpC(y, m);
   while (d > n) {
     d -= n;
@@ -137,25 +150,6 @@ inline CONSTEXPR fields n_C(int y, int m, int d, int hh, int mm, int ss) {
     n = (m == 12) ? dpm(++y, m = 1) : dpm(y, ++m);
   }
   return fields{y, m, d, hh, mm, ss};
-}
-
-inline CONSTEXPR fields n_C4d2(int y, int m, int d, int hh, int mm, int ss) {
-  return (d < 0) ? n_C(y - 400, m, d + 146097, hh, mm, ss)
-                 : (d == 0) ? n_C(y - 400, m, 146097, hh, mm, ss)
-                            : n_C(y, m, d, hh, mm, ss);
-}
-inline CONSTEXPR fields n_C4d(int y, int m, int d, int c, int hh, int mm,
-                              int ss) {
-  return n_C4d2(y + (d / 146097) * 400, m, d % 146097 + c, hh, mm, ss);
-}
-inline CONSTEXPR fields n_C4c2(int y, int m, int d, int c, int hh, int mm,
-                               int ss) {
-  return (c < 0) ? n_C4d(y - 400, m, d, c + 146097, hh, mm, ss)
-                 : n_C4d(y, m, d, c, hh, mm, ss);
-}
-inline CONSTEXPR fields n_C4c(int y, int m, int d, int c, int hh, int mm,
-                              int ss) {
-  return n_C4c2(y + (c / 146097) * 400, m, d, c % 146097, hh, mm, ss);
 }
 
 inline CONSTEXPR fields n_m_n(int y, int cy, int m, int d, int cd, int hh,
