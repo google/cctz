@@ -53,7 +53,7 @@ struct year_tag : month_tag {};
 
 ////////////////////////////////////////////////////////////////////////
 
-// Field normalization.
+// Field normalization (without avoidable overflow).
 
 namespace impl {
 
@@ -95,11 +95,10 @@ CONSTEXPR_F int days_per_year(int y, int m) {
   return is_leap_year(y + (m > 2)) ? 366 : 365;
 }
 CONSTEXPR_F int days_per_month(int y, int m) {
-  // The month lengths in non-leap years.
-  CONSTEXPR_D signed char k_dpm[12] = {
+  CONSTEXPR_D signed char k_days_per_month[12] = {
     31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
   };
-  return k_dpm[m - 1] + (m == 2 && is_leap_year(y));
+  return k_days_per_month[m - 1] + (m == 2 && is_leap_year(y));
 }
 
 CONSTEXPR_F fields n_day(int y, int m, int d, int c, int hh, int mm, int ss) {
