@@ -51,16 +51,16 @@ struct year_tag : month_tag {};
 
 namespace impl {
 
-inline CONSTEXPR bool is_leap(int y) {
+inline CONSTEXPR bool is_leap_year(int y) {
   return y % 4 == 0 && (y % 100 != 0 || y % 400 == 0);
 }
 inline CONSTEXPR int year_index(int y, int m) {
   return (((y + (m > 2)) % 400) + 400) % 400;
 }
-inline CONSTEXPR int dpC(int y, int m) {
+inline CONSTEXPR int days_per_century(int y, int m) {
   // The number of days in the 100 years starting in the mod-400 index year,
   // stored as a 36524-deficit value (i.e., 0 == 36524, 1 == 36525).
-  CONSTEXPR const signed char k_dpC[400] = {
+  CONSTEXPR const signed char k_days_per_century[400] = {
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -79,12 +79,12 @@ inline CONSTEXPR int dpC(int y, int m) {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   };
-  return 36524 + k_dpC[year_index(y, m)];
+  return 36524 + k_days_per_century[year_index(y, m)];
 }
-inline CONSTEXPR int dp4y(int y, int m) {
+inline CONSTEXPR int days_per_4years(int y, int m) {
   // The number of days in the 4 years starting in the mod-400 index year,
   // stored as a 1460-deficit value (i.e., 0 == 1460, 1 == 1461).
-  CONSTEXPR const signed char k_dp4y[400] = {
+  CONSTEXPR const signed char k_days_per_4years[400] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -103,20 +103,20 @@ inline CONSTEXPR int dp4y(int y, int m) {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
   };
-  return 1460 + k_dp4y[year_index(y, m)];
+  return 1460 + k_days_per_4years[year_index(y, m)];
 }
-inline CONSTEXPR int dpy(int y, int m) {
-  return is_leap(y + (m > 2)) ? 366 : 365;
+inline CONSTEXPR int days_per_year(int y, int m) {
+  return is_leap_year(y + (m > 2)) ? 366 : 365;
 }
-inline CONSTEXPR int dpm(int y, int m) {
+inline CONSTEXPR int days_per_month(int y, int m) {
   // The month lengths in non-leap years.
   CONSTEXPR const signed char k_dpm[12] = {
     31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
   };
-  return k_dpm[m - 1] + (m == 2 && is_leap(y));
+  return k_dpm[m - 1] + (m == 2 && is_leap_year(y));
 }
 
-inline CONSTEXPR fields n_C4c(int y, int m, int d, int c, int hh, int mm,
+inline CONSTEXPR fields n_day(int y, int m, int d, int c, int hh, int mm,
                               int ss) {
   y += (c / 146097) * 400;
   c %= 146097;
@@ -130,30 +130,30 @@ inline CONSTEXPR fields n_C4c(int y, int m, int d, int c, int hh, int mm,
     y -= 400;
     d += 146097;
   }
-  int n = dpC(y, m);
+  int n = days_per_century(y, m);
   while (d > n) {
     d -= n;
-    n = dpC(y += 100, m);
+    n = days_per_century(y += 100, m);
   }
-  n = dp4y(y, m);
+  n = days_per_4years(y, m);
   while (d > n) {
     d -= n;
-    n = dp4y(y += 4, m);
+    n = days_per_4years(y += 4, m);
   }
-  n = dpy(y, m);
+  n = days_per_year(y, m);
   while (d > n) {
     d -= n;
-    n = dpy(++y, m);
+    n = days_per_year(++y, m);
   }
-  n = dpm(y, m);
+  n = days_per_month(y, m);
   while (d > n) {
     d -= n;
-    n = (m == 12) ? dpm(++y, m = 1) : dpm(y, ++m);
+    n = (m == 12) ? days_per_month(++y, m = 1) : days_per_month(y, ++m);
   }
   return fields{y, m, d, hh, mm, ss};
 }
 
-inline CONSTEXPR fields n_m_n(int y, int m, int d, int cd, int hh, int mm,
+inline CONSTEXPR fields n_mon(int y, int m, int d, int cd, int hh, int mm,
                               int ss) {
   y += m / 12;
   m %= 12;
@@ -161,39 +161,39 @@ inline CONSTEXPR fields n_m_n(int y, int m, int d, int cd, int hh, int mm,
     y -= 1;
     m += 12;
   }
-  return n_C4c(y, m, d, cd, hh, mm, ss);
+  return n_day(y, m, d, cd, hh, mm, ss);
 }
 
-inline CONSTEXPR fields n_hh_c2(int y, int m, int d, int c, int hh, int mm,
-                                int ss) {
+inline CONSTEXPR fields n_hour(int y, int m, int d, int c, int hh, int mm,
+                               int ss) {
   c += hh / 24;
   hh %= 24;
   if (hh < 0) {
     c -= 1;
     hh += 24;
   }
-  return n_m_n(y, m, d, c, hh, mm, ss);
+  return n_mon(y, m, d, c, hh, mm, ss);
 }
 
-inline CONSTEXPR fields n_mm_c2(int y, int m, int d, int hh, int c, int mm,
-                                int ss) {
+inline CONSTEXPR fields n_min(int y, int m, int d, int hh, int c, int mm,
+                              int ss) {
   c += mm / 60;
   mm %= 60;
   if (mm < 0) {
     c -= 1;
     mm += 60;
   }
-  return n_hh_c2(y, m, d, hh / 24 + c / 24, hh % 24 + c % 24, mm, ss);
+  return n_hour(y, m, d, hh / 24 + c / 24, hh % 24 + c % 24, mm, ss);
 }
 
-inline CONSTEXPR fields n_ss(int y, int m, int d, int hh, int mm, int ss) {
+inline CONSTEXPR fields n_sec(int y, int m, int d, int hh, int mm, int ss) {
   int c = ss / 60;
   ss %= 60;
   if (ss < 0) {
     c -= 1;
     ss += 60;
   }
-  return n_mm_c2(y, m, d, hh, mm / 60 + c / 60, mm % 60 + c % 60, ss);
+  return n_min(y, m, d, hh, mm / 60 + c / 60, mm % 60 + c % 60, ss);
 }
 
 }  // namespace impl
@@ -248,19 +248,19 @@ inline CONSTEXPR fields align(year_tag, fields f) {
 
 // Increments the indicated (normalized) field by "n".
 inline CONSTEXPR fields step(second_tag, fields f, int n) {
-  return impl::n_ss(f.y, f.m, f.d, f.hh, f.mm + n / 60, f.ss + n % 60);
+  return impl::n_sec(f.y, f.m, f.d, f.hh, f.mm + n / 60, f.ss + n % 60);
 }
 inline CONSTEXPR fields step(minute_tag, fields f, int n) {
-  return impl::n_mm_c2(f.y, f.m, f.d, f.hh + n / 60, 0, f.mm + n % 60, f.ss);
+  return impl::n_min(f.y, f.m, f.d, f.hh + n / 60, 0, f.mm + n % 60, f.ss);
 }
 inline CONSTEXPR fields step(hour_tag, fields f, int n) {
-  return impl::n_hh_c2(f.y, f.m, f.d + n / 24, 0, f.hh + n % 24, f.mm, f.ss);
+  return impl::n_hour(f.y, f.m, f.d + n / 24, 0, f.hh + n % 24, f.mm, f.ss);
 }
 inline CONSTEXPR fields step(day_tag, fields f, int n) {
-  return impl::n_C4c(f.y, f.m, f.d, n, f.hh, f.mm, f.ss);
+  return impl::n_day(f.y, f.m, f.d, n, f.hh, f.mm, f.ss);
 }
 inline CONSTEXPR fields step(month_tag, fields f, int n) {
-  return impl::n_m_n(f.y + n / 12, f.m + n % 12, f.d, 0, f.hh, f.mm, f.ss);
+  return impl::n_mon(f.y + n / 12, f.m + n % 12, f.d, 0, f.hh, f.mm, f.ss);
 }
 inline CONSTEXPR fields step(year_tag, fields f, int n) {
   return fields{f.y + n, f.m, f.d, f.hh, f.mm, f.ss};
@@ -295,7 +295,7 @@ class civil_time {
  public:
   explicit CONSTEXPR civil_time(int y, int m = 1, int d = 1, int hh = 0,
                                 int mm = 0, int ss = 0)
-      : civil_time(impl::n_ss(y, m, d, hh, mm, ss)) {}
+      : civil_time(impl::n_sec(y, m, d, hh, mm, ss)) {}
 
   CONSTEXPR civil_time() : civil_time(1970) {}
   CONSTEXPR civil_time(const civil_time&) = default;
