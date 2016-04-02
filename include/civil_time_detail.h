@@ -198,27 +198,25 @@ CONSTEXPR_F fields n_sec(int y, int m, int d, int hh, int mm, int ss) {
 
 ////////////////////////////////////////////////////////////////////////
 
-namespace impl {
-
-// Map a (normalized) Y/M/D to the number of days before/after 1970-01-01.
-// Will overflow outside of the range [-5877641-06-23 ... 5881580-07-11].
-CONSTEXPR_F int doy(int m, int d) {
-  return (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;
+// Increments the indicated (normalized) field by "n".
+CONSTEXPR_F fields step(second_tag, fields f, int n) {
+  return impl::n_sec(f.y, f.m, f.d, f.hh, f.mm + n / 60, f.ss + n % 60);
 }
-CONSTEXPR_F int doe(int yoe, int m, int d) {
-  return yoe * 365 + yoe / 4 - yoe / 100 + doy(m, d);
+CONSTEXPR_F fields step(minute_tag, fields f, int n) {
+  return impl::n_min(f.y, f.m, f.d, f.hh + n / 60, 0, f.mm + n % 60, f.ss);
 }
-CONSTEXPR_F int era_eymd_ord(int era, int eyear, int m, int d) {
-  return era * 146097 + doe(eyear - era * 400, m, d) - 719468;
+CONSTEXPR_F fields step(hour_tag, fields f, int n) {
+  return impl::n_hour(f.y, f.m, f.d + n / 24, 0, f.hh + n % 24, f.mm, f.ss);
 }
-CONSTEXPR_F int eymd_ord(int eyear, int m, int d) {
-  return era_eymd_ord((eyear >= 0 ? eyear : eyear - 399) / 400, eyear, m, d);
+CONSTEXPR_F fields step(day_tag, fields f, int n) {
+  return impl::n_day(f.y, f.m, f.d, n, f.hh, f.mm, f.ss);
 }
-CONSTEXPR_F int ymd_ord(int y, int m, int d) {
-  return eymd_ord(m <= 2 ? y - 1 : y, m, d);
+CONSTEXPR_F fields step(month_tag, fields f, int n) {
+  return impl::n_mon(f.y + n / 12, f.m + n % 12, f.d, 0, f.hh, f.mm, f.ss);
 }
-
-}  // namespace impl
+CONSTEXPR_F fields step(year_tag, fields f, int n) {
+  return fields{f.y + n, f.m, f.d, f.hh, f.mm, f.ss};
+}
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -244,27 +242,20 @@ CONSTEXPR_F fields align(year_tag, fields f) {
 
 ////////////////////////////////////////////////////////////////////////
 
-// Increments the indicated (normalized) field by "n".
-CONSTEXPR_F fields step(second_tag, fields f, int n) {
-  return impl::n_sec(f.y, f.m, f.d, f.hh, f.mm + n / 60, f.ss + n % 60);
-}
-CONSTEXPR_F fields step(minute_tag, fields f, int n) {
-  return impl::n_min(f.y, f.m, f.d, f.hh + n / 60, 0, f.mm + n % 60, f.ss);
-}
-CONSTEXPR_F fields step(hour_tag, fields f, int n) {
-  return impl::n_hour(f.y, f.m, f.d + n / 24, 0, f.hh + n % 24, f.mm, f.ss);
-}
-CONSTEXPR_F fields step(day_tag, fields f, int n) {
-  return impl::n_day(f.y, f.m, f.d, n, f.hh, f.mm, f.ss);
-}
-CONSTEXPR_F fields step(month_tag, fields f, int n) {
-  return impl::n_mon(f.y + n / 12, f.m + n % 12, f.d, 0, f.hh, f.mm, f.ss);
-}
-CONSTEXPR_F fields step(year_tag, fields f, int n) {
-  return fields{f.y + n, f.m, f.d, f.hh, f.mm, f.ss};
+namespace impl {
+
+// Map a (normalized) Y/M/D to the number of days before/after 1970-01-01.
+// Will overflow outside of the range [-5877641-06-23 ... 5881580-07-11].
+CONSTEXPR_F int ymd_ord(int y, int m, int d) {
+  const int eyear = (m <= 2) ? y - 1 : y;
+  const int era = (eyear >= 0 ? eyear : eyear - 399) / 400;
+  const int yoe = eyear - era * 400;
+  const int doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;
+  const int doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+  return era * 146097 + doe - 719468;
 }
 
-////////////////////////////////////////////////////////////////////////
+}  // namespace impl
 
 // Returns the difference between fields structs using the indicated unit.
 CONSTEXPR_F int difference(year_tag, fields f1, fields f2) {
@@ -364,7 +355,7 @@ class civil_time {
     return civil_time(step(T{}, a.f_, -n));
   }
   inline friend CONSTEXPR_M int operator-(const civil_time& lhs,
-                                        const civil_time& rhs) {
+                                          const civil_time& rhs) {
     return difference(T{}, lhs.f_, rhs.f_);
   }
 
@@ -393,7 +384,7 @@ using civil_second = civil_time<second_tag>;
 // Always compares all six fields.
 template <typename T1, typename T2>
 CONSTEXPR_T bool operator<(const civil_time<T1>& lhs,
-                         const civil_time<T2>& rhs) {
+                           const civil_time<T2>& rhs) {
   return (lhs.year() < rhs.year() ||
           (lhs.year() == rhs.year() &&
            (lhs.month() < rhs.month() ||
@@ -408,29 +399,29 @@ CONSTEXPR_T bool operator<(const civil_time<T1>& lhs,
 }
 template <typename T1, typename T2>
 CONSTEXPR_T bool operator<=(const civil_time<T1>& lhs,
-                          const civil_time<T2>& rhs) {
+                            const civil_time<T2>& rhs) {
   return !(rhs < lhs);
 }
 template <typename T1, typename T2>
 CONSTEXPR_T bool operator>=(const civil_time<T1>& lhs,
-                          const civil_time<T2>& rhs) {
+                            const civil_time<T2>& rhs) {
   return !(lhs < rhs);
 }
 template <typename T1, typename T2>
 CONSTEXPR_T bool operator>(const civil_time<T1>& lhs,
-                         const civil_time<T2>& rhs) {
+                           const civil_time<T2>& rhs) {
   return rhs < lhs;
 }
 template <typename T1, typename T2>
 CONSTEXPR_T bool operator==(const civil_time<T1>& lhs,
-                          const civil_time<T2>& rhs) {
+                            const civil_time<T2>& rhs) {
   return lhs.year() == rhs.year() && lhs.month() == rhs.month() &&
          lhs.day() == rhs.day() && lhs.hour() == rhs.hour() &&
          lhs.minute() == rhs.minute() && lhs.second() == rhs.second();
 }
 template <typename T1, typename T2>
 CONSTEXPR_T bool operator!=(const civil_time<T1>& lhs,
-                          const civil_time<T2>& rhs) {
+                            const civil_time<T2>& rhs) {
   return !(lhs == rhs);
 }
 
