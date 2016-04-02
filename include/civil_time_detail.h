@@ -15,6 +15,7 @@
 #include <iomanip>
 #include <limits>
 #include <ostream>
+#include <sstream>
 #include <type_traits>
 
 // Disable constexpr support unless we are using clang in C++14 mode.
@@ -441,27 +442,39 @@ CONSTEXPR bool operator!=(const civil_time<T1>& lhs,
 // while omitting fields inferior to the type's alignment. For example,
 // civil_day is formatted only as YYYY-MM-DD.
 inline std::ostream& operator<<(std::ostream& os, civil_year y) {
-  return os << y.year();  // No padding.
+  std::stringstream ss;
+  ss << y.year();  // No padding.
+  return os << ss.str();
 }
 inline std::ostream& operator<<(std::ostream& os, civil_month m) {
-  return os << civil_year(m) << '-' << std::setfill('0') << std::setw(2)
-            << m.month();
+  std::stringstream ss;
+  ss << civil_year(m) << '-';
+  ss << std::setfill('0') << std::setw(2) << m.month();
+  return os << ss.str();
 }
 inline std::ostream& operator<<(std::ostream& os, civil_day d) {
-  return os << civil_month(d) << '-' << std::setfill('0') << std::setw(2)
-            << d.day();
+  std::stringstream ss;
+  ss << civil_month(d) << '-';
+  ss << std::setfill('0') << std::setw(2) << d.day();
+  return os << ss.str();
 }
 inline std::ostream& operator<<(std::ostream& os, civil_hour h) {
-  return os << civil_day(h) << 'T' << std::setfill('0') << std::setw(2)
-            << h.hour();
+  std::stringstream ss;
+  ss << civil_day(h) << 'T';
+  ss << std::setfill('0') << std::setw(2) << h.hour();
+  return os << ss.str();
 }
 inline std::ostream& operator<<(std::ostream& os, civil_minute m) {
-  return os << civil_hour(m) << ':' << std::setfill('0') << std::setw(2)
-            << m.minute();
+  std::stringstream ss;
+  ss << civil_hour(m) << ':';
+  ss << std::setfill('0') << std::setw(2) << m.minute();
+  return os << ss.str();
 }
 inline std::ostream& operator<<(std::ostream& os, civil_second s) {
-  return os << civil_minute(s) << ':' << std::setfill('0') << std::setw(2)
-            << s.second();
+  std::stringstream ss;
+  ss << civil_minute(s) << ':';
+  ss << std::setfill('0') << std::setw(2) << s.second();
+  return os << ss.str();
 }
 
 ////////////////////////////////////////////////////////////////////////

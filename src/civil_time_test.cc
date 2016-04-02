@@ -14,6 +14,7 @@
 
 #include "civil_time.h"
 
+#include <iomanip>
 #include <limits>
 #include <string>
 #include <sstream>
@@ -785,6 +786,58 @@ TEST(CivilTime, OutputStream) {
   EXPECT_EQ("Friday", Format(weekday::friday));
   EXPECT_EQ("Saturday", Format(weekday::saturday));
   EXPECT_EQ("Sunday", Format(weekday::sunday));
+}
+
+TEST(CivilTime, OutputStreamLeftFillWidth) {
+  civil_second cs(2016, 2, 3, 4, 5, 6);
+  {
+    std::stringstream ss;
+    ss << std::left << std::setfill('.');
+    ss << std::setw(3) << 'X';
+    ss << std::setw(21) << civil_year(cs);
+    ss << std::setw(3) << 'X';
+    EXPECT_EQ("X..2016.................X..", ss.str());
+  }
+  {
+    std::stringstream ss;
+    ss << std::left << std::setfill('.');
+    ss << std::setw(3) << 'X';
+    ss << std::setw(21) << civil_month(cs);
+    ss << std::setw(3) << 'X';
+    EXPECT_EQ("X..2016-02..............X..", ss.str());
+  }
+  {
+    std::stringstream ss;
+    ss << std::left << std::setfill('.');
+    ss << std::setw(3) << 'X';
+    ss << std::setw(21) << civil_day(cs);
+    ss << std::setw(3) << 'X';
+    EXPECT_EQ("X..2016-02-03...........X..", ss.str());
+  }
+  {
+    std::stringstream ss;
+    ss << std::left << std::setfill('.');
+    ss << std::setw(3) << 'X';
+    ss << std::setw(21) << civil_hour(cs);
+    ss << std::setw(3) << 'X';
+    EXPECT_EQ("X..2016-02-03T04........X..", ss.str());
+  }
+  {
+    std::stringstream ss;
+    ss << std::left << std::setfill('.');
+    ss << std::setw(3) << 'X';
+    ss << std::setw(21) << civil_minute(cs);
+    ss << std::setw(3) << 'X';
+    EXPECT_EQ("X..2016-02-03T04:05.....X..", ss.str());
+  }
+  {
+    std::stringstream ss;
+    ss << std::left << std::setfill('.');
+    ss << std::setw(3) << 'X';
+    ss << std::setw(21) << civil_second(cs);
+    ss << std::setw(3) << 'X';
+    EXPECT_EQ("X..2016-02-03T04:05:06..X..", ss.str());
+  }
 }
 
 TEST(CivilTime, NextPrevWeekday) {
