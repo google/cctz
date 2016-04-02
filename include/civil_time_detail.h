@@ -325,11 +325,11 @@ class civil_time {
   CONSTEXPR int second() const { return f_.ss; }
 
   // Assigning arithmetic.
-  civil_time& operator+=(int n) {
+  CONSTEXPR civil_time& operator+=(int n) {
     f_ = step(T{}, f_, n);
     return *this;
   }
-  civil_time& operator-=(int n) {
+  CONSTEXPR civil_time& operator-=(int n) {
     if (n != std::numeric_limits<int>::min()) {
       f_ = step(T{}, f_, -n);
     } else {
@@ -337,18 +337,18 @@ class civil_time {
     }
     return *this;
   }
-  civil_time& operator++() {
+  CONSTEXPR civil_time& operator++() {
     return *this += 1;
   }
-  civil_time operator++(int) {
+  CONSTEXPR civil_time operator++(int) {
     civil_time a = *this;
     ++*this;
     return a;
   }
-  civil_time& operator--() {
+  CONSTEXPR civil_time& operator--() {
     return *this -= 1;
   }
-  civil_time operator--(int) {
+  CONSTEXPR civil_time operator--(int) {
     civil_time a = *this;
     --*this;
     return a;
@@ -476,18 +476,6 @@ enum class weekday {
   sunday,
 };
 
-namespace impl {
-CONSTEXPR const weekday k_weekday_by_thu_off[] = {
-    weekday::thursday,  weekday::friday,  weekday::saturday,
-    weekday::sunday,    weekday::monday,  weekday::tuesday,
-    weekday::wednesday,
-};
-}  // namespace impl
-
-inline CONSTEXPR weekday get_weekday(const civil_day& cd) {
-  return impl::k_weekday_by_thu_off[((cd - civil_day()) % 7 + 7) % 7];
-}
-
 inline std::ostream& operator<<(std::ostream& os, weekday wd) {
   switch (wd) {
     case weekday::monday:
@@ -507,27 +495,29 @@ inline std::ostream& operator<<(std::ostream& os, weekday wd) {
   }
 }
 
-////////////////////////////////////////////////////////////////////////
-
-namespace impl {
-inline CONSTEXPR civil_day scan_weekday(const civil_day& cd, weekday wd,
-                                        int incr) {
-  return get_weekday(cd) == wd ? cd : scan_weekday(cd + incr, wd, incr);
-}
-}  // namespace impl
-
-inline CONSTEXPR civil_day next_weekday(const civil_day& cd, weekday wd) {
-  return impl::scan_weekday(cd + 1, wd, 1);
-}
-
-inline CONSTEXPR civil_day prev_weekday(const civil_day& cd, weekday wd) {
-  return impl::scan_weekday(cd - 1, wd, -1);
+inline CONSTEXPR weekday get_weekday(const civil_day& cd) {
+  CONSTEXPR const weekday k_weekday_by_thu_off[] = {
+      weekday::thursday,  weekday::friday,  weekday::saturday,
+      weekday::sunday,    weekday::monday,  weekday::tuesday,
+      weekday::wednesday,
+  };
+  return k_weekday_by_thu_off[((cd - civil_day()) % 7 + 7) % 7];
 }
 
 ////////////////////////////////////////////////////////////////////////
+
+inline CONSTEXPR civil_day next_weekday(civil_day cd, weekday wd) {
+  do { cd += 1; } while (get_weekday(cd) != wd);
+  return cd;
+}
+
+inline CONSTEXPR civil_day prev_weekday(civil_day cd, weekday wd) {
+  do { cd -= 1; } while (get_weekday(cd) != wd);
+  return cd;
+}
 
 inline CONSTEXPR int get_yearday(const civil_day& cd) {
-  return cd - civil_day(cd.year(), 1, 0);
+  return cd - civil_day(civil_year(cd)) + 1;
 }
 
 }  // namespace detail
