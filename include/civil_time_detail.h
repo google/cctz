@@ -131,11 +131,13 @@ CONSTEXPR_F fields n_day(int y, int m, int d, int cd, int hh, int mm, int ss) {
       ++y;
     }
   }
-  for (int n = days_per_month(y, m); d > n; n = days_per_month(y, m)) {
-    d -= n;
-    if (++m > 12) {
-      ++y;
-      m = 1;
+  if (d > 28) {
+    for (int n = days_per_month(y, m); d > n; n = days_per_month(y, m)) {
+      d -= n;
+      if (++m > 12) {
+        ++y;
+        m = 1;
+      }
     }
   }
   return fields{y, m, d, hh, mm, ss};
