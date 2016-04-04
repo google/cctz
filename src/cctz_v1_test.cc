@@ -756,15 +756,20 @@ TEST(BreakTime, LocalTimeInSydney) {
 
 TEST(MakeTime, TimePointResolution) {
   const TimeZone utc = UTCTimeZone();
-  const time_point<std::chrono::nanoseconds> tp_ns = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  const time_point<std::chrono::nanoseconds> tp_ns =
+      MakeTime(2015, 1, 2, 3, 4, 5, utc);
   EXPECT_EQ("04:05", Format("%M:%E*S", tp_ns, utc));
-  const time_point<std::chrono::microseconds> tp_us = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  const time_point<std::chrono::microseconds> tp_us =
+      MakeTime(2015, 1, 2, 3, 4, 5, utc);
   EXPECT_EQ("04:05", Format("%M:%E*S", tp_us, utc));
-  const time_point<std::chrono::milliseconds> tp_ms = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  const time_point<std::chrono::milliseconds> tp_ms =
+      MakeTime(2015, 1, 2, 3, 4, 5, utc);
   EXPECT_EQ("04:05", Format("%M:%E*S", tp_ms, utc));
-  const time_point<std::chrono::seconds> tp_s = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  const time_point<std::chrono::seconds> tp_s =
+      MakeTime(2015, 1, 2, 3, 4, 5, utc);
   EXPECT_EQ("04:05", Format("%M:%E*S", tp_s, utc));
-  const time_point<seconds64> tp_s64 = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  const time_point<seconds64> tp_s64 =
+      MakeTime(2015, 1, 2, 3, 4, 5, utc);
   EXPECT_EQ("04:05", Format("%M:%E*S", tp_s64, utc));
 
   // These next two require time_point_cast because the conversion from a
