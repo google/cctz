@@ -101,38 +101,42 @@ CONSTEXPR_F int days_per_month(int y, int m) {
   return k_days_per_month[m - 1] + (m == 2 && is_leap_year(y));
 }
 
-CONSTEXPR_F fields n_day(int y, int m, int d, int c, int hh, int mm, int ss) {
-  y += (c / 146097) * 400;
-  c %= 146097;
-  if (c < 0) {
+CONSTEXPR_F fields n_day(int y, int m, int d, int cd, int hh, int mm, int ss) {
+  y += (cd / 146097) * 400;
+  cd %= 146097;
+  if (cd < 0) {
     y -= 400;
-    c += 146097;
+    cd += 146097;
   }
   y += (d / 146097) * 400;
-  d = d % 146097 + c;
+  d = d % 146097 + cd;
   if (d <= 0) {
     y -= 400;
     d += 146097;
+  } else if (d > 146097) {
+    y += 400;
+    d -= 146097;
   }
-  int n = days_per_century(y, m);
-  while (d > n) {
-    d -= n;
-    n = days_per_century(y += 100, m);
+  if (d > 365) {
+    for (int n = days_per_century(y, m); d > n; n = days_per_century(y, m)) {
+      d -= n;
+      y += 100;
+    }
+    for (int n = days_per_4years(y, m); d > n; n = days_per_4years(y, m)) {
+      d -= n;
+      y += 4;
+    }
+    for (int n = days_per_year(y, m); d > n; n = days_per_year(y, m)) {
+      d -= n;
+      ++y;
+    }
   }
-  n = days_per_4years(y, m);
-  while (d > n) {
+  for (int n = days_per_month(y, m); d > n; n = days_per_month(y, m)) {
     d -= n;
-    n = days_per_4years(y += 4, m);
-  }
-  n = days_per_year(y, m);
-  while (d > n) {
-    d -= n;
-    n = days_per_year(++y, m);
-  }
-  n = days_per_month(y, m);
-  while (d > n) {
-    d -= n;
-    n = (m == 12) ? days_per_month(++y, m = 1) : days_per_month(y, ++m);
+    if (++m > 12) {
+      ++y;
+      m = 1;
+    }
   }
   return fields{y, m, d, hh, mm, ss};
 }
@@ -145,32 +149,32 @@ CONSTEXPR_F fields n_mon(int y, int m, int d, int cd, int hh, int mm, int ss) {
   }
   return n_day(y, m, d, cd, hh, mm, ss);
 }
-CONSTEXPR_F fields n_hour(int y, int m, int d, int c, int hh, int mm, int ss) {
-  c += hh / 24;
+CONSTEXPR_F fields n_hour(int y, int m, int d, int cd, int hh, int mm, int ss) {
+  cd += hh / 24;
   hh %= 24;
   if (hh < 0) {
-    c -= 1;
+    cd -= 1;
     hh += 24;
   }
-  return n_mon(y, m, d, c, hh, mm, ss);
+  return n_mon(y, m, d, cd, hh, mm, ss);
 }
-CONSTEXPR_F fields n_min(int y, int m, int d, int hh, int c, int mm, int ss) {
-  c += mm / 60;
+CONSTEXPR_F fields n_min(int y, int m, int d, int hh, int ch, int mm, int ss) {
+  ch += mm / 60;
   mm %= 60;
   if (mm < 0) {
-    c -= 1;
+    ch -= 1;
     mm += 60;
   }
-  return n_hour(y, m, d, hh / 24 + c / 24, hh % 24 + c % 24, mm, ss);
+  return n_hour(y, m, d, hh / 24 + ch / 24, hh % 24 + ch % 24, mm, ss);
 }
 CONSTEXPR_F fields n_sec(int y, int m, int d, int hh, int mm, int ss) {
-  int c = ss / 60;
+  int cm = ss / 60;
   ss %= 60;
   if (ss < 0) {
-    c -= 1;
+    cm -= 1;
     ss += 60;
   }
-  return n_min(y, m, d, hh, mm / 60 + c / 60, mm % 60 + c % 60, ss);
+  return n_min(y, m, d, hh, mm / 60 + cm / 60, mm % 60 + cm % 60, ss);
 }
 
 }  // namespace impl
@@ -262,7 +266,7 @@ template <typename T>
 class civil_time {
  public:
   explicit CONSTEXPR_M civil_time(int y, int m = 1, int d = 1, int hh = 0,
-                                int mm = 0, int ss = 0)
+                                  int mm = 0, int ss = 0)
       : civil_time(impl::n_sec(y, m, d, hh, mm, ss)) {}
 
   CONSTEXPR_M civil_time() : civil_time(1970) {}
@@ -278,11 +282,11 @@ class civil_time {
       typename std::enable_if<std::is_base_of<U, S>::value>::type;
   template <typename U>
   CONSTEXPR_M civil_time(const civil_time<U>& ct,
-                       preserves_data<T, U>* = nullptr)
+                         preserves_data<T, U>* = nullptr)
       : civil_time(ct.f_) {}
   template <typename U>
   explicit CONSTEXPR_M civil_time(const civil_time<U>& ct,
-                                preserves_data<U, T>* = nullptr)
+                                  preserves_data<U, T>* = nullptr)
       : civil_time(ct.f_) {}
 
   // Field accessors.
@@ -504,7 +508,7 @@ CONSTEXPR_F int get_yearday(const civil_day& cd) {
 }  // namespace detail
 }  // namespace cctz
 
-#undef CONSTEXPR_D
-#undef CONSTEXPR_F
-#undef CONSTEXPR_M
 #undef CONSTEXPR_T
+#undef CONSTEXPR_M
+#undef CONSTEXPR_F
+#undef CONSTEXPR_D
