@@ -256,7 +256,7 @@ class civil_time {
       : civil_time(impl::n_sec(y, m, d, hh, mm, ss)) {}
 
   CONSTEXPR_M civil_time() noexcept : civil_time(1970) {}
-  CONSTEXPR_M civil_time(const civil_time&) = default;
+  civil_time(const civil_time&) = default;
   civil_time& operator=(const civil_time&) = default;
 
   // Conversion between civil times of different alignment. Conversion to
