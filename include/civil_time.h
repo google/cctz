@@ -106,6 +106,28 @@ namespace cctz {
 //   mm = civil_minute(hh);  // 2015-01-01 00:00:00
 //   ss = civil_second(mm);  // 2015-01-01 00:00:00
 //
+// ALIGNMENT CONVERSION:
+//
+// The alignment of a civil-time object cannot change, but the object may be
+// used to construct a new object with a different alignment. This is referred
+// to as "realigning". When realigning to a type with the same or more
+// precision (e.g., civil_day -> civil_second), the conversion may be
+// performed implicitly since no information is lost. However, if information
+// could be discarded (e.g., civil_second -> civil_day), the conversion must
+// be explicit at the call site.
+//
+//   void fun(const civil_day& day);
+//
+//   civil_second cs;
+//   fun(cs);  // Won't compile because data may be discarded
+//   fun(civil_day(cs));  // OK: explicit conversion
+//
+//   civil_day cd;
+//   fun(cd);  // OK: no conversion needed
+//
+//   civil_month cm;
+//   fun(cm);  // OK: implicit conversion to civil_day
+//
 // NORMALIZATION:
 //
 // Integer arguments passed to the constructor may be out-of-range, in which
@@ -239,8 +261,8 @@ using detail::weekday;
 //
 using detail::get_weekday;
 
-// Returns the civil_day that strictly follows or precedes the argument,
-// and that falls on the given weekday.
+// Returns the civil_day that strictly follows or precedes the given
+// civil_day, and that falls on the given weekday.
 //
 // For example, given:
 //
