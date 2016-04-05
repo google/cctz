@@ -176,6 +176,21 @@ namespace cctz {
 //     // ...
 //   }
 //
+// STREAMING:
+//
+// Each civil-time type may be sent to an output stream using operator<<().
+// The output format follows the pattern "YYYY-MM-DDThh:mm:ss" where fields
+// inferior to the type's alignment are omitted.
+//
+//   civil_second cs(2015, 2, 3, 4, 5, 6);
+//   std::cout << cs << "\n";  // Outputs: 2015-02-03T04:05:06
+//
+//   civil_day cd(cs);
+//   std::cout << cd << "\n";  // Outputs: 2015-02-03
+//
+//   civil_year cy(cs);
+//   std::cout << cy << "\n";  // Outputs: 2015
+//
 // ARITHMETIC:
 //
 // Civil-time types support natural arithmetic operators such as addition,
@@ -250,8 +265,14 @@ using civil_hour = detail::civil_hour;
 using civil_minute = detail::civil_minute;
 using civil_second = detail::civil_second;
 
-// An enum class with members monday, tuesday, wednesday, thursday,
-// friday, saturday, and sunday.
+// An enum class with members monday, tuesday, wednesday, thursday, friday,
+// saturday, and sunday. These enum values may be sent to an output stream
+// using operator<<(). The result is the full weekday name in English with a
+// leading capital letter.
+//
+//   weekday wd = weekday::thursday;
+//   std::cout << wd << "\n";  // Outputs: Thursday
+//
 using detail::weekday;
 
 // Returns the weekday for the given civil_day.
