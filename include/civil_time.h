@@ -80,6 +80,8 @@ namespace cctz {
 // a handful of helper functions and algorithms for performing common
 // calculations. These are described below.
 //
+// Note: In C++14 and later, this library is usable in a constexpr context.
+//
 // CONSTRUCTION:
 //
 // Each of the civil-time types can be constructed in two ways: by directly
