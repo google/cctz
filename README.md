@@ -19,17 +19,17 @@ us if you're interested in contributing.
 
 # Getting Started
 
-CCTZ is built using the [Bazel](http://bazel.io) build system and tested using
-the [Google Test](https://github.com/google/googletest) framework.
+CCTZ is best built and tested using the [Bazel](http://bazel.io) build system
+and the [Google Test](https://github.com/google/googletest) framework. (There
+is also a simple `Makefile` that should work if you're unable to use Bazel.)
 
 1.  Download/install Bazel http://bazel.io/docs/install.html
 2.  Get the cctz source: `git clone https://github.com/google/cctz.git` then `cd
     cctz`
 3.  Build cctz and run the tests: `bazel test :all`
 
-Note: If you're unable to use bazel, there is also a `Makefile` that should help
-get you started. When using CCTZ in your own project, you might find it easiest
-to compile the sources using your existing build system.
+Note: When using CCTZ in your own project, you might find it easiest to compile
+the sources using your existing build system.
 
 Next Steps:
 
@@ -44,7 +44,7 @@ Next Steps:
 
 *[The concepts presented here describe general truths about the problem domain
 and are library and language agnostic. An understanding of these concepts helps
-the programmer correctly reason about even the most complicated time-programming
+the programmer correctly reason about even the most-complicated time-programming
 challenges and produce the simplest possible solutions.]*
 
 There are two main ways to think about time in a computer program: as *absolute
@@ -109,6 +109,7 @@ day happens to be the 29th, we also output the day of the week.
 ```
 #include <iostream>
 #include "civil_time.h"
+
 int main() {
   for (cctz::civil_day d(2016, 2, 1); d < cctz::civil_month(2016, 3); ++d) {
     std::cout << "Hello " << d;
@@ -143,6 +144,7 @@ like to see what time it was for our friend watching in Sydney Australia.
 #include <iostream>
 #include "civil_time.h"
 #include "time_zone.h"
+
 int main() {
   cctz::time_zone nyc;
   cctz::load_time_zone("America/New_York", &nyc);
