@@ -363,6 +363,25 @@ TEST(CivilTime, FieldsConstructionLimits) {
       Format(civil_second(1970, kIntMin, kIntMin, kIntMin, kIntMin, kIntMin)));
 }
 
+TEST(CivilTime, RangeLimits) {
+  const int kIntMax = std::numeric_limits<int>::max();
+  const int kIntMin = std::numeric_limits<int>::min();
+
+  EXPECT_EQ(civil_year(kIntMax), civil_year::max());
+  EXPECT_EQ(civil_month(kIntMax, 12), civil_month::max());
+  EXPECT_EQ(civil_day(kIntMax, 12, 31), civil_day::max());
+  EXPECT_EQ(civil_hour(kIntMax, 12, 31, 23), civil_hour::max());
+  EXPECT_EQ(civil_minute(kIntMax, 12, 31, 23, 59), civil_minute::max());
+  EXPECT_EQ(civil_second(kIntMax, 12, 31, 23, 59, 59), civil_second::max());
+
+  EXPECT_EQ(civil_year(kIntMin), civil_year::min());
+  EXPECT_EQ(civil_month(kIntMin, 1), civil_month::min());
+  EXPECT_EQ(civil_day(kIntMin, 1, 1), civil_day::min());
+  EXPECT_EQ(civil_hour(kIntMin, 1, 1, 0), civil_hour::min());
+  EXPECT_EQ(civil_minute(kIntMin, 1, 1, 0, 0), civil_minute::min());
+  EXPECT_EQ(civil_second(kIntMin, 1, 1, 0, 0, 0), civil_second::min());
+}
+
 TEST(CivilTime, ImplicitCrossAlignment) {
   civil_year year(2015);
   civil_month month = year;

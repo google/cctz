@@ -275,6 +275,14 @@ class civil_time {
                                   preserves_data<U, T>* = nullptr) noexcept
       : civil_time(ct.f_) {}
 
+  // Factories for the maximum/minimum representable civil_time.
+  static civil_time max() {
+    return civil_time(std::numeric_limits<int>::max(), 12, 31, 23, 59, 59);
+  }
+  static civil_time min() {
+    return civil_time(std::numeric_limits<int>::min(), 1, 1, 0, 0, 0);
+  }
+
   // Field accessors.
   CONSTEXPR_M int year() const noexcept { return f_.y; }
   CONSTEXPR_M int month() const noexcept { return f_.m; }
