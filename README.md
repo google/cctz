@@ -2,9 +2,6 @@ This is not an official Google product.
 
 # Overview
 
-**NEW!** Mailing list for users and developers to ask questions about, discuss, and stay up-to-date
-with CCTZ. Please join https://groups.google.com/forum/#!forum/cctz
-
 CCTZ (C++ Time Zone) is a library for translating between absolute times and
 civil times (see the [Fundamental Concepts](#fundamental-concepts) section below for an explanation of
 these terms) using the rules defined by a time zone.
