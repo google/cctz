@@ -1,19 +1,18 @@
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-//     Unless required by applicable law or agreed to in writing, software
-//     distributed under the License is distributed on an "AS IS" BASIS,
-//     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-//     implied.
-//     See the License for the specific language governing permissions and
-//     limitations under the License.
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
 
-#include "src/cctz_libc.h"
+#include "time_zone_libc.h"
 
 #include <chrono>
 #include <cstdint>
@@ -35,6 +34,9 @@
 #elif defined(__sun)
 # define OFFSET(tm) ((tm).tm_isdst > 0 ? altzone : timezone)
 # define ABBR(tm)   (tzname[(tm).tm_isdst > 0])
+#elif defined(_WIN32) || defined(_WIN64)
+# define OFFSET(tm) (_timezone + ((tm).tm_isdst > 0 ? 60 * 60 : 0))
+# define ABBR(tm)   (_tzname[(tm).tm_isdst > 0])
 #else
 # define OFFSET(tm) (timezone + ((tm).tm_isdst > 0 ? 60 * 60 : 0))
 # define ABBR(tm)   (tzname[(tm).tm_isdst > 0])
@@ -51,13 +53,13 @@ TimeZoneLibC::TimeZoneLibC(const std::string& name) {
   }
 }
 
-Breakdown TimeZoneLibC::BreakTime(const time_point<seconds64>& tp) const {
+Breakdown TimeZoneLibC::BreakTime(const time_point<sys_seconds>& tp) const {
   Breakdown bd;
   std::time_t t = ToUnixSeconds(tp);
   std::tm tm;
   if (local_) {
 #if defined(_WIN32) || defined(_WIN64)
-    tm = *localtime(&t);
+    localtime_s(&tm, &t);
 #else
     localtime_r(&t, &tm);
 #endif
@@ -65,7 +67,7 @@ Breakdown TimeZoneLibC::BreakTime(const time_point<seconds64>& tp) const {
     bd.abbr = ABBR(tm);
   } else {
 #if defined(_WIN32) || defined(_WIN64)
-    tm = *gmtime(&t);
+    gmtime_s(&tm, &t);
 #else
     gmtime_r(&t, &tm);
 #endif
@@ -116,7 +118,7 @@ const int kDaysPerYear[2] = {365, 366};
 std::time_t DayOrdinal(int64_t year, int month, int day) {
   year -= (month <= 2 ? 1 : 0);
   const std::time_t era = (year >= 0 ? year : year - 399) / 400;
-  const int yoe = year - era * 400;
+  const int yoe = static_cast<int>(year - era * 400);
   const int doy = (153 * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;
   const int doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
   return era * 146097 + doe - 719468;  // shift epoch to 1970-01-01
@@ -175,7 +177,7 @@ TimeInfo TimeZoneLibC::MakeTimeInfo(int64_t year, int mon, int day,
     t = ((((DayOrdinal(year, mon, day) * 24) + hour) * 60) + min) * 60 + sec;
   }
   TimeInfo ti;
-  ti.kind = TimeInfo::Kind::UNIQUE;
+  ti.kind = time_zone::civil_lookup::UNIQUE;
   ti.pre = ti.trans = ti.post = FromUnixSeconds(t);
   ti.normalized = normalized;
   return ti;

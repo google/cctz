@@ -1,17 +1,16 @@
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-//     Unless required by applicable law or agreed to in writing, software
-//     distributed under the License is distributed on an "AS IS" BASIS,
-//     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-//     implied.
-//     See the License for the specific language governing permissions and
-//     limitations under the License.
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
 
 // This file implements the TimeZoneIf interface using the "zoneinfo"
 // data provided by the IANA Time Zone Database (i.e., the only real game
@@ -31,7 +30,7 @@
 // Note that we assume the proleptic Gregorian calendar and 60-second
 // minutes throughout.
 
-#include "src/cctz_info.h"
+#include "time_zone_info.h"
 
 #include <algorithm>
 #include <cerrno>
@@ -43,7 +42,7 @@
 #include <iostream>
 #include <limits>
 
-#include "src/cctz_posix.h"
+#include "time_zone_posix.h"
 
 namespace cctz {
 
@@ -58,7 +57,7 @@ char* errmsg(int errnum, char* buf, size_t buflen) {
 #elif defined(__APPLE__)
   strerror_r(errnum, buf, buflen);
   return buf;
-#elif (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! _GNU_SOURCE
+#elif (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE
   strerror_r(errnum, buf, buflen);
   return buf;
 #else
@@ -167,7 +166,7 @@ inline int DaysPerYear(int year) { return kDaysPerYear[IsLeap(year)]; }
 int64_t DayOrdinal(int64_t year, int month, int day) {
   year -= (month <= 2 ? 1 : 0);
   const int64_t era = (year >= 0 ? year : year - 399) / 400;
-  const int yoe = year - era * 400;
+  const int yoe = static_cast<int>(year - era * 400);
   const int doy = (153 * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;
   const int doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
   return era * 146097 + doe - 719468;  // shift epoch to 1970-01-01
@@ -259,7 +258,7 @@ int64_t TransOffset(bool leap_year, int jan1_weekday,
 inline TimeInfo MakeUnique(int64_t unix_time, bool normalized) {
   TimeInfo ti;
   ti.pre = ti.trans = ti.post = FromUnixSeconds(unix_time);
-  ti.kind = TimeInfo::Kind::UNIQUE;
+  ti.kind = time_zone::civil_lookup::UNIQUE;
   ti.normalized = normalized;
   return ti;
 }
@@ -270,7 +269,7 @@ inline TimeInfo MakeSkipped(const Transition& tr, const DateTime& dt,
   ti.pre = FromUnixSeconds(tr.unix_time - 1 + (dt - tr.prev_date_time));
   ti.trans = FromUnixSeconds(tr.unix_time);
   ti.post = FromUnixSeconds(tr.unix_time - (tr.date_time - dt));
-  ti.kind = TimeInfo::Kind::SKIPPED;
+  ti.kind = time_zone::civil_lookup::SKIPPED;
   ti.normalized = normalized;
   return ti;
 }
@@ -281,7 +280,7 @@ inline TimeInfo MakeRepeated(const Transition& tr, const DateTime& dt,
   ti.pre = FromUnixSeconds(tr.unix_time - 1 - (tr.prev_date_time - dt));
   ti.trans = FromUnixSeconds(tr.unix_time);
   ti.post = FromUnixSeconds(tr.unix_time + (dt - tr.date_time));
-  ti.kind = TimeInfo::Kind::REPEATED;
+  ti.kind = time_zone::civil_lookup::REPEATED;
   ti.normalized = normalized;
   return ti;
 }
@@ -379,7 +378,7 @@ void TimeZoneInfo::ResetToBuiltinUTC(int seconds) {
   transitions_[0].prev_date_time = transitions_[0].date_time;
   transitions_[0].prev_date_time.offset -= 1;
   default_transition_type_ = 0;
-  abbreviations_ = "UTC";  // TODO: handle non-zero offset
+  abbreviations_ = "UTC";  // TODO: Handle non-zero offset.
   abbreviations_.append(1, '\0');  // add NUL
   future_spec_.clear();  // never needed for a fixed-offset zone
   extended_ = false;
@@ -433,7 +432,7 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   size_t time_len = 4;
   if (tzh.tzh_version[0] != '\0') {
     // Skip the 4-byte data.
-    if (fseek(fp, hdr.DataLength(time_len), SEEK_CUR) != 0)
+    if (fseek(fp, static_cast<long>(hdr.DataLength(time_len)), SEEK_CUR) != 0)
       return false;
     // Read and validate the header for the 8-byte data.
     if (fread(&tzh, 1, sizeof tzh, fp) != sizeof tzh)
@@ -648,20 +647,40 @@ bool TimeZoneInfo::Load(const std::string& name) {
   // Map time-zone name to its machine-specific path.
   std::string path;
   if (name == "localtime") {
+#if defined(_WIN32) || defined(_WIN64)
+    char* localtime = nullptr;
+    _dupenv_s(&localtime, nullptr, "LOCALTIME");
+    path = localtime ? localtime : "/etc/localtime";
+    free(localtime);
+#else
     const char* localtime = std::getenv("LOCALTIME");
     path = localtime ? localtime : "/etc/localtime";
+#endif
   } else if (!name.empty() && name[0] == '/') {
     path = name;
   } else {
+#if defined(_WIN32) || defined(_WIN64)
+    char* tzdir = nullptr;
+    _dupenv_s(&tzdir, nullptr, "TZDIR");
+    path = tzdir ? tzdir : "/usr/share/zoneinfo";
+    free(tzdir);
+#else
     const char* tzdir = std::getenv("TZDIR");
     path = tzdir ? tzdir : "/usr/share/zoneinfo";
+#endif
     path += '/';
     path += name;
   }
 
   // Load the time-zone data.
   bool loaded = false;
-  if (FILE* fp = fopen(path.c_str(), "rb")) {
+#if defined(_WIN32) || defined(_WIN64)
+  FILE* fp;
+  if (fopen_s(&fp, path.c_str(), "rb") != 0) fp = nullptr;
+#else
+  FILE* fp = fopen(path.c_str(), "rb");
+#endif
+  if (fp != nullptr) {
     loaded = Load(name, fp);
     fclose(fp);
   } else {
@@ -739,7 +758,7 @@ Breakdown TimeZoneInfo::LocalTime(int64_t unix_time,
   }
 
   // Handle months and days.
-  bd.yearday = (seconds / SECSPERDAY) + 1;
+  bd.yearday = static_cast<int>(seconds / SECSPERDAY) + 1;
   seconds %= SECSPERDAY;
   bd.month = TM_DECEMBER + 1;
   bd.day = bd.yearday;
@@ -754,9 +773,9 @@ Breakdown TimeZoneInfo::LocalTime(int64_t unix_time,
   }
 
   // Handle hours, minutes, and seconds.
-  bd.hour = seconds / SECSPERHOUR;
+  bd.hour = static_cast<int>(seconds / SECSPERHOUR);
   seconds %= SECSPERHOUR;
-  bd.minute = seconds / SECSPERMIN;
+  bd.minute = static_cast<int>(seconds / SECSPERMIN);
   bd.second = seconds % SECSPERMIN;
 
   // Shift weekday to [1==Mon, ..., 7=Sun].
@@ -782,9 +801,9 @@ TimeInfo TimeZoneInfo::TimeLocal(int64_t year, int mon, int day, int hour,
   return ti;
 }
 
-Breakdown TimeZoneInfo::BreakTime(const time_point<seconds64>& tp) const {
+Breakdown TimeZoneInfo::BreakTime(const time_point<sys_seconds>& tp) const {
   int64_t unix_time = ToUnixSeconds(tp);
-  const int32_t timecnt = transitions_.size();
+  const size_t timecnt = transitions_.size();
   if (timecnt == 0 || unix_time < transitions_[0].unix_time) {
     const int type_index = default_transition_type_;
     return LocalTime(unix_time, transition_types_[type_index]);
@@ -796,7 +815,7 @@ Breakdown TimeZoneInfo::BreakTime(const time_point<seconds64>& tp) const {
     if (extended_) {
       const int64_t diff = unix_time - transitions_[timecnt - 1].unix_time;
       const int64_t shift = diff / kSecPer400Years + 1;
-      const auto d = seconds64(shift * kSecPer400Years);
+      const auto d = sys_seconds(shift * kSecPer400Years);
       Breakdown bd = BreakTime(tp - d);
       bd.year += shift * 400;
       return bd;
@@ -805,7 +824,7 @@ Breakdown TimeZoneInfo::BreakTime(const time_point<seconds64>& tp) const {
     return LocalTime(unix_time, transition_types_[type_index]);
   }
 
-  const int32_t hint = local_time_hint_.load(std::memory_order_relaxed);
+  const size_t hint = local_time_hint_.load(std::memory_order_relaxed);
   if (0 < hint && hint < timecnt) {
     if (unix_time < transitions_[hint].unix_time) {
       if (!(unix_time < transitions_[hint - 1].unix_time)) {
@@ -830,7 +849,7 @@ TimeInfo TimeZoneInfo::MakeTimeInfo(int64_t year, int mon, int day,
   DateTime& dt(target.date_time);
   const bool normalized = dt.Normalize(year, mon, day, hour, min, sec);
 
-  const int32_t timecnt = transitions_.size();
+  const size_t timecnt = transitions_.size();
   if (timecnt == 0) {
     // Use the default offset.
     int32_t offset = transition_types_[default_transition_type_].utc_offset;
@@ -847,7 +866,7 @@ TimeInfo TimeZoneInfo::MakeTimeInfo(int64_t year, int mon, int day,
   } else if (!(dt < transitions_[timecnt - 1].date_time)) {
     tr = end;
   } else {
-    const int32_t hint = time_local_hint_.load(std::memory_order_relaxed);
+    const size_t hint = time_local_hint_.load(std::memory_order_relaxed);
     if (0 < hint && hint < timecnt) {
       if (dt < transitions_[hint].date_time) {
         if (!(dt < transitions_[hint - 1].date_time)) {

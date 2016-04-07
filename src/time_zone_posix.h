@@ -1,17 +1,16 @@
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-//     Unless required by applicable law or agreed to in writing, software
-//     distributed under the License is distributed on an "AS IS" BASIS,
-//     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-//     implied.
-//     See the License for the specific language governing permissions and
-//     limitations under the License.
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
 
 // Parsing of a POSIX zone spec as described in the TZ part of section 8.3 in
 // http://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap08.html.
@@ -50,8 +49,8 @@
 //     }
 //   }
 
-#ifndef CCTZ_POSIX_H_
-#define CCTZ_POSIX_H_
+#ifndef CCTZ_TIME_ZONE_POSIX_H_
+#define CCTZ_TIME_ZONE_POSIX_H_
 
 #include <cstdint>
 #include <string>
@@ -112,4 +111,4 @@ bool ParsePosixSpec(const std::string& spec, PosixTimeZone* res);
 
 }  // namespace cctz
 
-#endif  // CCTZ_POSIX_H_
+#endif  // CCTZ_TIME_ZONE_POSIX_H_

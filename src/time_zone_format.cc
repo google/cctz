@@ -1,17 +1,16 @@
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-//     Unless required by applicable law or agreed to in writing, software
-//     distributed under the License is distributed on an "AS IS" BASIS,
-//     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-//     implied.
-//     See the License for the specific language governing permissions and
-//     limitations under the License.
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
 
 #if !defined(HAS_STRPTIME)
 # if !defined(_WIN32) && !defined(_WIN64)
@@ -19,8 +18,8 @@
 # endif
 #endif
 
-#include "src/cctz.h"
-#include "src/cctz_if.h"
+#include "time_zone.h"
+#include "time_zone_if.h"
 
 #include <cctype>
 #include <chrono>
@@ -35,6 +34,7 @@
 #endif
 
 namespace cctz {
+namespace detail {
 
 namespace {
 
@@ -48,26 +48,48 @@ char* strptime(const char* s, const char* fmt, std::tm* tm) {
 }
 #endif
 
-std::tm ToTM(const Breakdown& bd) {
+std::tm ToTM(const time_zone::absolute_lookup& al) {
   std::tm tm{};
-  tm.tm_sec = bd.second;
-  tm.tm_min = bd.minute;
-  tm.tm_hour = bd.hour;
-  tm.tm_mday = bd.day;
-  tm.tm_mon = bd.month - 1;
+  tm.tm_sec = al.cs.second();
+  tm.tm_min = al.cs.minute();
+  tm.tm_hour = al.cs.hour();
+  tm.tm_mday = al.cs.day();
+  tm.tm_mon = al.cs.month() - 1;
 
   // Saturate tm.tm_year is cases of over/underflow.
-  if (bd.year < std::numeric_limits<int>::min() + 1900) {
+  if (al.cs.year() < std::numeric_limits<int>::min() + 1900) {
     tm.tm_year = std::numeric_limits<int>::min();
-  } else if (bd.year - 1900 > std::numeric_limits<int>::max()) {
+  } else if (al.cs.year() - 1900 > std::numeric_limits<int>::max()) {
     tm.tm_year = std::numeric_limits<int>::max();
   } else {
-    tm.tm_year = static_cast<int>(bd.year - 1900);
+    tm.tm_year = static_cast<int>(al.cs.year() - 1900);
   }
 
-  tm.tm_wday = bd.weekday % 7;
-  tm.tm_yday = bd.yearday - 1;
-  tm.tm_isdst = bd.is_dst ? 1 : 0;
+  switch (get_weekday(civil_day(al.cs))) {
+    case weekday::sunday:
+      tm.tm_wday = 0;
+      break;
+    case weekday::monday:
+      tm.tm_wday = 1;
+      break;
+    case weekday::tuesday:
+      tm.tm_wday = 2;
+      break;
+    case weekday::wednesday:
+      tm.tm_wday = 3;
+      break;
+    case weekday::thursday:
+      tm.tm_wday = 4;
+      break;
+    case weekday::friday:
+      tm.tm_wday = 5;
+      break;
+    case weekday::saturday:
+      tm.tm_wday = 6;
+      break;
+  }
+  tm.tm_yday = get_yearday(civil_day(al.cs)) - 1;
+  tm.tm_isdst = al.is_dst ? 1 : 0;
   return tm;
 }
 
@@ -238,11 +260,11 @@ const int64_t kExp10[kDigits10_64 + 1] = {
 //
 // We also handle the %z and %Z specifiers to accommodate platforms that do
 // not support the tm_gmtoff and tm_zone extensions to std::tm.
-std::string Format(const std::string& format, const time_point<seconds64>& tp,
-                   const std::chrono::nanoseconds& ns, const TimeZone& tz) {
+std::string format(const std::string& format, const time_point<sys_seconds>& tp,
+                   const std::chrono::nanoseconds& ns, const time_zone& tz) {
   std::string result;
-  const Breakdown bd = BreakTime(tp, tz);
-  const std::tm tm = ToTM(bd);
+  const time_zone::absolute_lookup al = tz.lookup(tp);
+  const std::tm tm = ToTM(al);
 
   // Scratch buffer for internal conversions.
   char buf[3 + kDigits10_64];  // enough for longest conversion
@@ -297,37 +319,37 @@ std::string Format(const std::string& format, const time_point<seconds64>& tp,
         case 'Y':
           // This avoids the tm_year overflow problem for %Y, however
           // tm.tm_year will still be used by other specifiers like %D.
-          bp = Format64(ep, 0, bd.year);
+          bp = Format64(ep, 0, al.cs.year());
           result.append(bp, ep - bp);
           break;
         case 'm':
-          bp = Format02d(ep, bd.month);
+          bp = Format02d(ep, al.cs.month());
           result.append(bp, ep - bp);
           break;
         case 'd':
         case 'e':
-          bp = Format02d(ep, bd.day);
+          bp = Format02d(ep, al.cs.day());
           if (*cur == 'e' && *bp == '0') *bp = ' ';  // for Windows
           result.append(bp, ep - bp);
           break;
         case 'H':
-          bp = Format02d(ep, bd.hour);
+          bp = Format02d(ep, al.cs.hour());
           result.append(bp, ep - bp);
           break;
         case 'M':
-          bp = Format02d(ep, bd.minute);
+          bp = Format02d(ep, al.cs.minute());
           result.append(bp, ep - bp);
           break;
         case 'S':
-          bp = Format02d(ep, bd.second);
+          bp = Format02d(ep, al.cs.second());
           result.append(bp, ep - bp);
           break;
         case 'z':
-          bp = FormatOffset(ep, bd.offset / 60, '\0');
+          bp = FormatOffset(ep, al.offset / 60, '\0');
           result.append(bp, ep - bp);
           break;
         case 'Z':
-          result.append(bd.abbr);
+          result.append(al.abbr);
           break;
         case 's':
           bp = Format64(ep, 0, ToUnixSeconds(tp));
@@ -347,7 +369,7 @@ std::string Format(const std::string& format, const time_point<seconds64>& tp,
       if (cur - 2 != pending) {
         FormatTM(&result, std::string(pending, cur - 2), tm);
       }
-      bp = FormatOffset(ep, bd.offset / 60, ':');
+      bp = FormatOffset(ep, al.offset / 60, ':');
       result.append(bp, ep - bp);
       pending = ++cur;
     } else if (*cur == '*' && cur + 1 != end && *(cur + 1) == 'S') {
@@ -359,7 +381,7 @@ std::string Format(const std::string& format, const time_point<seconds64>& tp,
       bp = Format64(cp, 9, ns.count());
       while (cp != bp && cp[-1] == '0') --cp;
       if (cp != bp) *--bp = '.';
-      bp = Format02d(bp, bd.second);
+      bp = Format02d(bp, al.cs.second());
       result.append(bp, cp - bp);
       pending = cur += 2;
     } else if (*cur == '4' && cur + 1 != end && *(cur + 1) == 'Y') {
@@ -367,7 +389,7 @@ std::string Format(const std::string& format, const time_point<seconds64>& tp,
       if (cur - 2 != pending) {
         FormatTM(&result, std::string(pending, cur - 2), tm);
       }
-      bp = Format64(ep, 4, bd.year);
+      bp = Format64(ep, 4, al.cs.year());
       result.append(bp, ep - bp);
       pending = cur += 2;
     } else if (std::isdigit(*cur)) {
@@ -386,7 +408,7 @@ std::string Format(const std::string& format, const time_point<seconds64>& tp,
                                          : ns.count() / kExp10[9 - n]);
             *--bp = '.';
           }
-          bp = Format02d(bp, bd.second);
+          bp = Format02d(bp, al.cs.second());
           result.append(bp, ep - bp);
           pending = cur = np;
         }
@@ -437,7 +459,8 @@ const char* ParseZone(const char* dp, std::string* zone) {
   return dp;
 }
 
-const char* ParseSubSeconds(const char* dp, std::chrono::nanoseconds* subseconds) {
+const char* ParseSubSeconds(const char* dp,
+                            std::chrono::nanoseconds* subseconds) {
   if (dp != nullptr) {
     if (*dp == '.') {
       int64_t v = 0;
@@ -475,7 +498,7 @@ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
 }  // namespace
 
 // Uses strptime(3) to parse the given input.  Supports the same extended
-// format specifiers as Format(), although %E#S and %E*S are treated
+// format specifiers as format(), although %E#S and %E*S are treated
 // identically.
 //
 // The standard specifiers from RFC3339_* (%Y, %m, %d, %H, %M, and %S) are
@@ -487,8 +510,8 @@ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
 //
 // We also handle the %z specifier to accommodate platforms that do not
 // support the tm_gmtoff extension to std::tm.  %Z is parsed but ignored.
-bool Parse(const std::string& format, const std::string& input,
-           const TimeZone& tz, time_point<seconds64>* tpp,
+bool parse(const std::string& format, const std::string& input,
+           const time_zone& tz, time_point<sys_seconds>* tpp,
            std::chrono::nanoseconds* ns) {
   // The unparsed input.
   const char* data = input.c_str();  // NUL terminated
@@ -684,10 +707,10 @@ bool Parse(const std::string& format, const std::string& input,
 
   // If we saw %z or %Ez then we want to interpret the parsed fields in
   // UTC and then shift by that offset.  Otherwise we want to interpret
-  // the fields directly in the passed TimeZone.
-  TimeZone ptz = tz;
+  // the fields directly in the passed time_zone.
+  time_zone ptz = tz;
   if (offset != kintmin) {
-    ptz = UTCTimeZone();  // Override tz.  Offset applied later.
+    ptz = utc_time_zone();  // Override tz.  Offset applied later.
   } else {
     offset = 0;  // No offset from passed tz.
   }
@@ -705,16 +728,23 @@ bool Parse(const std::string& format, const std::string& input,
   } else {
     year += 1900;
   }
-  const TimeInfo ti = MakeTimeInfo(year, tm.tm_mon + 1, tm.tm_mday,
-                                   tm.tm_hour, tm.tm_min, tm.tm_sec, ptz);
+
+  // TODO: Eliminate extra normalization.
+  const civil_second cs(year, tm.tm_mon + 1, tm.tm_mday,
+                        tm.tm_hour, tm.tm_min, tm.tm_sec);
 
   // Parse() fails if any normalization was done.  That is,
   // parsing "Sep 31" will not produce the equivalent of "Oct 1".
-  if (ti.normalized) return false;
+  if (cs.year() != year || cs.month() != tm.tm_mon + 1 ||
+      cs.day() != tm.tm_mday || cs.hour() != tm.tm_hour ||
+      cs.minute() != tm.tm_min || cs.second() != tm.tm_sec) {
+    return false;
+  }
 
-  *tpp = ti.pre - seconds64(offset);
+  *tpp = ptz.lookup(cs).pre - sys_seconds(offset);
   *ns = subseconds;
   return true;
 }
 
+}  // namespace detail
 }  // namespace cctz

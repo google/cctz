@@ -1,20 +1,19 @@
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 //
-//     Unless required by applicable law or agreed to in writing, software
-//     distributed under the License is distributed on an "AS IS" BASIS,
-//     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-//     implied.
-//     See the License for the specific language governing permissions and
-//     limitations under the License.
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
 
-#ifndef CCTZ_INFO_H_
-#define CCTZ_INFO_H_
+#ifndef CCTZ_TIME_ZONE_INFO_H_
+#define CCTZ_TIME_ZONE_INFO_H_
 
 #include <atomic>
 #include <cstdint>
@@ -22,18 +21,18 @@
 #include <string>
 #include <vector>
 
-#include "src/cctz_if.h"
-#include "src/tzfile.h"
+#include "time_zone_if.h"
+#include "tzfile.h"
 
 namespace cctz {
 
 // A zone-independent date/time. A DateTime represents a "Y/M/D H:M:S"
 // as an offset in seconds from some epoch DateTime, without taking into
-// account the value of, or changes in any TimeZone's UTC offset (i.e., as
+// account the value of, or changes in any time_zone's UTC offset (i.e., as
 // if the date/time was in UTC). This allows "Y/M/D H:M:S" values to be
 // quickly ordered by offset (although this may not be the same ordering as
-// their corresponding times in a TimeZone). Also, if two DateTimes are not
-// separated by a UTC-offset change in some TimeZone, then the number of
+// their corresponding times in a time_zone). Also, if two DateTimes are not
+// separated by a UTC-offset change in some time_zone, then the number of
 // seconds between them can be computed as a simple difference of offsets.
 //
 // Note: Because the DateTime epoch does not correspond to the time_point
@@ -95,7 +94,7 @@ class TimeZoneInfo : public TimeZoneIf {
   bool Load(const std::string& name);
 
   // TimeZoneIf implementations.
-  Breakdown BreakTime(const time_point<seconds64>& tp) const override;
+  Breakdown BreakTime(const time_point<sys_seconds>& tp) const override;
   TimeInfo MakeTimeInfo(int64_t year, int mon, int day,
                         int hour, int min, int sec) const override;
 
@@ -133,10 +132,10 @@ class TimeZoneInfo : public TimeZoneIf {
   bool extended_;            // future_spec_ was used to generate transitions
   int64_t last_year_;        // the final year of the generated transitions
 
-  mutable std::atomic<int32_t> local_time_hint_;  // BreakTime() search hint
-  mutable std::atomic<int32_t> time_local_hint_;  // MakeTimeInfo() search hint
+  mutable std::atomic<size_t> local_time_hint_;  // BreakTime() search hint
+  mutable std::atomic<size_t> time_local_hint_;  // MakeTimeInfo() search hint
 };
 
 }  // namespace cctz
 
-#endif  // CCTZ_INFO_H_
+#endif  // CCTZ_TIME_ZONE_INFO_H_

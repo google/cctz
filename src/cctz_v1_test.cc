@@ -756,15 +756,20 @@ TEST(BreakTime, LocalTimeInSydney) {
 
 TEST(MakeTime, TimePointResolution) {
   const TimeZone utc = UTCTimeZone();
-  const time_point<std::chrono::nanoseconds> tp_ns = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  const time_point<std::chrono::nanoseconds> tp_ns =
+      MakeTime(2015, 1, 2, 3, 4, 5, utc);
   EXPECT_EQ("04:05", Format("%M:%E*S", tp_ns, utc));
-  const time_point<std::chrono::microseconds> tp_us = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  const time_point<std::chrono::microseconds> tp_us =
+      MakeTime(2015, 1, 2, 3, 4, 5, utc);
   EXPECT_EQ("04:05", Format("%M:%E*S", tp_us, utc));
-  const time_point<std::chrono::milliseconds> tp_ms = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  const time_point<std::chrono::milliseconds> tp_ms =
+      MakeTime(2015, 1, 2, 3, 4, 5, utc);
   EXPECT_EQ("04:05", Format("%M:%E*S", tp_ms, utc));
-  const time_point<std::chrono::seconds> tp_s = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  const time_point<std::chrono::seconds> tp_s =
+      MakeTime(2015, 1, 2, 3, 4, 5, utc);
   EXPECT_EQ("04:05", Format("%M:%E*S", tp_s, utc));
-  const time_point<seconds64> tp_s64 = MakeTime(2015, 1, 2, 3, 4, 5, utc);
+  const time_point<seconds64> tp_s64 =
+      MakeTime(2015, 1, 2, 3, 4, 5, utc);
   EXPECT_EQ("04:05", Format("%M:%E*S", tp_s64, utc));
 
   // These next two require time_point_cast because the conversion from a
@@ -1104,6 +1109,8 @@ TEST(TimeZoneEdgeCase, UTC5DigitYear) {
   ExpectTime(bd, 10000, 1, 1, 0, 0, 0, 0 * 3600, false, "UTC");
 }
 
+// These tests are disabled because they require 64-bit civil years.
+#if 0
 TEST(TimeZoneEdgeCase, East64bitLimit) {
   // For zones with positive offsets we cannot really get all the way to the
   // maximal time_point as anything closer than the offset will (currently)
@@ -1123,5 +1130,6 @@ TEST(TimeZoneEdgeCase, West64bitLimit) {
   EXPECT_EQ(std::numeric_limits<seconds64::rep>::min() + 12 * 3600,
             tp.time_since_epoch().count());
 }
+#endif
 
 }  // namespace cctz
