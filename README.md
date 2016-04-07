@@ -8,10 +8,11 @@ zones in a simple and correct manner. The libraries in CCTZ are:
 
 * **The Civil-Time Library** &mdash; This is a header-only library that supports
   computing with human-scale time, such as dates (which are represented by the
-  `cctz::civil_day` class). This library is declared in `include/civil_time.h`.
+  `cctz::civil_day` class). This library is declared in [`include/civil_time.h`]
+(https://github.com/google/cctz/blob/master/include/civil_time.h).
 * **The Time-Zone Library** &mdash; This library uses the IANA time zone
   database that is installed on the system to convert between *absolute time*
-  and *civil time*. This library is declared in `include/time_zone.h`.
+  and *civil time*. This library is declared in [`include/time_zone.h`](https://github.com/google/cctz/blob/master/include/time_zone.h).
 
 These libraries are currently known to work on **Linux** and **Mac OS X**. We
 are actively interested in help getting them working on Windows. Please contact
@@ -21,7 +22,8 @@ us if you're interested in contributing.
 
 CCTZ is best built and tested using the [Bazel](http://bazel.io) build system
 and the [Google Test](https://github.com/google/googletest) framework. (There
-is also a simple `Makefile` that should work if you're unable to use Bazel.)
+is also a simple [`Makefile`](https://github.com/google/cctz/blob/master/Makefile)
+that should work if you're unable to use Bazel.)
 
 1.  Download/install Bazel http://bazel.io/docs/install.html
 2.  Get the cctz source: `git clone https://github.com/google/cctz.git` then `cd
@@ -34,8 +36,8 @@ the sources using your existing build system.
 Next Steps:
 
 1.  See the documentation for the libraries in CCTZ:
-  * Civil Time: `include/civil_time.h`
-  * Time Zone: `include/time_zone.h`
+  * Civil Time: [`include/civil_time.h`](https://github.com/google/cctz/blob/master/include/civil_time.h)
+  * Time Zone: [`include/time_zone.h`](https://github.com/google/cctz/blob/master/include/time_zone.h)
 2.  Look at the examples in https://github.com/google/cctz/tree/master/examples
 3.  Join our mailing list to ask questions and keep informed of changes: 
   * https://groups.google.com/forum/#!forum/cctz
@@ -88,13 +90,14 @@ deal with these concepts, they must have a library that correctly implements the
 above concepts. CCTZ adds to the existing C++11 `<chrono>` library to fully
 implement the above concepts.
 
-* Absolute time &mdash; This is implemented by the existing C++11 `<chrono>`
+* Absolute time &mdash; This is implemented by the existing C++11 
+  [`<chrono>`](http://en.cppreference.com/w/cpp/chrono)
   library without modification. For example, an absolute point in time is
   represented by a `std::chrono::time_point`.
-* Civil time &mdash; This is implemented by the `include/civil_time.h` library
+* Civil time &mdash; This is implemented by the [`include/civil_time.h`](https://github.com/google/cctz/blob/master/include/civil_time.h) library
   that is provided as part of CCTZ. For example, a "date" is represented by a
   `cctz::civil_day`.
-* Time zone &mdash; This is implemented by the `include/time_zone.h` library
+* Time zone &mdash; This is implemented by the [`include/time_zone.h`](https://github.com/google/cctz/blob/master/include/time_zone.h) library
   that is provided as part of CCTZ. For example, a time zone is represented by
   an instance of the class `cctz::time_zone`.
 
