@@ -535,7 +535,7 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
     for (int c = fgetc(fp); c != '\n'; c = fgetc(fp)) {
       if (c == EOF)
         return false;
-      future_spec_.push_back(c);
+      future_spec_.push_back(static_cast<char>(c));
     }
   }
 
