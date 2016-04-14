@@ -29,7 +29,7 @@ time_zone utc_time_zone() {
 time_zone local_time_zone() {
 #if defined(_WIN32) || defined(_WIN64)
   char* tz_env = nullptr;
-  _dupenv_s(*tz_env, nullptr, "TZ");
+  _dupenv_s(&tz_env, nullptr, "TZ");
   const char* zone = tz_env;
 #else
   const char* zone = std::getenv("TZ");

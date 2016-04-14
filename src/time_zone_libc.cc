@@ -35,8 +35,19 @@
 # define OFFSET(tm) ((tm).tm_isdst > 0 ? altzone : timezone)
 # define ABBR(tm)   (tzname[(tm).tm_isdst > 0])
 #elif defined(_WIN32) || defined(_WIN64)
-# define OFFSET(tm) (_timezone + ((tm).tm_isdst > 0 ? 60 * 60 : 0))
-# define ABBR(tm)   (_tzname[(tm).tm_isdst > 0])
+static long get_timezone() {
+  long seconds;
+  _get_timezone(&seconds);
+  return seconds;
+}
+static std::string get_tzname(int index) {
+  char time_zone_name[32] = {0};
+  size_t size_in_bytes = sizeof time_zone_name;
+  _get_tzname(&size_in_bytes, time_zone_name, size_in_bytes, index);
+  return time_zone_name;
+}
+# define OFFSET(tm) (get_timezone() + ((tm).tm_isdst > 0 ? 60 * 60 : 0))
+# define ABBR(tm)   (get_tzname((tm).tm_isdst > 0))
 #else
 # define OFFSET(tm) (timezone + ((tm).tm_isdst > 0 ? 60 * 60 : 0))
 # define ABBR(tm)   (tzname[(tm).tm_isdst > 0])

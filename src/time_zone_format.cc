@@ -730,7 +730,7 @@ bool parse(const std::string& format, const std::string& input,
   }
 
   // TODO: Eliminate extra normalization.
-  const civil_second cs(year, tm.tm_mon + 1, tm.tm_mday,
+  const civil_second cs(static_cast<int>(year), tm.tm_mon + 1, tm.tm_mday,
                         tm.tm_hour, tm.tm_min, tm.tm_sec);
 
   // Parse() fails if any normalization was done.  That is,

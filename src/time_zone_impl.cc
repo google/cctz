@@ -103,8 +103,8 @@ time_zone::absolute_lookup time_zone::Impl::BreakTime(
   time_zone::absolute_lookup res;
   Breakdown bd = zone_->BreakTime(tp);
   // TODO: Eliminate extra normalization.
-  res.cs =
-      civil_second(bd.year, bd.month, bd.day, bd.hour, bd.minute, bd.second);
+  res.cs = civil_second(static_cast<int>(bd.year), bd.month, bd.day,
+                        bd.hour, bd.minute, bd.second);
   res.offset = bd.offset;
   res.is_dst = bd.is_dst;
   res.abbr = bd.abbr;
