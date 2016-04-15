@@ -163,7 +163,7 @@ void FormatTM(std::string* out, const std::string& fmt, const std::tm& tm) {
   }
 }
 
-// Used for %E#S specifiers and for data values in Parse().
+// Used for %E#S/%E#f specifiers and for data values in parse().
 template <typename T>
 const char* ParseInt(const char* dp, int width, T min, T max, T* vp) {
   if (dp != nullptr) {
@@ -372,16 +372,24 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
       bp = FormatOffset(ep, al.offset / 60, ':');
       result.append(bp, ep - bp);
       pending = ++cur;
-    } else if (*cur == '*' && cur + 1 != end && *(cur + 1) == 'S') {
-      // Formats %E*S.
+    } else if (*cur == '*' && cur + 1 != end &&
+               (*(cur + 1) == 'S' || *(cur + 1) == 'f')) {
+      // Formats %E*S or %E*F.
       if (cur - 2 != pending) {
         FormatTM(&result, std::string(pending, cur - 2), tm);
       }
       char* cp = ep;
       bp = Format64(cp, 9, ns.count());
       while (cp != bp && cp[-1] == '0') --cp;
-      if (cp != bp) *--bp = '.';
-      bp = Format02d(bp, al.cs.second());
+      switch (*(cur + 1)) {
+        case 'S':
+          if (cp != bp) *--bp = '.';
+          bp = Format02d(bp, al.cs.second());
+          break;
+        case 'f':
+          if (cp == bp) *--bp = '0';
+          break;
+      }
       result.append(bp, cp - bp);
       pending = cur += 2;
     } else if (*cur == '4' && cur + 1 != end && *(cur + 1) == 'Y') {
@@ -393,11 +401,11 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
       result.append(bp, ep - bp);
       pending = cur += 2;
     } else if (std::isdigit(*cur)) {
-      // Possibly found %E#S.
+      // Possibly found %E#S or %E#f.
       int n = 0;
       if (const char* np = ParseInt(cur, 0, 0, 1024, &n)) {
-        if (*np++ == 'S') {
-          // Formats %E#S.
+        if (*np == 'S' || *np == 'f') {
+          // Formats %E#S or %E#f.
           if (cur - 2 != pending) {
             FormatTM(&result, std::string(pending, cur - 2), tm);
           }
@@ -406,11 +414,11 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
             if (n > kDigits10_64) n = kDigits10_64;
             bp = Format64(bp, n, (n > 9) ? ns.count() * kExp10[n - 9]
                                          : ns.count() / kExp10[9 - n]);
-            *--bp = '.';
+            if (*np == 'S') *--bp = '.';
           }
-          bp = Format02d(bp, al.cs.second());
+          if (*np == 'S') bp = Format02d(bp, al.cs.second());
           result.append(bp, ep - bp);
-          pending = cur = np;
+          pending = cur = ++np;
         }
       }
     }
@@ -462,26 +470,24 @@ const char* ParseZone(const char* dp, std::string* zone) {
 const char* ParseSubSeconds(const char* dp,
                             std::chrono::nanoseconds* subseconds) {
   if (dp != nullptr) {
-    if (*dp == '.') {
-      int64_t v = 0;
-      int64_t exp = 0;
-      const char* const bp = ++dp;
-      while (const char* cp = strchr(kDigits, *dp)) {
-        int d = static_cast<int>(cp - kDigits);
-        if (d >= 10) break;
-        if (exp < 9) {
-          exp += 1;
-          v *= 10;
-          v += d;
-        }
-        ++dp;
+    int64_t v = 0;
+    int64_t exp = 0;
+    const char* const bp = dp;
+    while (const char* cp = strchr(kDigits, *dp)) {
+      int d = static_cast<int>(cp - kDigits);
+      if (d >= 10) break;
+      if (exp < 9) {
+        exp += 1;
+        v *= 10;
+        v += d;
       }
-      if (dp != bp) {
-        v *= kExp10[9 - exp];
-        *subseconds = std::chrono::nanoseconds(v);
-      } else {
-        dp = nullptr;
-      }
+      ++dp;
+    }
+    if (dp != bp) {
+      v *= kExp10[9 - exp];
+      *subseconds = std::chrono::nanoseconds(v);
+    } else {
+      dp = nullptr;
     }
   }
   return dp;
@@ -499,7 +505,7 @@ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
 
 // Uses strptime(3) to parse the given input.  Supports the same extended
 // format specifiers as format(), although %E#S and %E*S are treated
-// identically.
+// identically (and similarly for %E#f and %E*f).
 //
 // The standard specifiers from RFC3339_* (%Y, %m, %d, %H, %M, and %S) are
 // handled internally so that we can normally avoid strptime() altogether
@@ -626,7 +632,16 @@ bool parse(const std::string& format, const std::string& input,
         }
         if (*fmt == '*' && *(fmt + 1) == 'S') {
           data = ParseInt(data, 2, 0, 60, &tm.tm_sec);
-          data = ParseSubSeconds(data, &subseconds);
+          if (data != NULL && *data == '.') {
+            data = ParseSubSeconds(data + 1, &subseconds);
+          }
+          fmt += 2;
+          continue;
+        }
+        if (*fmt == '*' && *(fmt + 1) == 'f') {
+          if (data != NULL && std::isdigit(*data)) {
+            data = ParseSubSeconds(data, &subseconds);
+          }
           fmt += 2;
           continue;
         }
@@ -644,14 +659,21 @@ bool parse(const std::string& format, const std::string& input,
           continue;
         }
         if (std::isdigit(*fmt)) {
-          int n = 0;
+          int n = 0;  // value ignored
           if (const char* np = ParseInt(fmt, 0, 0, 1024, &n)) {
-            if (*np++ == 'S') {
+            if (*np == 'S') {
               data = ParseInt(data, 2, 0, 60, &tm.tm_sec);
-              if (n > 0) {  // n is otherwise ignored
+              if (data != NULL && *data == '.') {
+                data = ParseSubSeconds(data + 1, &subseconds);
+              }
+              fmt = ++np;
+              continue;
+            }
+            if (*np == 'f') {
+              if (data != NULL && std::isdigit(*data)) {
                 data = ParseSubSeconds(data, &subseconds);
               }
-              fmt = np;
+              fmt = ++np;
               continue;
             }
           }
@@ -695,7 +717,7 @@ bool parse(const std::string& format, const std::string& input,
   // Skip any remaining whitespace.
   while (std::isspace(*data)) ++data;
 
-  // Parse() must consume the entire input string.
+  // parse() must consume the entire input string.
   if (*data != '\0') return false;
 
   // If we saw %s then we ignore anything else and return that time.
@@ -733,7 +755,7 @@ bool parse(const std::string& format, const std::string& input,
   const civil_second cs(static_cast<int>(year), tm.tm_mon + 1, tm.tm_mday,
                         tm.tm_hour, tm.tm_min, tm.tm_sec);
 
-  // Parse() fails if any normalization was done.  That is,
+  // parse() fails if any normalization was done.  That is,
   // parsing "Sep 31" will not produce the equivalent of "Oct 1".
   if (cs.year() != year || cs.month() != tm.tm_mon + 1 ||
       cs.day() != tm.tm_mday || cs.hour() != tm.tm_hour ||

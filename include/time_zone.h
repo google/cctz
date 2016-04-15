@@ -200,7 +200,12 @@ bool parse(const std::string&, const std::string&, const time_zone&,
 //   - %Ez  - RFC3339-compatible numeric time zone (+hh:mm or -hh:mm)
 //   - %E#S - Seconds with # digits of fractional precision
 //   - %E*S - Seconds with full fractional precision (a literal '*')
+//   - %E#f - Fractional seconds with # digits of precision
+//   - %E*f - Fractional seconds with full precision (a literal '*')
 //   - %E4Y - Four-character years (-999 ... -001, 0000, 0001 ... 9999)
+//
+// Note that %E0S behaves like %S, and %E0f produces no characters.  In
+// contrast %E*f always produces at least one digit, which may be '0'.
 //
 // Note that %Y produces as many characters as it takes to fully render the
 // year. A year outside of [-999:9999] when formatted with %E4Y will produce
@@ -225,7 +230,8 @@ inline std::string format(const std::string& fmt, const time_point<D>& tp,
 
 // Parses an input string according to the provided format string and
 // returns the corresponding time_point. Uses strftime()-like formatting
-// options, with the same extensions as cctz::format().
+// options, with the same extensions as cctz::format(), but with the
+// exceptions that %E#S is interpreted as %E*S, and %E#f as %E*f.
 //
 // %Y consumes as many numeric characters as it can, so the matching data
 // should always be terminated with a non-numeric. %E4Y always consumes

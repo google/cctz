@@ -23,6 +23,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using std::chrono::time_point_cast;
 using std::chrono::system_clock;
 using std::chrono::nanoseconds;
 using std::chrono::microseconds;
@@ -76,31 +77,30 @@ void TestFormatSpecifier(time_point<D> tp, time_zone tz, const std::string& fmt,
 //
 
 TEST(Format, TimePointResolution) {
-  using std::chrono::time_point_cast;
   const char kFmt[] = "%H:%M:%E*S";
   const time_zone utc = utc_time_zone();
-  const time_point<std::chrono::nanoseconds> t0 =
-      system_clock::from_time_t(1420167845) + std::chrono::milliseconds(123) +
-      std::chrono::microseconds(456) + std::chrono::nanoseconds(789);
+  const time_point<nanoseconds> t0 = system_clock::from_time_t(1420167845) +
+                                     milliseconds(123) + microseconds(456) +
+                                     nanoseconds(789);
   EXPECT_EQ("03:04:05.123456789",
-            format(kFmt, time_point_cast<std::chrono::nanoseconds>(t0), utc));
+            format(kFmt, time_point_cast<nanoseconds>(t0), utc));
   EXPECT_EQ("03:04:05.123456",
-            format(kFmt, time_point_cast<std::chrono::microseconds>(t0), utc));
+            format(kFmt, time_point_cast<microseconds>(t0), utc));
   EXPECT_EQ("03:04:05.123",
-            format(kFmt, time_point_cast<std::chrono::milliseconds>(t0), utc));
+            format(kFmt, time_point_cast<milliseconds>(t0), utc));
   EXPECT_EQ("03:04:05",
-            format(kFmt, time_point_cast<std::chrono::seconds>(t0), utc));
+            format(kFmt, time_point_cast<seconds>(t0), utc));
   EXPECT_EQ("03:04:05",
             format(kFmt, time_point_cast<sys_seconds>(t0), utc));
   EXPECT_EQ("03:04:00",
-            format(kFmt, time_point_cast<std::chrono::minutes>(t0), utc));
+            format(kFmt, time_point_cast<minutes>(t0), utc));
   EXPECT_EQ("03:00:00",
-            format(kFmt, time_point_cast<std::chrono::hours>(t0), utc));
+            format(kFmt, time_point_cast<hours>(t0), utc));
 }
 
 TEST(Format, Basics) {
   time_zone tz = utc_time_zone();
-  time_point<std::chrono::nanoseconds> tp = system_clock::from_time_t(0);
+  time_point<nanoseconds> tp = system_clock::from_time_t(0);
 
   // Starts with a couple basic edge cases.
   EXPECT_EQ("", format("", tp, tz));
@@ -232,30 +232,47 @@ TEST(Format, Escaping) {
 
 TEST(Format, ExtendedSeconds) {
   const time_zone tz = utc_time_zone();
-  time_point<std::chrono::nanoseconds> tp = system_clock::from_time_t(0);
-  tp += hours(3) + minutes(4) + seconds(5);
+
+  // No subseconds.
+  time_point<nanoseconds> tp = system_clock::from_time_t(0);
+  tp += seconds(5);
+  EXPECT_EQ("05", format("%E*S", tp, tz));
+  EXPECT_EQ("05", format("%E0S", tp, tz));
+  EXPECT_EQ("05.0", format("%E1S", tp, tz));
+  EXPECT_EQ("05.00", format("%E2S", tp, tz));
+  EXPECT_EQ("05.000", format("%E3S", tp, tz));
+  EXPECT_EQ("05.0000", format("%E4S", tp, tz));
+  EXPECT_EQ("05.00000", format("%E5S", tp, tz));
+  EXPECT_EQ("05.000000", format("%E6S", tp, tz));
+  EXPECT_EQ("05.0000000", format("%E7S", tp, tz));
+  EXPECT_EQ("05.00000000", format("%E8S", tp, tz));
+  EXPECT_EQ("05.000000000", format("%E9S", tp, tz));
+  EXPECT_EQ("05.0000000000", format("%E10S", tp, tz));
+  EXPECT_EQ("05.00000000000", format("%E11S", tp, tz));
+  EXPECT_EQ("05.000000000000", format("%E12S", tp, tz));
+  EXPECT_EQ("05.0000000000000", format("%E13S", tp, tz));
+  EXPECT_EQ("05.00000000000000", format("%E14S", tp, tz));
+  EXPECT_EQ("05.000000000000000", format("%E15S", tp, tz));
+
+  // With subseconds.
   tp += milliseconds(6) + microseconds(7) + nanoseconds(8);
-
-  EXPECT_EQ("11045", format("%s", tp, tz));
-
-  EXPECT_EQ("03:04:05", format("%H:%M:%E0S", tp, tz));
-  EXPECT_EQ("03:04:05.0", format("%H:%M:%E1S", tp, tz));
-  EXPECT_EQ("03:04:05.00", format("%H:%M:%E2S", tp, tz));
-  EXPECT_EQ("03:04:05.006", format("%H:%M:%E3S", tp, tz));
-  EXPECT_EQ("03:04:05.0060", format("%H:%M:%E4S", tp, tz));
-  EXPECT_EQ("03:04:05.00600", format("%H:%M:%E5S", tp, tz));
-  EXPECT_EQ("03:04:05.006007", format("%H:%M:%E6S", tp, tz));
-  EXPECT_EQ("03:04:05.0060070", format("%H:%M:%E7S", tp, tz));
-  EXPECT_EQ("03:04:05.00600700", format("%H:%M:%E8S", tp, tz));
-  EXPECT_EQ("03:04:05.006007008", format("%H:%M:%E9S", tp, tz));
-  EXPECT_EQ("03:04:05.0060070080", format("%H:%M:%E10S", tp, tz));
-  EXPECT_EQ("03:04:05.00600700800", format("%H:%M:%E11S", tp, tz));
-  EXPECT_EQ("03:04:05.006007008000", format("%H:%M:%E12S", tp, tz));
-  EXPECT_EQ("03:04:05.0060070080000", format("%H:%M:%E13S", tp, tz));
-  EXPECT_EQ("03:04:05.00600700800000", format("%H:%M:%E14S", tp, tz));
-  EXPECT_EQ("03:04:05.006007008000000", format("%H:%M:%E15S", tp, tz));
-
-  EXPECT_EQ("03:04:05.006007008", format("%H:%M:%E*S", tp, tz));
+  EXPECT_EQ("05.006007008", format("%E*S", tp, tz));
+  EXPECT_EQ("05", format("%E0S", tp, tz));
+  EXPECT_EQ("05.0", format("%E1S", tp, tz));
+  EXPECT_EQ("05.00", format("%E2S", tp, tz));
+  EXPECT_EQ("05.006", format("%E3S", tp, tz));
+  EXPECT_EQ("05.0060", format("%E4S", tp, tz));
+  EXPECT_EQ("05.00600", format("%E5S", tp, tz));
+  EXPECT_EQ("05.006007", format("%E6S", tp, tz));
+  EXPECT_EQ("05.0060070", format("%E7S", tp, tz));
+  EXPECT_EQ("05.00600700", format("%E8S", tp, tz));
+  EXPECT_EQ("05.006007008", format("%E9S", tp, tz));
+  EXPECT_EQ("05.0060070080", format("%E10S", tp, tz));
+  EXPECT_EQ("05.00600700800", format("%E11S", tp, tz));
+  EXPECT_EQ("05.006007008000", format("%E12S", tp, tz));
+  EXPECT_EQ("05.0060070080000", format("%E13S", tp, tz));
+  EXPECT_EQ("05.00600700800000", format("%E14S", tp, tz));
+  EXPECT_EQ("05.006007008000000", format("%E15S", tp, tz));
 
   // Times before the Unix epoch.
   tp = system_clock::from_time_t(0) + microseconds(-1);
@@ -271,6 +288,107 @@ TEST(Format, ExtendedSeconds) {
   tp += microseconds(1);
   EXPECT_EQ("2014-03-17 02:47:07.333305",
             format("%Y-%m-%d %H:%M:%E*S", tp, tz));
+}
+
+TEST(Format, ExtendedSubeconds) {
+  const time_zone tz = utc_time_zone();
+
+  // No subseconds.
+  time_point<nanoseconds> tp = system_clock::from_time_t(0);
+  tp += seconds(5);
+  EXPECT_EQ("0", format("%E*f", tp, tz));
+  EXPECT_EQ("", format("%E0f", tp, tz));
+  EXPECT_EQ("0", format("%E1f", tp, tz));
+  EXPECT_EQ("00", format("%E2f", tp, tz));
+  EXPECT_EQ("000", format("%E3f", tp, tz));
+  EXPECT_EQ("0000", format("%E4f", tp, tz));
+  EXPECT_EQ("00000", format("%E5f", tp, tz));
+  EXPECT_EQ("000000", format("%E6f", tp, tz));
+  EXPECT_EQ("0000000", format("%E7f", tp, tz));
+  EXPECT_EQ("00000000", format("%E8f", tp, tz));
+  EXPECT_EQ("000000000", format("%E9f", tp, tz));
+  EXPECT_EQ("0000000000", format("%E10f", tp, tz));
+  EXPECT_EQ("00000000000", format("%E11f", tp, tz));
+  EXPECT_EQ("000000000000", format("%E12f", tp, tz));
+  EXPECT_EQ("0000000000000", format("%E13f", tp, tz));
+  EXPECT_EQ("00000000000000", format("%E14f", tp, tz));
+  EXPECT_EQ("000000000000000", format("%E15f", tp, tz));
+
+  // With subseconds.
+  tp += milliseconds(6) + microseconds(7) + nanoseconds(8);
+  EXPECT_EQ("006007008", format("%E*f", tp, tz));
+  EXPECT_EQ("", format("%E0f", tp, tz));
+  EXPECT_EQ("0", format("%E1f", tp, tz));
+  EXPECT_EQ("00", format("%E2f", tp, tz));
+  EXPECT_EQ("006", format("%E3f", tp, tz));
+  EXPECT_EQ("0060", format("%E4f", tp, tz));
+  EXPECT_EQ("00600", format("%E5f", tp, tz));
+  EXPECT_EQ("006007", format("%E6f", tp, tz));
+  EXPECT_EQ("0060070", format("%E7f", tp, tz));
+  EXPECT_EQ("00600700", format("%E8f", tp, tz));
+  EXPECT_EQ("006007008", format("%E9f", tp, tz));
+  EXPECT_EQ("0060070080", format("%E10f", tp, tz));
+  EXPECT_EQ("00600700800", format("%E11f", tp, tz));
+  EXPECT_EQ("006007008000", format("%E12f", tp, tz));
+  EXPECT_EQ("0060070080000", format("%E13f", tp, tz));
+  EXPECT_EQ("00600700800000", format("%E14f", tp, tz));
+  EXPECT_EQ("006007008000000", format("%E15f", tp, tz));
+
+  // Times before the Unix epoch.
+  tp = system_clock::from_time_t(0) + microseconds(-1);
+  EXPECT_EQ("1969-12-31 23:59:59.999999",
+            format("%Y-%m-%d %H:%M:%S.%E*f", tp, tz));
+
+  // Here is a "%E*S" case we got wrong for a while.  While the first
+  // instant below is correctly rendered as "...:07.333304", the second
+  // one used to appear as "...:07.33330499999999999".
+  tp = system_clock::from_time_t(0) + microseconds(1395024427333304);
+  EXPECT_EQ("2014-03-17 02:47:07.333304",
+            format("%Y-%m-%d %H:%M:%S.%E*f", tp, tz));
+  tp += microseconds(1);
+  EXPECT_EQ("2014-03-17 02:47:07.333305",
+            format("%Y-%m-%d %H:%M:%S.%E*f", tp, tz));
+}
+
+TEST(Format, CompareExtendSecondsVsSubseconds) {
+  const time_zone tz = utc_time_zone();
+
+  // This test case illustrates the differences/similarities between:
+  //   fmt_A: %E<prec>S
+  //   fmt_B: %S.%E<prec>f
+  auto fmt_A = [](const std::string& prec) { return "%E" + prec + "S"; };
+  auto fmt_B = [](const std::string& prec) { return "%S.%E" + prec + "f"; };
+
+  // No subseconds:
+  time_point<nanoseconds> tp = system_clock::from_time_t(0);
+  tp += seconds(5);
+  // ... %E*S and %S.%E*f are different.
+  EXPECT_EQ("05", format(fmt_A("*"), tp, tz));
+  EXPECT_EQ("05.0", format(fmt_B("*"), tp, tz));
+  // ... %E0S and %S.%E0f are different.
+  EXPECT_EQ("05", format(fmt_A("0"), tp, tz));
+  EXPECT_EQ("05.", format(fmt_B("0"), tp, tz));
+  // ... %E<prec>S and %S.%E<prec>f are the same for prec in [1:15].
+  for (int prec = 1; prec <= 15; ++prec) {
+    const std::string a = format(fmt_A(std::to_string(prec)), tp, tz);
+    const std::string b = format(fmt_B(std::to_string(prec)), tp, tz);
+    EXPECT_EQ(a, b) << "prec=" << prec;
+  }
+
+  // With subseconds:
+  // ... %E*S and %S.%E*f are the same.
+  tp += milliseconds(6) + microseconds(7) + nanoseconds(8);
+  EXPECT_EQ("05.006007008", format(fmt_A("*"), tp, tz));
+  EXPECT_EQ("05.006007008", format(fmt_B("*"), tp, tz));
+  // ... %E0S and %S.%E0f are different.
+  EXPECT_EQ("05", format(fmt_A("0"), tp, tz));
+  EXPECT_EQ("05.", format(fmt_B("0"), tp, tz));
+  // ... %E<prec>S and %S.%E<prec>f are the same for prec in [1:15].
+  for (int prec = 1; prec <= 15; ++prec) {
+    const std::string a = format(fmt_A(std::to_string(prec)), tp, tz);
+    const std::string b = format(fmt_B(std::to_string(prec)), tp, tz);
+    EXPECT_EQ(a, b) << "prec=" << prec;
+  }
 }
 
 TEST(Format, ExtendedOffset) {
@@ -331,7 +449,7 @@ TEST(Format, RFC3339Format) {
   time_zone tz;
   EXPECT_TRUE(load_time_zone("America/Los_Angeles", &tz));
 
-  time_point<std::chrono::nanoseconds> tp =
+  time_point<nanoseconds> tp =
       convert(civil_second(1977, 6, 28, 9, 8, 7), tz);
   EXPECT_EQ("1977-06-28T09:08:07-07:00", format(RFC3339_full, tp, tz));
   EXPECT_EQ("1977-06-28T09:08:07-07:00", format(RFC3339_sec, tp, tz));
@@ -388,17 +506,16 @@ TEST(Format, RFC1123Format) {  // locale specific
 //
 
 TEST(Parse, TimePointResolution) {
-  using std::chrono::time_point_cast;
   const char kFmt[] = "%H:%M:%E*S";
   const time_zone utc = utc_time_zone();
 
-  time_point<std::chrono::nanoseconds> tp_ns;
+  time_point<nanoseconds> tp_ns;
   EXPECT_TRUE(parse(kFmt, "03:04:05.123456789", utc, &tp_ns));
   EXPECT_EQ("03:04:05.123456789", format(kFmt, tp_ns, utc));
   EXPECT_TRUE(parse(kFmt, "03:04:05.123456", utc, &tp_ns));
   EXPECT_EQ("03:04:05.123456", format(kFmt, tp_ns, utc));
 
-  time_point<std::chrono::microseconds> tp_us;
+  time_point<microseconds> tp_us;
   EXPECT_TRUE(parse(kFmt, "03:04:05.123456789", utc, &tp_us));
   EXPECT_EQ("03:04:05.123456", format(kFmt, tp_us, utc));
   EXPECT_TRUE(parse(kFmt, "03:04:05.123456", utc, &tp_us));
@@ -406,7 +523,7 @@ TEST(Parse, TimePointResolution) {
   EXPECT_TRUE(parse(kFmt, "03:04:05.123", utc, &tp_us));
   EXPECT_EQ("03:04:05.123", format(kFmt, tp_us, utc));
 
-  time_point<std::chrono::milliseconds> tp_ms;
+  time_point<milliseconds> tp_ms;
   EXPECT_TRUE(parse(kFmt, "03:04:05.123456", utc, &tp_ms));
   EXPECT_EQ("03:04:05.123", format(kFmt, tp_ms, utc));
   EXPECT_TRUE(parse(kFmt, "03:04:05.123", utc, &tp_ms));
@@ -414,25 +531,24 @@ TEST(Parse, TimePointResolution) {
   EXPECT_TRUE(parse(kFmt, "03:04:05", utc, &tp_ms));
   EXPECT_EQ("03:04:05", format(kFmt, tp_ms, utc));
 
-  time_point<std::chrono::seconds> tp_s;
+  time_point<seconds> tp_s;
   EXPECT_TRUE(parse(kFmt, "03:04:05.123", utc, &tp_s));
   EXPECT_EQ("03:04:05", format(kFmt, tp_s, utc));
   EXPECT_TRUE(parse(kFmt, "03:04:05", utc, &tp_s));
   EXPECT_EQ("03:04:05", format(kFmt, tp_s, utc));
 
-  time_point<std::chrono::minutes> tp_m;
+  time_point<minutes> tp_m;
   EXPECT_TRUE(parse(kFmt, "03:04:05", utc, &tp_m));
   EXPECT_EQ("03:04:00", format(kFmt, tp_m, utc));
 
-  time_point<std::chrono::hours> tp_h;
+  time_point<hours> tp_h;
   EXPECT_TRUE(parse(kFmt, "03:04:05", utc, &tp_h));
   EXPECT_EQ("03:00:00", format(kFmt, tp_h, utc));
 }
 
 TEST(Parse, Basics) {
   time_zone tz = utc_time_zone();
-  time_point<std::chrono::nanoseconds> tp =
-      system_clock::from_time_t(1234567890);
+  time_point<nanoseconds> tp = system_clock::from_time_t(1234567890);
 
   // Simple edge cases.
   EXPECT_TRUE(parse("", "", tz, &tp));
@@ -450,7 +566,7 @@ TEST(Parse, Basics) {
 TEST(Parse, WithTimeZone) {
   time_zone tz;
   EXPECT_TRUE(load_time_zone("America/Los_Angeles", &tz));
-  time_point<std::chrono::nanoseconds> tp;
+  time_point<nanoseconds> tp;
 
   // We can parse a string without a UTC offset if we supply a timezone.
   EXPECT_TRUE(parse("%Y-%m-%d %H:%M:%S", "2013-06-28 19:08:09", tz, &tp));
@@ -475,7 +591,7 @@ TEST(Parse, WithTimeZone) {
 TEST(Parse, LeapSecond) {
   time_zone tz;
   EXPECT_TRUE(load_time_zone("America/Los_Angeles", &tz));
-  time_point<std::chrono::nanoseconds> tp;
+  time_point<nanoseconds> tp;
 
   // ":59" -> ":59"
   EXPECT_TRUE(parse(RFC3339_full, "2013-06-28T07:08:59-08:00", tz, &tp));
@@ -786,33 +902,72 @@ TEST(Parse, LocaleSpecific) {
 
 TEST(Parse, ExtendedSeconds) {
   const time_zone tz = utc_time_zone();
+  const time_point<nanoseconds> unix_epoch = system_clock::from_time_t(0);
+
+  // All %E<prec>S cases are treated the same as %E*S on input.
+  auto precisions = {"*", "0", "1",  "2",  "3",  "4",  "5",  "6", "7",
+                     "8", "9", "10", "11", "12", "13", "14", "15"};
+  for (const std::string& prec : precisions) {
+    const std::string fmt = "%E" + prec + "S";
+    SCOPED_TRACE(fmt);
+    time_point<nanoseconds> tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "5", tz, &tp));
+    EXPECT_EQ(unix_epoch + seconds(5), tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "05", tz, &tp));
+    EXPECT_EQ(unix_epoch + seconds(5), tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "05.0", tz, &tp));
+    EXPECT_EQ(unix_epoch + seconds(5), tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "05.00", tz, &tp));
+    EXPECT_EQ(unix_epoch + seconds(5), tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "05.6", tz, &tp));
+    EXPECT_EQ(unix_epoch + seconds(5) + milliseconds(600), tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "05.60", tz, &tp));
+    EXPECT_EQ(unix_epoch + seconds(5) + milliseconds(600), tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "05.600", tz, &tp));
+    EXPECT_EQ(unix_epoch + seconds(5) + milliseconds(600), tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "05.67", tz, &tp));
+    EXPECT_EQ(unix_epoch + seconds(5) + milliseconds(670), tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "05.670", tz, &tp));
+    EXPECT_EQ(unix_epoch + seconds(5) + milliseconds(670), tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "05.678", tz, &tp));
+    EXPECT_EQ(unix_epoch + seconds(5) + milliseconds(678), tp);
+  }
 
   // Here is a "%E*S" case we got wrong for a while.  The fractional
   // part of the first instant is less than 2^31 and was correctly
   // parsed, while the second (and any subsecond field >=2^31) failed.
-  time_point<std::chrono::nanoseconds> tp = system_clock::from_time_t(0);
+  time_point<nanoseconds> tp = unix_epoch;
   EXPECT_TRUE(parse("%E*S", "0.2147483647", tz, &tp));
-  EXPECT_EQ(system_clock::from_time_t(0) + nanoseconds(214748364), tp);
-  tp = system_clock::from_time_t(0);
+  EXPECT_EQ(unix_epoch + nanoseconds(214748364), tp);
+  tp = unix_epoch;
   EXPECT_TRUE(parse("%E*S", "0.2147483648", tz, &tp));
-  EXPECT_EQ(system_clock::from_time_t(0) + nanoseconds(214748364), tp);
+  EXPECT_EQ(unix_epoch + nanoseconds(214748364), tp);
 
   // We should also be able to specify long strings of digits far
   // beyond the current resolution and have them convert the same way.
-  tp = system_clock::from_time_t(0);
+  tp = unix_epoch;
   EXPECT_TRUE(parse(
       "%E*S", "0.214748364801234567890123456789012345678901234567890123456789",
       tz, &tp));
-  EXPECT_EQ(system_clock::from_time_t(0) + nanoseconds(214748364), tp);
+  EXPECT_EQ(unix_epoch + nanoseconds(214748364), tp);
 }
 
 TEST(Parse, ExtendedSecondsScan) {
   const time_zone tz = utc_time_zone();
-  time_point<std::chrono::nanoseconds> tp;
-  for (int64_t ms = 0; ms < 1000; ms += 111) {
-    for (int64_t us = 0; us < 1000; us += 27) {
-      const int64_t micros = ms * 1000 + us;
-      for (int64_t ns = 0; ns < 1000; ns += 9) {
+  time_point<nanoseconds> tp;
+  for (int ms = 0; ms < 1000; ms += 111) {
+    for (int us = 0; us < 1000; us += 27) {
+      const int micros = ms * 1000 + us;
+      for (int ns = 0; ns < 1000; ns += 9) {
         const auto expected =
             system_clock::from_time_t(0) + nanoseconds(micros * 1000 + ns);
         std::ostringstream oss;
@@ -821,6 +976,86 @@ TEST(Parse, ExtendedSecondsScan) {
         const std::string input = oss.str();
         EXPECT_TRUE(parse("%E*S", input, tz, &tp));
         EXPECT_EQ(expected, tp) << input;
+      }
+    }
+  }
+}
+
+TEST(Parse, ExtendedSubeconds) {
+  const time_zone tz = utc_time_zone();
+  const time_point<nanoseconds> unix_epoch = system_clock::from_time_t(0);
+
+  // All %E<prec>f cases are treated the same as %E*f on input.
+  auto precisions = {"*", "0", "1",  "2",  "3",  "4",  "5",  "6", "7",
+                     "8", "9", "10", "11", "12", "13", "14", "15"};
+  for (const std::string& prec : precisions) {
+    const std::string fmt = "%E" + prec + "f";
+    SCOPED_TRACE(fmt);
+    time_point<nanoseconds> tp = unix_epoch - seconds(1);
+    EXPECT_TRUE(parse(fmt, "", tz, &tp));
+    EXPECT_EQ(unix_epoch, tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "6", tz, &tp));
+    EXPECT_EQ(unix_epoch + milliseconds(600), tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "60", tz, &tp));
+    EXPECT_EQ(unix_epoch + milliseconds(600), tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "600", tz, &tp));
+    EXPECT_EQ(unix_epoch + milliseconds(600), tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "67", tz, &tp));
+    EXPECT_EQ(unix_epoch + milliseconds(670), tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "670", tz, &tp));
+    EXPECT_EQ(unix_epoch + milliseconds(670), tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "678", tz, &tp));
+    EXPECT_EQ(unix_epoch + milliseconds(678), tp);
+    tp = unix_epoch;
+    EXPECT_TRUE(parse(fmt, "6789", tz, &tp));
+    EXPECT_EQ(unix_epoch + milliseconds(678) + microseconds(900), tp);
+  }
+
+  // Here is a "%E*f" case we got wrong for a while.  The fractional
+  // part of the first instant is less than 2^31 and was correctly
+  // parsed, while the second (and any subsecond field >=2^31) failed.
+  time_point<nanoseconds> tp = unix_epoch;
+  EXPECT_TRUE(parse("%E*f", "2147483647", tz, &tp));
+  EXPECT_EQ(unix_epoch + nanoseconds(214748364) + nanoseconds(1) / 2, tp);
+  tp = unix_epoch;
+  EXPECT_TRUE(parse("%E*f", "2147483648", tz, &tp));
+  EXPECT_EQ(unix_epoch + nanoseconds(214748364) + nanoseconds(3) / 4, tp);
+
+  // We should also be able to specify long strings of digits far
+  // beyond the current resolution and have them convert the same way.
+  tp = unix_epoch;
+  EXPECT_TRUE(parse(
+      "%E*f", "214748364801234567890123456789012345678901234567890123456789",
+      tz, &tp));
+  EXPECT_EQ(unix_epoch + nanoseconds(214748364) + nanoseconds(3) / 4, tp);
+}
+
+TEST(Parse, ExtendedSubecondsScan) {
+  time_point<nanoseconds> tp;
+  const time_zone tz = utc_time_zone();
+  for (int ms = 0; ms < 1000; ms += 111) {
+    for (int us = 0; us < 1000; us += 27) {
+      const int micros = ms * 1000 + us;
+      for (int ns = 0; ns < 1000; ns += 9) {
+        std::ostringstream oss;
+        oss << std::setfill('0') << std::setw(3) << ms;
+        oss << std::setw(3) << us << std::setw(3) << ns;
+        const std::string nanos = oss.str();
+        const auto expected =
+            system_clock::from_time_t(0) + nanoseconds(micros * 1000 + ns);
+        for (int ps = 0; ps < 1000; ps += 250) {
+          std::ostringstream oss;
+          oss << std::setfill('0') << std::setw(3) << ps;
+          const std::string input = nanos + oss.str() + "999";
+          EXPECT_TRUE(parse("%E*f", input, tz, &tp));
+          EXPECT_EQ(expected + nanoseconds(ps) / 1000, tp) << input;
+        }
       }
     }
   }
@@ -910,12 +1145,12 @@ TEST(Parse, ExtendedYears) {
 
 TEST(Parse, RFC3339Format) {
   const time_zone tz = utc_time_zone();
-  time_point<std::chrono::nanoseconds> tp;
+  time_point<nanoseconds> tp;
   EXPECT_TRUE(parse(RFC3339_sec, "2014-02-12T20:21:00+00:00", tz, &tp));
   ExpectTime(tp, tz, 2014, 2, 12, 20, 21, 0, 0, false, "UTC");
 
   // Check that %Ez also accepts "Z" as a synonym for "+00:00".
-  time_point<std::chrono::nanoseconds> tp2;
+  time_point<nanoseconds> tp2;
   EXPECT_TRUE(parse(RFC3339_sec, "2014-02-12T20:21:00Z", tz, &tp2));
   EXPECT_EQ(tp, tp2);
 }
@@ -932,7 +1167,7 @@ TEST(FormatParse, RoundTrip) {
 
   // RFC3339, which renders subseconds.
   {
-    time_point<std::chrono::nanoseconds> out;
+    time_point<nanoseconds> out;
     const std::string s = format(RFC3339_full, in + subseconds, lax);
     EXPECT_TRUE(parse(RFC3339_full, s, lax, &out)) << s;
     EXPECT_EQ(in + subseconds, out);  // RFC3339_full includes %Ez
@@ -940,7 +1175,7 @@ TEST(FormatParse, RoundTrip) {
 
   // RFC1123, which only does whole seconds.
   {
-    time_point<std::chrono::nanoseconds> out;
+    time_point<nanoseconds> out;
     const std::string s = format(RFC1123_full, in, lax);
     EXPECT_TRUE(parse(RFC1123_full, s, lax, &out)) << s;
     EXPECT_EQ(in, out);  // RFC1123_full includes %z
@@ -949,7 +1184,7 @@ TEST(FormatParse, RoundTrip) {
   // Even though we don't know what %c will produce, it should roundtrip,
   // but only in the 0-offset timezone.
   {
-    time_point<std::chrono::nanoseconds> out;
+    time_point<nanoseconds> out;
     time_zone utc = utc_time_zone();
     const std::string s = format("%c", in, utc);
     EXPECT_TRUE(parse("%c", s, utc, &out)) << s;
