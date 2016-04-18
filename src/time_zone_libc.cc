@@ -91,8 +91,6 @@ Breakdown TimeZoneLibC::BreakTime(const time_point<sys_seconds>& tp) const {
   bd.hour = tm.tm_hour;
   bd.minute = tm.tm_min;
   bd.second = tm.tm_sec;
-  bd.weekday = (tm.tm_wday ? tm.tm_wday : 7);
-  bd.yearday = tm.tm_yday + 1;
   bd.is_dst = tm.tm_isdst > 0;
   return bd;
 }

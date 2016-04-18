@@ -696,7 +696,6 @@ Breakdown TimeZoneInfo::LocalTime(int64_t unix_time,
   Breakdown bd;
 
   bd.year = EPOCH_YEAR;
-  bd.weekday = EPOCH_WDAY;  // Thu
   int64_t seconds = unix_time;
 
   // Shift to a base year that is 400-year aligned.
@@ -708,7 +707,6 @@ Breakdown TimeZoneInfo::LocalTime(int64_t unix_time,
     seconds += (146097LL - 10957LL) * SECSPERDAY;
     bd.year -= 370;  // == 1600
   }
-  bd.weekday += 2;  // Sat
 
   // A civil time in "+offset" looks like (time+offset) in UTC.
   if (seconds >= 0) {
@@ -736,7 +734,6 @@ Breakdown TimeZoneInfo::LocalTime(int64_t unix_time,
   while (seconds >= sec_per_100years) {
     seconds -= sec_per_100years;
     bd.year += 100;
-    bd.weekday += 5 + leap_year;
     leap_year = false;  // 1-century, non 4-century aligned
     sec_per_100years = kSecPer100Years[leap_year];
   }
@@ -744,7 +741,6 @@ Breakdown TimeZoneInfo::LocalTime(int64_t unix_time,
   while (seconds >= sec_per_4years) {
     seconds -= sec_per_4years;
     bd.year += 4;
-    bd.weekday += 4 + leap_year;
     leap_year = true;  // 4-year, non century aligned
     sec_per_4years = kSecPer4Years[leap_year];
   }
@@ -752,17 +748,14 @@ Breakdown TimeZoneInfo::LocalTime(int64_t unix_time,
   while (seconds >= sec_per_year) {
     seconds -= sec_per_year;
     bd.year += 1;
-    bd.weekday += 1 + leap_year;
     leap_year = false;  // non 4-year aligned
     sec_per_year = kSecPerYear[leap_year];
   }
 
   // Handle months and days.
-  bd.yearday = static_cast<int>(seconds / SECSPERDAY) + 1;
-  seconds %= SECSPERDAY;
   bd.month = TM_DECEMBER + 1;
-  bd.day = bd.yearday;
-  bd.weekday += bd.day - 1;
+  bd.day = static_cast<int>(seconds / SECSPERDAY) + 1;
+  seconds %= SECSPERDAY;
   while (bd.month != TM_JANUARY + 1) {
     int month_offset = kMonthOffsets[leap_year][bd.month];
     if (bd.day > month_offset) {
@@ -777,11 +770,6 @@ Breakdown TimeZoneInfo::LocalTime(int64_t unix_time,
   seconds %= SECSPERHOUR;
   bd.minute = static_cast<int>(seconds / SECSPERMIN);
   bd.second = seconds % SECSPERMIN;
-
-  // Shift weekday to [1==Mon, ..., 7=Sun].
-  bd.weekday -= 1;
-  bd.weekday %= DAYSPERWEEK;
-  bd.weekday += 1;
 
   // Handle offset, is_dst, and abbreviation.
   bd.offset = tt.utc_offset;

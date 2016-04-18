@@ -34,8 +34,6 @@ struct Breakdown {
   int hour;          // hour of day [0:23]
   int minute;        // minute of hour [0:59]
   int second;        // second of minute [0:59]
-  int weekday;       // 1==Mon, ..., 7=Sun
-  int yearday;       // day of year [1:366]
 
   // Note: The following fields exist for backward compatibility with older
   // APIs. Accessing these fields directly is a sign of imprudent logic in the
