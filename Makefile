@@ -38,6 +38,8 @@ ARFLAGS = rcs
 LDFLAGS = -pthread
 LDLIBS = $(TEST_LIBS)
 
+SUDO =
+
 CCTZ_LIB = libcctz.a
 
 CCTZ_HDRS =			\
@@ -64,9 +66,15 @@ $(TESTS) $(TOOLS) $(EXAMPLES): $(CCTZ_LIB)
 $(CCTZ_LIB): $(CCTZ_OBJS)
 	$(AR) $(ARFLAGS) $@ $(CCTZ_OBJS)
 
-install: $(CCTZ_HDRS) $(CCTZ_LIB)
-	sudo cp -p $(CCTZ_HDRS) $(PREFIX)/include
-	sudo cp -p $(CCTZ_LIB) $(PREFIX)/lib
+install: install_hdrs install_lib
+
+install_hdrs: $(CCTZ_HDRS)
+	$(SUDO) mkdir -p $(PREFIX)/include
+	$(SUDO) cp -p $? $(PREFIX)/include
+
+install_lib: $(CCTZ_LIB)
+	$(SUDO) mkdir -p $(PREFIX)/lib
+	$(SUDO) cp -p $? $(PREFIX)/lib
 
 clean:
 	@$(RM) -r $(EXAMPLES:=.dSYM) $(EXAMPLES:=.o) $(EXAMPLES:=.d) $(EXAMPLES)
