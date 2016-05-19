@@ -21,7 +21,7 @@
 // Define OFFSET(tm) and ABBR(tm) for your platform to return the UTC
 // offset and zone abbreviation after a call to localtime_r().
 #if defined(linux)
-# if defined(__USE_BSD)
+# if defined(__USE_BSD) || defined(__USE_MISC)
 #  define OFFSET(tm) ((tm).tm_gmtoff)
 #  define ABBR(tm)   ((tm).tm_zone)
 # else
