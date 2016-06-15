@@ -27,7 +27,7 @@ time_zone utc_time_zone() {
 }
 
 time_zone local_time_zone() {
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER)
   char* tz_env = nullptr;
   _dupenv_s(&tz_env, nullptr, "TZ");
   const char* zone = tz_env;
@@ -43,7 +43,7 @@ time_zone local_time_zone() {
   if (!load_time_zone(zone, &tz)) {
     load_time_zone("UTC", &tz);
   }
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER)
   free(tz_env);
 #endif
   return tz;

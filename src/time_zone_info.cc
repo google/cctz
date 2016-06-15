@@ -51,7 +51,7 @@ namespace {
 // Convert errnum to a message, using buf[buflen] if necessary.
 // buf must be non-null, and buflen non-zero.
 char* errmsg(int errnum, char* buf, size_t buflen) {
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER)
   strerror_s(buf, buflen, errnum);
   return buf;
 #elif defined(__APPLE__)
@@ -647,7 +647,7 @@ bool TimeZoneInfo::Load(const std::string& name) {
   // Map time-zone name to its machine-specific path.
   std::string path;
   if (name == "localtime") {
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER)
     char* localtime = nullptr;
     _dupenv_s(&localtime, nullptr, "LOCALTIME");
     path = localtime ? localtime : "/etc/localtime";
@@ -659,7 +659,7 @@ bool TimeZoneInfo::Load(const std::string& name) {
   } else if (!name.empty() && name[0] == '/') {
     path = name;
   } else {
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER)
     char* tzdir = nullptr;
     _dupenv_s(&tzdir, nullptr, "TZDIR");
     path = tzdir ? tzdir : "/usr/share/zoneinfo";
@@ -674,7 +674,7 @@ bool TimeZoneInfo::Load(const std::string& name) {
 
   // Load the time-zone data.
   bool loaded = false;
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER)
   FILE* fp;
   if (fopen_s(&fp, path.c_str(), "rb") != 0) fp = nullptr;
 #else
