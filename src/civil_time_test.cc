@@ -490,6 +490,47 @@ TEST(CivilTime, ExplicitCrossAlignment) {
   EXPECT_EQ("2015-01-01T00:00:00", Format(second));
 }
 
+// Metafunction to test whether difference is allowed between two types.
+template <typename T1, typename T2>
+struct HasDifference {
+  template <typename U1, typename U2>
+  static std::false_type test(...);
+  template <typename U1, typename U2>
+  static std::true_type test(decltype(std::declval<U1>() - std::declval<U2>()));
+  static constexpr bool value = decltype(test<T1, T2>(0))::value;
+};
+
+TEST(CivilTime, DisallowCrossAlignedDifference) {
+  // Difference is allowed between types with the same alignment.
+  static_assert(HasDifference<civil_second, civil_second>::value, "");
+  static_assert(HasDifference<civil_minute, civil_minute>::value, "");
+  static_assert(HasDifference<civil_hour, civil_hour>::value, "");
+  static_assert(HasDifference<civil_day, civil_day>::value, "");
+  static_assert(HasDifference<civil_month, civil_month>::value, "");
+  static_assert(HasDifference<civil_year, civil_year>::value, "");
+
+  // Difference is disallowed between types with different alignments.
+  static_assert(!HasDifference<civil_second, civil_minute>::value, "");
+  static_assert(!HasDifference<civil_second, civil_hour>::value, "");
+  static_assert(!HasDifference<civil_second, civil_day>::value, "");
+  static_assert(!HasDifference<civil_second, civil_month>::value, "");
+  static_assert(!HasDifference<civil_second, civil_year>::value, "");
+
+  static_assert(!HasDifference<civil_minute, civil_hour>::value, "");
+  static_assert(!HasDifference<civil_minute, civil_day>::value, "");
+  static_assert(!HasDifference<civil_minute, civil_month>::value, "");
+  static_assert(!HasDifference<civil_minute, civil_year>::value, "");
+
+  static_assert(!HasDifference<civil_hour, civil_day>::value, "");
+  static_assert(!HasDifference<civil_hour, civil_month>::value, "");
+  static_assert(!HasDifference<civil_hour, civil_year>::value, "");
+
+  static_assert(!HasDifference<civil_day, civil_month>::value, "");
+  static_assert(!HasDifference<civil_day, civil_year>::value, "");
+
+  static_assert(!HasDifference<civil_month, civil_year>::value, "");
+}
+
 TEST(CivilTime, ValueSemantics) {
   const civil_hour a(2015, 1, 2, 3);
   const civil_hour b = a;

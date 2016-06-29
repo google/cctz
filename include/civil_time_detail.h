@@ -351,6 +351,11 @@ class civil_time {
   fields f_;
 };
 
+// Disallows difference between differently aligned types.
+// auto n = civil_day(...) - civil_hour(...);  // would be confusing.
+template <typename Tag1, typename Tag2>
+CONSTEXPR_F int operator-(civil_time<Tag1>, civil_time<Tag2>) = delete;
+
 using civil_year = civil_time<year_tag>;
 using civil_month = civil_time<month_tag>;
 using civil_day = civil_time<day_tag>;
