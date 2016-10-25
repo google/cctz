@@ -14,36 +14,35 @@
 
 #include "time_zone_impl.h"
 
-#include <map>
 #include <mutex>
+#include <unordered_map>
 
 namespace cctz {
 
 namespace {
 
 // time_zone::Impls are linked into a map to support fast lookup by name.
-typedef std::map<std::string, const time_zone::Impl*> TimeZoneImplByName;
+using TimeZoneImplByName =
+    std::unordered_map<std::string, const time_zone::Impl*>;
 TimeZoneImplByName* time_zone_map = nullptr;
 
 // Mutual exclusion for time_zone_map.
 std::mutex time_zone_mutex;
 
-// The utc_time_zone(). Also used for time zones that fail to load.
-const time_zone::Impl* utc_zone = nullptr;
-
-// utc_zone should only be referenced in a thread that has just done
-// a LoadUTCTimeZone().
-std::once_flag load_utc_once;
-void LoadUTCTimeZone() {
-  std::call_once(load_utc_once, []() { utc_time_zone(); });
-}
-
 }  // namespace
 
-bool time_zone::Impl::LoadTimeZone(const std::string& name, time_zone* tz) {
-  const bool is_utc = (name.compare("UTC") == 0);
+time_zone time_zone::Impl::UTC() {
+  return time_zone(UTCImpl());
+}
 
-  // First check, under a shared lock, whether the time zone has already
+bool time_zone::Impl::LoadTimeZone(const std::string& name, time_zone* tz) {
+  // First check for UTC.
+  if (name.compare("UTC") == 0) {
+    *tz = time_zone(UTCImpl());
+    return true;
+  }
+
+  // Then check, under a shared lock, whether the time zone has already
   // been loaded. This is the common path. TODO: Move to shared_mutex.
   {
     std::lock_guard<std::mutex> lock(time_zone_mutex);
@@ -51,34 +50,25 @@ bool time_zone::Impl::LoadTimeZone(const std::string& name, time_zone* tz) {
       TimeZoneImplByName::const_iterator itr = time_zone_map->find(name);
       if (itr != time_zone_map->end()) {
         *tz = time_zone(itr->second);
-        return is_utc || itr->second != utc_zone;
+        return itr->second != UTCImpl();
       }
     }
-  }
-
-  if (!is_utc) {
-    // Ensure that UTC is loaded before any other time zones.
-    LoadUTCTimeZone();
   }
 
   // Now check again, under an exclusive lock.
   std::lock_guard<std::mutex> lock(time_zone_mutex);
   if (time_zone_map == nullptr) time_zone_map = new TimeZoneImplByName;
-  const time_zone::Impl*& impl = (*time_zone_map)[name];
+  const Impl*& impl = (*time_zone_map)[name];
   bool fallback_utc = false;
   if (impl == nullptr) {
     // The first thread in loads the new time zone.
-    time_zone::Impl* new_impl = new time_zone::Impl(name);
+    Impl* new_impl = new Impl(name);
     new_impl->zone_ = TimeZoneIf::Load(new_impl->name_);
     if (new_impl->zone_ == nullptr) {
-      delete new_impl;  // free the nascent time_zone::Impl
-      impl = utc_zone;  // and fallback to UTC
+      delete new_impl;  // free the nascent Impl
+      impl = UTCImpl();  // and fallback to UTC
       fallback_utc = true;
     } else {
-      if (is_utc) {
-        // Happens before any reference to utc_zone.
-        utc_zone = new_impl;
-      }
       impl = new_impl;  // install new time zone
     }
   }
@@ -90,8 +80,7 @@ const time_zone::Impl& time_zone::Impl::get(const time_zone& tz) {
   if (tz.impl_ == nullptr) {
     // Dereferencing an implicit-UTC time_zone is expected to be
     // rare, so we don't mind paying a small synchronization cost.
-    LoadUTCTimeZone();
-    return *utc_zone;
+    return *UTCImpl();
   }
   return *tz.impl_;
 }
@@ -121,6 +110,15 @@ time_zone::civil_lookup time_zone::Impl::MakeTimeInfo(civil_second cs) const {
   res.trans = t.trans;
   res.post = t.post;
   return res;
+}
+
+const time_zone::Impl* time_zone::Impl::UTCImpl() {
+  static Impl* utc_impl = [] {
+    Impl* impl = new Impl("UTC");
+    impl->zone_ = TimeZoneIf::Load(impl->name_);  // never fails
+    return impl;
+  }();
+  return utc_impl;
 }
 
 }  // namespace cctz
