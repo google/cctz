@@ -1056,13 +1056,13 @@ TEST(TimeZoneEdgeCase, FixedOffsets) {
   const TimeZone gmtm5 = LoadZone("Etc/GMT+5");  // -0500
   auto tp = MakeTime(1970, 1, 1, 0, 0, 0, gmtm5);
   Breakdown bd = BreakTime(tp, gmtm5);
-  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, -5 * 3600, false, "GMT+5");
+  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, -5 * 3600, false, "-05");
   EXPECT_EQ(system_clock::from_time_t(5 * 3600), tp);
 
   const TimeZone gmtp5 = LoadZone("Etc/GMT-5");  // +0500
   tp = MakeTime(1970, 1, 1, 0, 0, 0, gmtp5);
   bd = BreakTime(tp, gmtp5);
-  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 5 * 3600, false, "GMT-5");
+  ExpectTime(bd, 1970, 1, 1, 0, 0, 0, 5 * 3600, false, "+05");
   EXPECT_EQ(system_clock::from_time_t(-5 * 3600), tp);
 }
 

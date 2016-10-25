@@ -1018,12 +1018,12 @@ TEST(TimeZoneEdgeCase, WET) {
 TEST(TimeZoneEdgeCase, FixedOffsets) {
   const time_zone gmtm5 = LoadZone("Etc/GMT+5");  // -0500
   auto tp = convert(civil_second(1970, 1, 1, 0, 0, 0), gmtm5);
-  ExpectTime(tp, gmtm5, 1970, 1, 1, 0, 0, 0, -5 * 3600, false, "GMT+5");
+  ExpectTime(tp, gmtm5, 1970, 1, 1, 0, 0, 0, -5 * 3600, false, "-05");
   EXPECT_EQ(system_clock::from_time_t(5 * 3600), tp);
 
   const time_zone gmtp5 = LoadZone("Etc/GMT-5");  // +0500
   tp = convert(civil_second(1970, 1, 1, 0, 0, 0), gmtp5);
-  ExpectTime(tp, gmtp5, 1970, 1, 1, 0, 0, 0, 5 * 3600, false, "GMT-5");
+  ExpectTime(tp, gmtp5, 1970, 1, 1, 0, 0, 0, 5 * 3600, false, "+05");
   EXPECT_EQ(system_clock::from_time_t(-5 * 3600), tp);
 }
 
