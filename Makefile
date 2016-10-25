@@ -24,6 +24,7 @@ CXX = g++
 STD = c++11
 OPT = -O
 PREFIX = /usr/local
+DESTDIR =
 
 # possible support for googletest
 ## TESTS = civil_time_test time_zone_lookup_test time_zone_format_test
@@ -74,12 +75,12 @@ $(CCTZ_LIB): $(CCTZ_OBJS)
 install: install_hdrs install_lib
 
 install_hdrs: $(CCTZ_HDRS)
-	$(SUDO) $(MKDIR) -p $(PREFIX)/include
-	$(SUDO) $(CP) -p $? $(PREFIX)/include
+	$(SUDO) $(MKDIR) -p $(DESTDIR)$(PREFIX)/include
+	$(SUDO) $(CP) -p $? $(DESTDIR)$(PREFIX)/include
 
 install_lib: $(CCTZ_LIB)
-	$(SUDO) $(MKDIR) -p $(PREFIX)/lib
-	$(SUDO) $(CP) -p $? $(PREFIX)/lib
+	$(SUDO) $(MKDIR) -p $(DESTDIR)$(PREFIX)/lib
+	$(SUDO) $(CP) -p $? $(DESTDIR)$(PREFIX)/lib
 
 clean:
 	@$(RM) -r $(EXAMPLES:=.dSYM) $(EXAMPLES:=.o) $(EXAMPLES:=.d) $(EXAMPLES)
