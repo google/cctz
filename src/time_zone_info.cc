@@ -394,6 +394,20 @@ void TimeZoneInfo::Header::Build(const tzhead& tzh) {
   ttisgmtcnt = Decode32(tzh.tzh_ttisgmtcnt);
 }
 
+// How many bytes of data are associated with this header. The result
+// depends upon whether this is a section with 4-byte or 8-byte times.
+size_t TimeZoneInfo::Header::DataLength(size_t time_len) const {
+  size_t len = 0;
+  len += (time_len + 1) * timecnt;  // unix_time + type_index
+  len += (4 + 1 + 1) * typecnt;     // utc_offset + is_dst + abbr_index
+  len += 1 * charcnt;               // abbreviations
+  len += (time_len + 4) * leapcnt;  // leap-time + TAI-UTC
+  len += 1 * ttisstdcnt;            // UTC/local indicators
+  len += 1 * ttisgmtcnt;            // standard/wall indicators
+  return len;
+}
+
+// Check that the TransitionType has the expected offset/is_dst/abbreviation.
 void TimeZoneInfo::CheckTransition(const std::string& name,
                                    const TransitionType& tt, int32_t offset,
                                    bool is_dst, const std::string& abbr) const {
@@ -407,17 +421,108 @@ void TimeZoneInfo::CheckTransition(const std::string& name,
   }
 }
 
-// How many bytes of data are associated with this header. The result
-// depends upon whether this is a section with 4-byte or 8-byte times.
-size_t TimeZoneInfo::Header::DataLength(size_t time_len) const {
-  size_t len = 0;
-  len += (time_len + 1) * timecnt;  // unix_time + type_index
-  len += (4 + 1 + 1) * typecnt;     // utc_offset + is_dst + abbr_index
-  len += 1 * charcnt;               // abbreviations
-  len += (time_len + 4) * leapcnt;  // leap-time + TAI-UTC
-  len += 1 * ttisstdcnt;            // UTC/local indicators
-  len += 1 * ttisgmtcnt;            // standard/wall indicators
-  return len;
+// zic(8) can generate no-op transitions when a zone changes rules at an
+// instant when there is actually no discontinuity.  So we check whether
+// two transitions have equivalent types (same offset/is_dst/abbr).
+bool TimeZoneInfo::EquivTransitions(uint8_t tt1_index,
+                                    uint8_t tt2_index) const {
+  if (tt1_index == tt2_index) return true;
+  const TransitionType& tt1(transition_types_[tt1_index]);
+  const TransitionType& tt2(transition_types_[tt2_index]);
+  if (tt1.is_dst != tt2.is_dst) return false;
+  if (tt1.utc_offset != tt2.utc_offset) return false;
+  if (tt1.abbr_index != tt2.abbr_index) return false;
+  return true;
+}
+
+// Use the POSIX-TZ-environment-variable-style string to handle times
+// in years after the last transition stored in the zoneinfo data.
+void TimeZoneInfo::ExtendTransitions(const std::string& name,
+                                     const Header& hdr) {
+  extended_ = false;
+  if (future_spec_.empty()) {
+    std::clog << name << ": Missing POSIX spec\n";
+    return;
+  }
+
+  PosixTimeZone posix;
+  if (!ParsePosixSpec(future_spec_, &posix)) {
+    std::clog << name << ": Failed to parse '" << future_spec_ << "'\n";
+    return;
+  }
+
+  if (posix.dst_abbr.empty()) {  // std only
+    // The future specification should match the last/default transition,
+    // and that means that handling the future will fall out naturally.
+    int index = default_transition_type_;
+    if (hdr.timecnt != 0) index = transitions_[hdr.timecnt - 1].type_index;
+    const TransitionType& tt(transition_types_[index]);
+    CheckTransition(name, tt, posix.std_offset, false, posix.std_abbr);
+    return;
+  }
+
+  // Locate the last (real) change between transition types.
+  if (hdr.timecnt < 2) {
+    std::clog << name << ": Too few transitions for POSIX spec\n";
+    return;
+  }
+  uint8_t index = hdr.timecnt - 1;
+  const uint8_t type_index = transitions_[index].type_index;
+  while (EquivTransitions(type_index, transitions_[index - 1].type_index)) {
+    if (--index == 0) {
+      std::clog << name << ": Too few types for POSIX spec\n";
+      return;
+    }
+  }
+  if (transitions_[index - 1].unix_time < 0) {
+    std::clog << name << ": Old transitions for POSIX spec\n";
+    return;
+  }
+
+  // Extend the transitions for an additional 400 years using the
+  // future specification. Years beyond those can be handled by
+  // mapping back to a cycle-equivalent year within that range.
+  // zic(8) should probably do this so that we don't have to.
+  transitions_.resize(hdr.timecnt + 400 * 2);
+  extended_ = true;
+
+  // The future specification should match the last two transitions,
+  // and those transitions should have different is_dst flags but be
+  // in the same calendar year.
+  const Transition& tr0(transitions_[index]);
+  const Transition& tr1(transitions_[index - 1]);
+  const TransitionType& tt0(transition_types_[tr0.type_index]);
+  const TransitionType& tt1(transition_types_[tr1.type_index]);
+  const TransitionType& spring(tt0.is_dst ? tt0 : tt1);
+  const TransitionType& autumn(tt0.is_dst ? tt1 : tt0);
+  CheckTransition(name, spring, posix.dst_offset, true, posix.dst_abbr);
+  CheckTransition(name, autumn, posix.std_offset, false, posix.std_abbr);
+  last_year_ = LocalTime(tr0.unix_time, tt0).year;
+  if (LocalTime(tr1.unix_time, tt1).year != last_year_) {
+    std::clog << name << ": Final transitions not in same year\n";
+  }
+
+  // Add the transitions to tr1 and back to tr0 for each extra year.
+  const PosixTransition& pt1(tt0.is_dst ? posix.dst_end : posix.dst_start);
+  const PosixTransition& pt0(tt0.is_dst ? posix.dst_start : posix.dst_end);
+  Transition* tr = &transitions_[hdr.timecnt];  // next trans to fill
+  const int64_t jan1_ord = DayOrdinal(last_year_, 1, 1);
+  int64_t jan1_time = jan1_ord * SECSPERDAY;
+  int jan1_weekday = (EPOCH_WDAY + jan1_ord) % DAYSPERWEEK;
+  if (jan1_weekday < 0) jan1_weekday += DAYSPERWEEK;
+  bool leap_year = IsLeap(last_year_);
+  for (const int64_t limit = last_year_ + 400; last_year_ < limit;) {
+    last_year_ += 1;  // an additional year of generated transitions
+    jan1_time += kSecPerYear[leap_year];
+    jan1_weekday = (jan1_weekday + kDaysPerYear[leap_year]) % DAYSPERWEEK;
+    leap_year = !leap_year && IsLeap(last_year_);
+    const int64_t tr1_offset = TransOffset(leap_year, jan1_weekday, pt1);
+    tr->unix_time = jan1_time + tr1_offset - tt0.utc_offset;
+    tr++->type_index = tr1.type_index;
+    const int64_t tr0_offset = TransOffset(leap_year, jan1_weekday, pt0);
+    tr->unix_time = jan1_time + tr0_offset - tt1.utc_offset;
+    tr++->type_index = tr0.type_index;
+  }
 }
 
 bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
@@ -541,71 +646,8 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
 
   // We don't check for EOF so that we're forwards compatible.
 
-  // Use the POSIX-TZ-environment-variable-style string to handle times
-  // in years after the last transition stored in the zoneinfo data.
-  extended_ = false;
-  if (!future_spec_.empty()) {
-    PosixTimeZone posix;
-    if (!ParsePosixSpec(future_spec_, &posix)) {
-      std::clog << name << ": Failed to parse '" << future_spec_ << "'\n";
-    } else if (posix.dst_abbr.empty()) {  // std only
-      // The future specification should match the last/default transition,
-      // and that means that handling the future will fall out naturally.
-      int index = default_transition_type_;
-      if (hdr.timecnt != 0) index = transitions_[hdr.timecnt - 1].type_index;
-      const TransitionType& tt(transition_types_[index]);
-      CheckTransition(name, tt, posix.std_offset, false, posix.std_abbr);
-    } else if (hdr.timecnt < 2) {
-      std::clog << name << ": Too few transitions for POSIX spec\n";
-    } else if (transitions_[hdr.timecnt - 1].unix_time < 0) {
-      std::clog << name << ": Old transitions for POSIX spec\n";
-    } else {  // std and dst
-      // Extend the transitions for an additional 400 years using the
-      // future specification. Years beyond those can be handled by
-      // mapping back to a cycle-equivalent year within that range.
-      // zic(8) should probably do this so that we don't have to.
-      transitions_.resize(hdr.timecnt + 400 * 2);
-      extended_ = true;
-
-      // The future specification should match the last two transitions,
-      // and those transitions should have different is_dst flags but be
-      // in the same calendar year.
-      const Transition& tr0(transitions_[hdr.timecnt - 1]);
-      const Transition& tr1(transitions_[hdr.timecnt - 2]);
-      const TransitionType& tt0(transition_types_[tr0.type_index]);
-      const TransitionType& tt1(transition_types_[tr1.type_index]);
-      const TransitionType& spring(tt0.is_dst ? tt0 : tt1);
-      const TransitionType& autumn(tt0.is_dst ? tt1 : tt0);
-      CheckTransition(name, spring, posix.dst_offset, true, posix.dst_abbr);
-      CheckTransition(name, autumn, posix.std_offset, false, posix.std_abbr);
-      last_year_ = LocalTime(tr0.unix_time, tt0).year;
-      if (LocalTime(tr1.unix_time, tt1).year != last_year_) {
-        std::clog << name << ": Final transitions not in same year\n";
-      }
-
-      // Add the transitions to tr1 and back to tr0 for each extra year.
-      const PosixTransition& pt1(tt0.is_dst ? posix.dst_end : posix.dst_start);
-      const PosixTransition& pt0(tt0.is_dst ? posix.dst_start : posix.dst_end);
-      Transition* tr = &transitions_[hdr.timecnt];  // next trans to fill
-      const int64_t jan1_ord = DayOrdinal(last_year_, 1, 1);
-      int64_t jan1_time = jan1_ord * SECSPERDAY;
-      int jan1_weekday = (EPOCH_WDAY + jan1_ord) % DAYSPERWEEK;
-      if (jan1_weekday < 0) jan1_weekday += DAYSPERWEEK;
-      bool leap_year = IsLeap(last_year_);
-      for (const int64_t limit = last_year_ + 400; last_year_ < limit;) {
-        last_year_ += 1;  // an additional year of generated transitions
-        jan1_time += kSecPerYear[leap_year];
-        jan1_weekday = (jan1_weekday + kDaysPerYear[leap_year]) % DAYSPERWEEK;
-        leap_year = !leap_year && IsLeap(last_year_);
-        const int64_t tr1_offset = TransOffset(leap_year, jan1_weekday, pt1);
-        tr->unix_time = jan1_time + tr1_offset - tt0.utc_offset;
-        tr++->type_index = tr1.type_index;
-        const int64_t tr0_offset = TransOffset(leap_year, jan1_weekday, pt0);
-        tr->unix_time = jan1_time + tr0_offset - tt1.utc_offset;
-        tr++->type_index = tr0.type_index;
-      }
-    }
-  }
+  // Extend the transitions using the future specification.
+  ExtendTransitions(name, hdr);
 
   // Compute the local civil time for each transition and the preceeding
   // second. These will be used for reverse conversions in MakeTimeInfo().

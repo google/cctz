@@ -114,6 +114,8 @@ class TimeZoneInfo : public TimeZoneIf {
   void CheckTransition(const std::string& name, const TransitionType& tt,
                        int32_t offset, bool is_dst,
                        const std::string& abbr) const;
+  bool EquivTransitions(uint8_t tt1_index, uint8_t tt2_index) const;
+  void ExtendTransitions(const std::string& name, const Header& hdr);
 
   void ResetToBuiltinUTC(int seconds);
   bool Load(const std::string& name, FILE* fp);
