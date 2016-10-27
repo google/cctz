@@ -38,9 +38,12 @@ ARFLAGS = rcs
 LDFLAGS = -pthread
 LDLIBS = $(TEST_LIBS)
 
+CP = cp
+MKDIR = mkdir
 SUDO =
 
-CCTZ_LIB = libcctz.a
+CCTZ = cctz
+CCTZ_LIB = lib$(CCTZ).a
 
 CCTZ_HDRS =			\
 	civil_time.h		\
@@ -63,18 +66,20 @@ all: $(TESTS) $(TOOLS) $(EXAMPLES)
 
 $(TESTS) $(TOOLS) $(EXAMPLES): $(CCTZ_LIB)
 
+$(TESTS:=.o) $(TOOLS:=.o) $(EXAMPLES:=.o):
+
 $(CCTZ_LIB): $(CCTZ_OBJS)
 	$(AR) $(ARFLAGS) $@ $(CCTZ_OBJS)
 
 install: install_hdrs install_lib
 
 install_hdrs: $(CCTZ_HDRS)
-	$(SUDO) mkdir -p $(PREFIX)/include
-	$(SUDO) cp -p $? $(PREFIX)/include
+	$(SUDO) $(MKDIR) -p $(PREFIX)/include
+	$(SUDO) $(CP) -p $? $(PREFIX)/include
 
 install_lib: $(CCTZ_LIB)
-	$(SUDO) mkdir -p $(PREFIX)/lib
-	$(SUDO) cp -p $? $(PREFIX)/lib
+	$(SUDO) $(MKDIR) -p $(PREFIX)/lib
+	$(SUDO) $(CP) -p $? $(PREFIX)/lib
 
 clean:
 	@$(RM) -r $(EXAMPLES:=.dSYM) $(EXAMPLES:=.o) $(EXAMPLES:=.d) $(EXAMPLES)
