@@ -88,7 +88,7 @@ $(CCTZ_SHARED_LINK): $(CCTZ_SHARED_SONAME)
 $(CCTZ_LIB): $(CCTZ_OBJS)
 	$(AR) $(ARFLAGS) $@ $(CCTZ_OBJS)
 
-install: install_hdrs install_lib
+install: install_hdrs install_lib install_shared_lib
 
 install_hdrs: $(CCTZ_HDRS)
 	$(SUDO) $(MKDIR) -p $(DESTDIR)$(PREFIX)/include
@@ -97,6 +97,10 @@ install_hdrs: $(CCTZ_HDRS)
 install_lib: $(CCTZ_LIB)
 	$(SUDO) $(MKDIR) -p $(DESTDIR)$(PREFIX)/lib
 	$(SUDO) $(CP) -p $? $(DESTDIR)$(PREFIX)/lib
+
+install_shared_lib: $(CCTZ_SHARED_LIB) $(CCTZ_SHARED_SONAME) $(CCTZ_SHARED_LINK)
+	$(SUDO) $(MKDIR) -p $(DESTDIR)$(PREFIX)/lib
+	$(SUDO) $(CP) -pd $? $(DESTDIR)$(PREFIX)/lib
 
 clean:
 	@$(RM) -r $(EXAMPLES:=.dSYM) $(EXAMPLES:=.o) $(EXAMPLES:=.d) $(EXAMPLES)
