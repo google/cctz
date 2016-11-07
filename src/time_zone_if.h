@@ -28,12 +28,12 @@ namespace cctz {
 // time_point in a certain time_zone. A better std::tm.  Note that we
 // cannot use time_zone::absolute_lookup because we need a 64-bit year.
 struct Breakdown {
-  int64_t year;      // year (e.g., 2013)
-  int month;         // month of year [1:12]
-  int day;           // day of month [1:31]
-  int hour;          // hour of day [0:23]
-  int minute;        // minute of hour [0:59]
-  int second;        // second of minute [0:59]
+  std::int64_t year;  // year (e.g., 2013)
+  int month;          // month of year [1:12]
+  int day;            // day of month [1:31]
+  int hour;           // hour of day [0:23]
+  int minute;         // minute of hour [0:59]
+  int second;         // second of minute [0:59]
 
   // Note: The following fields exist for backward compatibility with older
   // APIs. Accessing these fields directly is a sign of imprudent logic in the
@@ -64,7 +64,7 @@ class TimeZoneIf {
   virtual ~TimeZoneIf() {}
 
   virtual Breakdown BreakTime(const time_point<sys_seconds>& tp) const = 0;
-  virtual TimeInfo MakeTimeInfo(int64_t year, int mon, int day,
+  virtual TimeInfo MakeTimeInfo(std::int64_t year, int mon, int day,
                                 int hour, int min, int sec) const = 0;
 
  protected:
@@ -72,7 +72,7 @@ class TimeZoneIf {
 };
 
 // Converts tp to a count of seconds since the Unix epoch.
-inline int64_t ToUnixSeconds(const time_point<sys_seconds>& tp) {
+inline std::int64_t ToUnixSeconds(const time_point<sys_seconds>& tp) {
   return (tp - std::chrono::time_point_cast<sys_seconds>(
                    std::chrono::system_clock::from_time_t(0)))
       .count();
@@ -80,7 +80,7 @@ inline int64_t ToUnixSeconds(const time_point<sys_seconds>& tp) {
 
 // Converts a count of seconds since the Unix epoch to a
 // time_point<sys_seconds>.
-inline time_point<sys_seconds> FromUnixSeconds(int64_t t) {
+inline time_point<sys_seconds> FromUnixSeconds(std::int64_t t) {
   return std::chrono::time_point_cast<sys_seconds>(
              std::chrono::system_clock::from_time_t(0)) +
          sys_seconds(t);

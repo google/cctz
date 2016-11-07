@@ -98,7 +98,7 @@ const char kDigits[] = "0123456789";
 // Formats a 64-bit integer in the given field width.  Note that it is up
 // to the caller of Format64() [and Format02d()/FormatOffset()] to ensure
 // that there is sufficient space before ep to hold the conversion.
-char* Format64(char* ep, int width, int64_t v) {
+char* Format64(char* ep, int width, std::int64_t v) {
   bool neg = false;
   if (v < 0) {
     --width;
@@ -215,11 +215,11 @@ const char* ParseInt(const char* dp, int width, T min, T max, T* vp) {
   return dp;
 }
 
-// The number of base-10 digits that can be represented by an int64_t.
-const int kDigits10_64 = std::numeric_limits<int64_t>::digits10;
+// The number of base-10 digits that can be represented by an std::int64_t.
+const int kDigits10_64 = std::numeric_limits<std::int64_t>::digits10;
 
-// 10^n for everything that can be represented by an int64_t.
-const int64_t kExp10[kDigits10_64 + 1] = {
+// 10^n for everything that can be represented by an std::int64_t.
+const std::int64_t kExp10[kDigits10_64 + 1] = {
     1,
     10,
     100,
@@ -470,8 +470,8 @@ const char* ParseZone(const char* dp, std::string* zone) {
 const char* ParseSubSeconds(const char* dp,
                             std::chrono::nanoseconds* subseconds) {
   if (dp != nullptr) {
-    int64_t v = 0;
-    int64_t exp = 0;
+    std::int64_t v = 0;
+    std::int64_t exp = 0;
     const char* const bp = dp;
     while (const char* cp = strchr(kDigits, *dp)) {
       int d = static_cast<int>(cp - kDigits);
@@ -548,7 +548,7 @@ bool parse(const std::string& format, const std::string& input,
   bool afternoon = false;
 
   bool saw_percent_s = false;
-  int64_t percent_s_time = 0;
+  std::int64_t percent_s_time = 0;
 
   // Steps through format, one specifier at a time.
   while (data != nullptr && *fmt != '\0') {
@@ -744,7 +744,7 @@ bool parse(const std::string& format, const std::string& input,
     subseconds = std::chrono::nanoseconds::zero();
   }
 
-  int64_t year = tm.tm_year;
+  std::int64_t year = tm.tm_year;
   if (year > INT64_MAX - 1900) {
     year = INT64_MAX;
   } else {

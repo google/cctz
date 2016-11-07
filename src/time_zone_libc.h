@@ -30,7 +30,7 @@ class TimeZoneLibC : public TimeZoneIf {
 
   // TimeZoneIf implementations.
   Breakdown BreakTime(const time_point<sys_seconds>& tp) const override;
-  TimeInfo MakeTimeInfo(int64_t year, int mon, int day,
+  TimeInfo MakeTimeInfo(std::int64_t year, int mon, int day,
                         int hour, int min, int sec) const override;
 
  private:

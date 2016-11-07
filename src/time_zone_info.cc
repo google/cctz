@@ -67,7 +67,7 @@ char* errmsg(int errnum, char* buf, size_t buflen) {
 
 // Wrap the tzfile.h isleap() macro with an inline function, which will
 // then have normal argument-passing semantics (i.e., single evaluation).
-inline bool IsLeap(int64_t year) { return isleap(year); }
+inline bool IsLeap(std::int64_t year) { return isleap(year); }
 
 // The month lengths in non-leap and leap years respectively.
 const int8_t kDaysPerMonth[2][1 + MONSPERYEAR] = {
@@ -84,11 +84,11 @@ const int16_t kMonthOffsets[2][1 + MONSPERYEAR + 1] = {
 };
 
 // 400-year chunks always have 146097 days (20871 weeks).
-const int64_t kSecPer400Years = 146097LL * SECSPERDAY;
+const std::int64_t kSecPer400Years = 146097LL * SECSPERDAY;
 
 // The number of seconds in an aligned 100-year chunk, for those that
 // do not begin with a leap year and those that do respectively.
-const int64_t kSecPer100Years[2] = {
+const std::int64_t kSecPer100Years[2] = {
   (76LL * DAYSPERNYEAR + 24LL * DAYSPERLYEAR) * SECSPERDAY,
   (75LL * DAYSPERNYEAR + 25LL * DAYSPERLYEAR) * SECSPERDAY,
 };
@@ -163,9 +163,9 @@ inline int DaysPerYear(int year) { return kDaysPerYear[IsLeap(year)]; }
 
 // Map a (normalized) Y/M/D to the number of days before/after 1970-01-01.
 // See http://howardhinnant.github.io/date_algorithms.html#days_from_civil.
-int64_t DayOrdinal(int64_t year, int month, int day) {
+std::int64_t DayOrdinal(std::int64_t year, int month, int day) {
   year -= (month <= 2 ? 1 : 0);
-  const int64_t era = (year >= 0 ? year : year - 399) / 400;
+  const std::int64_t era = (year >= 0 ? year : year - 399) / 400;
   const int yoe = static_cast<int>(year - era * 400);
   const int doy = (153 * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;
   const int doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
@@ -216,17 +216,17 @@ int32_t Decode32(const char* cp) {
   return -static_cast<int32_t>(~v) - 1;
 }
 
-int64_t Decode64(const char* cp) {
+std::int64_t Decode64(const char* cp) {
   uint64_t v = 0;
   for (int i = 0; i != (64 / 8); ++i)
     v = (v << 8) | (static_cast<uint8_t>(*cp++) & 0xff);
   if ((v & ~(UINT64_MAX >> 1)) == 0) return v;
-  return -static_cast<int64_t>(~v) - 1;
+  return -static_cast<std::int64_t>(~v) - 1;
 }
 
 // Generate a year-relative offset for a PosixTransition.
-int64_t TransOffset(bool leap_year, int jan1_weekday,
-                    const PosixTransition& pt) {
+std::int64_t TransOffset(bool leap_year, int jan1_weekday,
+                         const PosixTransition& pt) {
   int days = 0;
   switch (pt.date.fmt) {
     case PosixTransition::J: {
@@ -255,7 +255,7 @@ int64_t TransOffset(bool leap_year, int jan1_weekday,
   return (days * SECSPERDAY) + pt.time.offset;
 }
 
-inline TimeInfo MakeUnique(int64_t unix_time, bool normalized) {
+inline TimeInfo MakeUnique(std::int64_t unix_time, bool normalized) {
   TimeInfo ti;
   ti.pre = ti.trans = ti.post = FromUnixSeconds(unix_time);
   ti.kind = time_zone::civil_lookup::UNIQUE;
@@ -288,7 +288,7 @@ inline TimeInfo MakeRepeated(const Transition& tr, const DateTime& dt,
 }  // namespace
 
 // Normalize from individual date/time fields.
-bool DateTime::Normalize(int64_t year, int mon, int day,
+bool DateTime::Normalize(std::int64_t year, int mon, int day,
                          int hour, int min, int sec) {
   int min_carry = NormalizeField(SECSPERMIN, 0, &sec, 0);
   int hour_carry = NormalizeField(MINSPERHOUR, 0, &min, min_carry);
@@ -304,7 +304,7 @@ bool DateTime::Normalize(int64_t year, int mon, int day,
 
   // Extract a [0:399] year calendrically equivalent to (year + year_carry)
   // from that sum in order to simplify year/day normalization and to defer
-  // the possibility of int64_t overflow until the final stage.
+  // the possibility of std::int64_t overflow until the final stage.
   int eyear = year % 400;
   if (year_carry != 0) { eyear += year_carry; eyear %= 400; }
   if (eyear < 0) eyear += 400;
@@ -506,20 +506,20 @@ void TimeZoneInfo::ExtendTransitions(const std::string& name,
   const PosixTransition& pt1(tt0.is_dst ? posix.dst_end : posix.dst_start);
   const PosixTransition& pt0(tt0.is_dst ? posix.dst_start : posix.dst_end);
   Transition* tr = &transitions_[hdr.timecnt];  // next trans to fill
-  const int64_t jan1_ord = DayOrdinal(last_year_, 1, 1);
-  int64_t jan1_time = jan1_ord * SECSPERDAY;
+  const std::int64_t jan1_ord = DayOrdinal(last_year_, 1, 1);
+  std::int64_t jan1_time = jan1_ord * SECSPERDAY;
   int jan1_weekday = (EPOCH_WDAY + jan1_ord) % DAYSPERWEEK;
   if (jan1_weekday < 0) jan1_weekday += DAYSPERWEEK;
   bool leap_year = IsLeap(last_year_);
-  for (const int64_t limit = last_year_ + 400; last_year_ < limit;) {
+  for (const std::int64_t limit = last_year_ + 400; last_year_ < limit;) {
     last_year_ += 1;  // an additional year of generated transitions
     jan1_time += kSecPerYear[leap_year];
     jan1_weekday = (jan1_weekday + kDaysPerYear[leap_year]) % DAYSPERWEEK;
     leap_year = !leap_year && IsLeap(last_year_);
-    const int64_t tr1_offset = TransOffset(leap_year, jan1_weekday, pt1);
+    const std::int64_t tr1_offset = TransOffset(leap_year, jan1_weekday, pt1);
     tr->unix_time = jan1_time + tr1_offset - tt0.utc_offset;
     tr++->type_index = tr1.type_index;
-    const int64_t tr0_offset = TransOffset(leap_year, jan1_weekday, pt0);
+    const std::int64_t tr0_offset = TransOffset(leap_year, jan1_weekday, pt0);
     tr->unix_time = jan1_time + tr0_offset - tt1.utc_offset;
     tr++->type_index = tr0.type_index;
   }
@@ -733,12 +733,12 @@ bool TimeZoneInfo::Load(const std::string& name) {
 }
 
 // BreakTime() translation for a particular transition type.
-Breakdown TimeZoneInfo::LocalTime(int64_t unix_time,
+Breakdown TimeZoneInfo::LocalTime(std::int64_t unix_time,
                                   const TransitionType& tt) const {
   Breakdown bd;
 
   bd.year = EPOCH_YEAR;
-  int64_t seconds = unix_time;
+  std::int64_t seconds = unix_time;
 
   // Shift to a base year that is 400-year aligned.
   static_assert(EPOCH_YEAR == 1970, "Unexpected value for EPOCH_YEAR");
@@ -772,7 +772,7 @@ Breakdown TimeZoneInfo::LocalTime(int64_t unix_time,
     bd.year -= 400;
   }
   bool leap_year = true;  // 4-century aligned
-  int64_t sec_per_100years = kSecPer100Years[leap_year];
+  std::int64_t sec_per_100years = kSecPer100Years[leap_year];
   while (seconds >= sec_per_100years) {
     seconds -= sec_per_100years;
     bd.year += 100;
@@ -822,8 +822,8 @@ Breakdown TimeZoneInfo::LocalTime(int64_t unix_time,
 }
 
 // MakeTimeInfo() translation with a conversion-preserving offset.
-TimeInfo TimeZoneInfo::TimeLocal(int64_t year, int mon, int day, int hour,
-                                 int min, int sec, int64_t offset) const {
+TimeInfo TimeZoneInfo::TimeLocal(std::int64_t year, int mon, int day, int hour,
+                                 int min, int sec, std::int64_t offset) const {
   TimeInfo ti = MakeTimeInfo(year, mon, day, hour, min, sec);
   ti.pre = FromUnixSeconds(ToUnixSeconds(ti.pre) + offset);
   ti.trans = FromUnixSeconds(ToUnixSeconds(ti.trans) + offset);
@@ -832,7 +832,7 @@ TimeInfo TimeZoneInfo::TimeLocal(int64_t year, int mon, int day, int hour,
 }
 
 Breakdown TimeZoneInfo::BreakTime(const time_point<sys_seconds>& tp) const {
-  int64_t unix_time = ToUnixSeconds(tp);
+  std::int64_t unix_time = ToUnixSeconds(tp);
   const size_t timecnt = transitions_.size();
   if (timecnt == 0 || unix_time < transitions_[0].unix_time) {
     const int type_index = default_transition_type_;
@@ -843,8 +843,8 @@ Breakdown TimeZoneInfo::BreakTime(const time_point<sys_seconds>& tp) const {
     // future_spec_, shift back to a supported year using the 400-year
     // cycle of calendaric equivalence and then compensate accordingly.
     if (extended_) {
-      const int64_t diff = unix_time - transitions_[timecnt - 1].unix_time;
-      const int64_t shift = diff / kSecPer400Years + 1;
+      const std::int64_t diff = unix_time - transitions_[timecnt - 1].unix_time;
+      const std::int64_t shift = diff / kSecPer400Years + 1;
       const auto d = sys_seconds(shift * kSecPer400Years);
       Breakdown bd = BreakTime(tp - d);
       bd.year += shift * 400;
@@ -873,7 +873,7 @@ Breakdown TimeZoneInfo::BreakTime(const time_point<sys_seconds>& tp) const {
   return LocalTime(unix_time, transition_types_[type_index]);
 }
 
-TimeInfo TimeZoneInfo::MakeTimeInfo(int64_t year, int mon, int day,
+TimeInfo TimeZoneInfo::MakeTimeInfo(std::int64_t year, int mon, int day,
                                     int hour, int min, int sec) const {
   Transition target;
   DateTime& dt(target.date_time);
@@ -883,7 +883,7 @@ TimeInfo TimeZoneInfo::MakeTimeInfo(int64_t year, int mon, int day,
   if (timecnt == 0) {
     // Use the default offset.
     int32_t offset = transition_types_[default_transition_type_].utc_offset;
-    int64_t unix_time = (dt - DateTime{0}) - offset;
+    std::int64_t unix_time = (dt - DateTime{0}) - offset;
     return MakeUnique(unix_time, normalized);
   }
 
@@ -914,7 +914,7 @@ TimeInfo TimeZoneInfo::MakeTimeInfo(int64_t year, int mon, int day,
     if (!(tr->prev_date_time < dt)) {
       // Before first transition, so use the default offset.
       int offset = transition_types_[default_transition_type_].utc_offset;
-      int64_t unix_time = (dt - DateTime{0}) - offset;
+      std::int64_t unix_time = (dt - DateTime{0}) - offset;
       return MakeUnique(unix_time, normalized);
     }
     // tr->prev_date_time < dt < tr->date_time
@@ -927,11 +927,11 @@ TimeInfo TimeZoneInfo::MakeTimeInfo(int64_t year, int mon, int day,
       // future_spec_, shift back to a supported year using the 400-year
       // cycle of calendaric equivalence and then compensate accordingly.
       if (extended_ && year > last_year_) {
-        const int64_t shift = (year - last_year_) / 400 + 1;
+        const std::int64_t shift = (year - last_year_) / 400 + 1;
         return TimeLocal(year - shift * 400, mon, day, hour, min, sec,
                          shift * kSecPer400Years);
       }
-      int64_t unix_time = tr->unix_time + (dt - tr->date_time);
+      std::int64_t unix_time = tr->unix_time + (dt - tr->date_time);
       return MakeUnique(unix_time, normalized);
     }
     // tr->date_time <= dt <= tr->prev_date_time
@@ -949,7 +949,7 @@ TimeInfo TimeZoneInfo::MakeTimeInfo(int64_t year, int mon, int day,
   }
 
   // In between transitions.
-  int64_t unix_time = tr->unix_time + (dt - tr->date_time);
+  std::int64_t unix_time = tr->unix_time + (dt - tr->date_time);
   return MakeUnique(unix_time, normalized);
 }
 
