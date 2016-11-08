@@ -39,19 +39,12 @@ ARFLAGS = rcs
 LDFLAGS = -pthread
 LDLIBS = $(TEST_LIBS)
 
-CP = cp
-LN = ln
-MKDIR = mkdir
+INSTALL = install
 SUDO =
-
-CCTZ_VERSION_MAJOR = 2
-CCTZ_VERSION_MINOR = 0
 
 CCTZ = cctz
 CCTZ_LIB = lib$(CCTZ).a
-CCTZ_SHARED_LINK = lib$(CCTZ).so
-CCTZ_SHARED_SONAME = $(CCTZ_SHARED_LINK).$(CCTZ_VERSION_MAJOR)
-CCTZ_SHARED_LIB = $(CCTZ_SHARED_SONAME).$(CCTZ_VERSION_MINOR)
+CCTZ_SHARED_LIB = lib$(CCTZ).so
 
 CCTZ_HDRS =			\
 	civil_time.h		\
@@ -76,35 +69,30 @@ $(TESTS) $(TOOLS) $(EXAMPLES): $(CCTZ_LIB)
 
 $(TESTS:=.o) $(TOOLS:=.o) $(EXAMPLES:=.o):
 
-$(CCTZ_SHARED_LIB): $(CCTZ_OBJS)
-	$(CC) $(LDFLAGS) -shared -Wl,-soname,$(CCTZ_SHARED_SONAME) \
-	    -o $@ $(CCTZ_OBJS)
-
-$(CCTZ_SHARED_SONAME) $(CCTZ_SHARED_LINK): $(CCTZ_SHARED_LIB)
-	$(LN) -sf $? $@
-
 $(CCTZ_LIB): $(CCTZ_OBJS)
 	$(AR) $(ARFLAGS) $@ $(CCTZ_OBJS)
 
-install: install_hdrs install_lib install_shared_lib
+$(CCTZ_SHARED_LIB): $(CCTZ_OBJS)
+	$(CC) $(LDFLAGS) -shared -o $@ $(CCTZ_OBJS)
+
+install: install_hdrs install_lib
 
 install_hdrs: $(CCTZ_HDRS)
-	$(SUDO) $(MKDIR) -p $(DESTDIR)$(PREFIX)/include
-	$(SUDO) $(CP) -pdf $? $(DESTDIR)$(PREFIX)/include
+	$(SUDO) $(INSTALL) -d $(DESTDIR)$(PREFIX)/include
+	$(SUDO) $(INSTALL) -m 644 -p -t $(DESTDIR)$(PREFIX)/include $?
 
 install_lib: $(CCTZ_LIB)
-	$(SUDO) $(MKDIR) -p $(DESTDIR)$(PREFIX)/lib
-	$(SUDO) $(CP) -pdf $? $(DESTDIR)$(PREFIX)/lib
+	$(SUDO) $(INSTALL) -d $(DESTDIR)$(PREFIX)/lib
+	$(SUDO) $(INSTALL) -m 644 -p -t $(DESTDIR)$(PREFIX)/lib $?
 
-install_shared_lib: $(CCTZ_SHARED_LIB) $(CCTZ_SHARED_SONAME) $(CCTZ_SHARED_LINK)
-	$(SUDO) $(MKDIR) -p $(DESTDIR)$(PREFIX)/lib
-	$(SUDO) $(CP) -pdf $? $(DESTDIR)$(PREFIX)/lib
+install_shared_lib: $(CCTZ_SHARED_LIB)
+	$(SUDO) $(INSTALL) -d $(DESTDIR)$(PREFIX)/lib
+	$(SUDO) $(INSTALL) -m 644 -p -t $(DESTDIR)$(PREFIX)/lib $?
 
 clean:
 	@$(RM) $(EXAMPLES:=.dSYM) $(EXAMPLES:=.o) $(EXAMPLES:=.d) $(EXAMPLES)
 	@$(RM) $(TOOLS:=.dSYM) $(TOOLS:=.o) $(TOOLS:=.d) $(TOOLS)
 	@$(RM) $(TESTS:=.dSYM) $(TESTS:=.o) $(TESTS:=.d) $(TESTS)
-	@$(RM) $(CCTZ_OBJS) $(CCTZ_OBJS:.o=.d) $(CCTZ_LIB)
-	@$(RM) $(CCTZ_SHARED_LIB) $(CCTZ_SHARED_SONAME) $(CCTZ_SHARED_LINK)
+	@$(RM) $(CCTZ_OBJS) $(CCTZ_OBJS:.o=.d) $(CCTZ_LIB) $(CCTZ_SHARED_LIB)
 
 -include $(CCTZ_OBJS:.o=.d) $(TESTS:=.d) $(TOOLS:=.d) $(EXAMPLES:=.d)
