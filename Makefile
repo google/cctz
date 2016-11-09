@@ -38,6 +38,7 @@ CPPFLAGS = -Wall -I$(SRC)include -std=$(STD) -pthread \
 ARFLAGS = rcs
 LDFLAGS = -pthread
 LDLIBS = $(TEST_LIBS)
+SHARED_LDFLAGS = -shared
 
 INSTALL = install
 SUDO =
@@ -73,7 +74,7 @@ $(CCTZ_LIB): $(CCTZ_OBJS)
 	$(AR) $(ARFLAGS) $@ $(CCTZ_OBJS)
 
 $(CCTZ_SHARED_LIB): $(CCTZ_OBJS)
-	$(CC) $(LDFLAGS) -shared -o $@ $(CCTZ_OBJS)
+	$(CC) $(LDFLAGS) $(SHARED_LDFLAGS) -o $@ $(CCTZ_OBJS)
 
 install: install_hdrs install_lib
 
