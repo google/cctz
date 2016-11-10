@@ -17,7 +17,15 @@
 # and can't compile the sources in their own build system.
 #
 # Suggested usage:
-#   make -C build -f ../Makefile SRC=../ -j `nproc`
+#
+#   To build locally:
+#     make -C build -f ../Makefile SRC=../ -j `nproc`
+#
+#   To build/install a versioned shared library on Linux:
+#     make -C build -f ../Makefile SRC=../ -j `nproc` \
+#         SHARED_LDFLAGS='-shared -Wl,-soname,libcctz.so.2' \
+#         CCTZ_SHARED_LIB=libcctz.so.2.0 \
+#         install install_shared_lib
 
 # local configuration
 CXX = g++
@@ -80,15 +88,15 @@ install: install_hdrs install_lib
 
 install_hdrs: $(CCTZ_HDRS)
 	$(SUDO) $(INSTALL) -d $(DESTDIR)$(PREFIX)/include
-	$(SUDO) $(INSTALL) -m 644 -p -t $(DESTDIR)$(PREFIX)/include $?
+	$(SUDO) $(INSTALL) -m 644 -p $? $(DESTDIR)$(PREFIX)/include
 
 install_lib: $(CCTZ_LIB)
 	$(SUDO) $(INSTALL) -d $(DESTDIR)$(PREFIX)/lib
-	$(SUDO) $(INSTALL) -m 644 -p -t $(DESTDIR)$(PREFIX)/lib $?
+	$(SUDO) $(INSTALL) -m 644 -p $? $(DESTDIR)$(PREFIX)/lib
 
 install_shared_lib: $(CCTZ_SHARED_LIB)
 	$(SUDO) $(INSTALL) -d $(DESTDIR)$(PREFIX)/lib
-	$(SUDO) $(INSTALL) -m 644 -p -t $(DESTDIR)$(PREFIX)/lib $?
+	$(SUDO) $(INSTALL) -m 644 -p $? $(DESTDIR)$(PREFIX)/lib
 
 clean:
 	@$(RM) $(EXAMPLES:=.dSYM) $(EXAMPLES:=.o) $(EXAMPLES:=.d) $(EXAMPLES)
