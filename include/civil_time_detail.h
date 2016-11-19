@@ -125,11 +125,13 @@ CONSTEXPR_F fields n_day(int y, int m, int d, int cd, int hh, int mm,
 }
 CONSTEXPR_F fields n_mon(int y, int m, int d, int cd, int hh, int mm,
                          int ss) noexcept {
-  y += m / 12;
-  m %= 12;
-  if (m <= 0) {
-    y -= 1;
-    m += 12;
+  if (m != 12) {
+    y += m / 12;
+    m %= 12;
+    if (m <= 0) {
+      y -= 1;
+      m += 12;
+    }
   }
   return n_day(y, m, d, cd, hh, mm, ss);
 }
