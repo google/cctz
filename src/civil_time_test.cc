@@ -364,22 +364,22 @@ TEST(CivilTime, FieldsConstructionLimits) {
 }
 
 TEST(CivilTime, RangeLimits) {
-  const int kIntMax = std::numeric_limits<int>::max();
-  const int kIntMin = std::numeric_limits<int>::min();
+  const year_t kYearMax = std::numeric_limits<year_t>::max();
+  const year_t kYearMin = std::numeric_limits<year_t>::min();
 
-  EXPECT_EQ(civil_year(kIntMax), civil_year::max());
-  EXPECT_EQ(civil_month(kIntMax, 12), civil_month::max());
-  EXPECT_EQ(civil_day(kIntMax, 12, 31), civil_day::max());
-  EXPECT_EQ(civil_hour(kIntMax, 12, 31, 23), civil_hour::max());
-  EXPECT_EQ(civil_minute(kIntMax, 12, 31, 23, 59), civil_minute::max());
-  EXPECT_EQ(civil_second(kIntMax, 12, 31, 23, 59, 59), civil_second::max());
+  EXPECT_EQ(civil_year(kYearMax), civil_year::max());
+  EXPECT_EQ(civil_month(kYearMax, 12), civil_month::max());
+  EXPECT_EQ(civil_day(kYearMax, 12, 31), civil_day::max());
+  EXPECT_EQ(civil_hour(kYearMax, 12, 31, 23), civil_hour::max());
+  EXPECT_EQ(civil_minute(kYearMax, 12, 31, 23, 59), civil_minute::max());
+  EXPECT_EQ(civil_second(kYearMax, 12, 31, 23, 59, 59), civil_second::max());
 
-  EXPECT_EQ(civil_year(kIntMin), civil_year::min());
-  EXPECT_EQ(civil_month(kIntMin, 1), civil_month::min());
-  EXPECT_EQ(civil_day(kIntMin, 1, 1), civil_day::min());
-  EXPECT_EQ(civil_hour(kIntMin, 1, 1, 0), civil_hour::min());
-  EXPECT_EQ(civil_minute(kIntMin, 1, 1, 0, 0), civil_minute::min());
-  EXPECT_EQ(civil_second(kIntMin, 1, 1, 0, 0, 0), civil_second::min());
+  EXPECT_EQ(civil_year(kYearMin), civil_year::min());
+  EXPECT_EQ(civil_month(kYearMin, 1), civil_month::min());
+  EXPECT_EQ(civil_day(kYearMin, 1, 1), civil_day::min());
+  EXPECT_EQ(civil_hour(kYearMin, 1, 1, 0), civil_hour::min());
+  EXPECT_EQ(civil_minute(kYearMin, 1, 1, 0, 0), civil_minute::min());
+  EXPECT_EQ(civil_second(kYearMin, 1, 1, 0, 0, 0), civil_second::min());
 }
 
 TEST(CivilTime, ImplicitCrossAlignment) {
