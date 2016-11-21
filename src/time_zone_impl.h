@@ -42,7 +42,7 @@ class time_zone::Impl {
   // Converts the civil-time components in this time zone into a time_point.
   // That is, the opposite of BreakTime(). The requested civil time may be
   // ambiguous or illegal due to a change of UTC offset.
-  time_zone::civil_lookup MakeTimeInfo(civil_second cs) const;
+  time_zone::civil_lookup MakeTimeInfo(const civil_second& cs) const;
 
  private:
   explicit Impl(const std::string& name);

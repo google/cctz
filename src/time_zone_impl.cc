@@ -92,7 +92,7 @@ time_zone::absolute_lookup time_zone::Impl::BreakTime(
   time_zone::absolute_lookup res;
   Breakdown bd = zone_->BreakTime(tp);
   // TODO: Eliminate extra normalization.
-  res.cs = civil_second(static_cast<int>(bd.year), bd.month, bd.day,
+  res.cs = civil_second(bd.year, bd.month, bd.day,
                         bd.hour, bd.minute, bd.second);
   res.offset = bd.offset;
   res.is_dst = bd.is_dst;
@@ -100,7 +100,8 @@ time_zone::absolute_lookup time_zone::Impl::BreakTime(
   return res;
 }
 
-time_zone::civil_lookup time_zone::Impl::MakeTimeInfo(civil_second cs) const {
+time_zone::civil_lookup time_zone::Impl::MakeTimeInfo(
+    const civil_second& cs) const {
   time_zone::civil_lookup res;
   // TODO: Eliminate extra normalization.
   TimeInfo t = zone_->MakeTimeInfo(cs.year(), cs.month(), cs.day(),
