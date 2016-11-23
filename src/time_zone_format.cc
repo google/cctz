@@ -519,7 +519,7 @@ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
 //
 // TODO: Support parsing year values beyond the width to tm_year.
 bool parse(const std::string& format, const std::string& input,
-           const time_zone& tz, time_point<sys_seconds>* tpp,
+           const time_zone& tz, time_point<sys_seconds>* sec,
            std::chrono::nanoseconds* ns) {
   // The unparsed input.
   const char* data = input.c_str();  // NUL terminated
@@ -724,7 +724,7 @@ bool parse(const std::string& format, const std::string& input,
 
   // If we saw %s then we ignore anything else and return that time.
   if (saw_percent_s) {
-    *tpp = FromUnixSeconds(percent_s_time);
+    *sec = FromUnixSeconds(percent_s_time);
     *ns = std::chrono::nanoseconds::zero();
     return true;
   }
@@ -765,7 +765,7 @@ bool parse(const std::string& format, const std::string& input,
     return false;
   }
 
-  *tpp = ptz.lookup(cs).pre - sys_seconds(offset);
+  *sec = ptz.lookup(cs).pre - sys_seconds(offset);
   *ns = subseconds;
   return true;
 }

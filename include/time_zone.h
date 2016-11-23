@@ -275,11 +275,11 @@ inline std::string format(const std::string& fmt, const time_point<D>& tp,
 template <typename D>
 inline bool parse(const std::string& fmt, const std::string& input,
                   const time_zone& tz, time_point<D>* tpp) {
-  time_point<sys_seconds> tp{};
+  time_point<sys_seconds> sec{};
   std::chrono::nanoseconds ns{0};
-  const bool b = detail::parse(fmt, input, tz, &tp, &ns);
+  const bool b = detail::parse(fmt, input, tz, &sec, &ns);
   if (b) {
-    *tpp = std::chrono::time_point_cast<D>(tp);
+    *tpp = std::chrono::time_point_cast<D>(sec);
     *tpp += std::chrono::duration_cast<D>(ns);
   }
   return b;
