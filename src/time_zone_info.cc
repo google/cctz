@@ -552,7 +552,8 @@ time_zone::absolute_lookup TimeZoneInfo::LocalTime(
   time_zone::absolute_lookup al;
 
   // A civil time in "+offset" looks like (time+offset) in UTC.
-  al.cs = unix_epoch + (unix_time + tt.utc_offset);
+  al.cs = unix_epoch + unix_time;
+  al.cs += tt.utc_offset;
 
   // Handle offset, is_dst, and abbreviation.
   al.offset = tt.utc_offset;
