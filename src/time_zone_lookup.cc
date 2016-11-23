@@ -55,7 +55,7 @@ time_zone::absolute_lookup time_zone::lookup(
 }
 
 time_zone::civil_lookup time_zone::lookup(const civil_second& cs) const {
-  return time_zone::Impl::get(*this).MakeTimeInfo(cs);
+  return time_zone::Impl::get(*this).MakeTime(cs);
 }
 
 }  // namespace cctz

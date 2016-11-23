@@ -24,16 +24,6 @@
 
 namespace cctz {
 
-// A TimeInfo represents the conversion of year, month, day, hour, minute,
-// and second values in a particular time_zone to a time instant.
-struct TimeInfo {
-  time_zone::civil_lookup::civil_kind kind;
-  time_point<sys_seconds> pre;   // Uses the pre-transition offset
-  time_point<sys_seconds> trans;
-  time_point<sys_seconds> post;  // Uses the post-transition offset
-  bool normalized;
-};
-
 // A simple interface used to hide time-zone complexities from time_zone::Impl.
 // Subclasses implement the functions for civil-time conversions in the zone.
 class TimeZoneIf {
@@ -45,8 +35,8 @@ class TimeZoneIf {
 
   virtual time_zone::absolute_lookup BreakTime(
       const time_point<sys_seconds>& tp) const = 0;
-  virtual TimeInfo MakeTimeInfo(std::int64_t year, int mon, int day,
-                                int hour, int min, int sec) const = 0;
+  virtual time_zone::civil_lookup MakeTime(
+      const civil_second& cs) const = 0;
 
  protected:
   TimeZoneIf() {}

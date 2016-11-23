@@ -142,34 +142,37 @@ std::int64_t TransOffset(bool leap_year, int jan1_weekday,
   return (days * SECSPERDAY) + pt.time.offset;
 }
 
-inline TimeInfo MakeUnique(std::int64_t unix_time, bool normalized) {
-  TimeInfo ti;
-  ti.pre = ti.trans = ti.post = FromUnixSeconds(unix_time);
-  ti.kind = time_zone::civil_lookup::UNIQUE;
-  ti.normalized = normalized;
-  return ti;
+inline time_zone::civil_lookup MakeUnique(std::int64_t unix_time) {
+  time_zone::civil_lookup cl;
+  cl.pre = cl.trans = cl.post = FromUnixSeconds(unix_time);
+  cl.kind = time_zone::civil_lookup::UNIQUE;
+  return cl;
 }
 
-inline TimeInfo MakeSkipped(const Transition& tr, const DateTime& dt,
-                            bool normalized) {
-  TimeInfo ti;
-  ti.pre = FromUnixSeconds(tr.unix_time - 1 + (dt - tr.prev_date_time));
-  ti.trans = FromUnixSeconds(tr.unix_time);
-  ti.post = FromUnixSeconds(tr.unix_time - (tr.date_time - dt));
-  ti.kind = time_zone::civil_lookup::SKIPPED;
-  ti.normalized = normalized;
-  return ti;
+inline time_zone::civil_lookup MakeSkipped(const Transition& tr,
+                                           const DateTime& dt) {
+  time_zone::civil_lookup cl;
+  cl.pre = FromUnixSeconds(tr.unix_time - 1 + (dt - tr.prev_date_time));
+  cl.trans = FromUnixSeconds(tr.unix_time);
+  cl.post = FromUnixSeconds(tr.unix_time - (tr.date_time - dt));
+  cl.kind = time_zone::civil_lookup::SKIPPED;
+  return cl;
 }
 
-inline TimeInfo MakeRepeated(const Transition& tr, const DateTime& dt,
-                             bool normalized) {
-  TimeInfo ti;
-  ti.pre = FromUnixSeconds(tr.unix_time - 1 - (tr.prev_date_time - dt));
-  ti.trans = FromUnixSeconds(tr.unix_time);
-  ti.post = FromUnixSeconds(tr.unix_time + (dt - tr.date_time));
-  ti.kind = time_zone::civil_lookup::REPEATED;
-  ti.normalized = normalized;
-  return ti;
+inline time_zone::civil_lookup MakeRepeated(const Transition& tr,
+                                            const DateTime& dt) {
+  time_zone::civil_lookup cl;
+  cl.pre = FromUnixSeconds(tr.unix_time - 1 - (tr.prev_date_time - dt));
+  cl.trans = FromUnixSeconds(tr.unix_time);
+  cl.post = FromUnixSeconds(tr.unix_time + (dt - tr.date_time));
+  cl.kind = time_zone::civil_lookup::REPEATED;
+  return cl;
+}
+
+civil_second YearShift(const civil_second& cs, std::int64_t year_shift) {
+  // TODO: How do we do this while avoiding any normalization tests?
+  return civil_second(cs.year() + year_shift, cs.month(), cs.day(),
+                      cs.hour(), cs.minute(), cs.second());
 }
 
 }  // namespace
@@ -464,7 +467,7 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   ExtendTransitions(name, hdr);
 
   // Compute the local civil time for each transition and the preceeding
-  // second. These will be used for reverse conversions in MakeTimeInfo().
+  // second. These will be used for reverse conversions in MakeTime().
   const TransitionType* ttp = &transition_types_[default_transition_type_];
   for (size_t i = 0; i != transitions_.size(); ++i) {
     Transition& tr(transitions_[i]);
@@ -475,15 +478,15 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
     if (i != 0) {
       // Check that the transitions are ordered by date/time. Essentially
       // this means that an offset change cannot cross another such change.
-      // No one does this in practice, and we depend on it in MakeTimeInfo().
+      // No one does this in practice, and we depend on it in MakeTime().
       if (!Transition::ByDateTime()(transitions_[i - 1], tr))
         return false;  // out of order
     }
   }
 
   // We remember the transitions found during the last BreakTime() and
-  // MakeTimeInfo() calls. If the next request is for the same transition
-  // we will avoid re-searching.
+  // MakeTime() calls. If the next request is for the same transition we
+  // will avoid re-searching.
   local_time_hint_ = 0;
   time_local_hint_ = 0;
 
@@ -563,14 +566,14 @@ time_zone::absolute_lookup TimeZoneInfo::LocalTime(
   return al;
 }
 
-// MakeTimeInfo() translation with a conversion-preserving offset.
-TimeInfo TimeZoneInfo::TimeLocal(std::int64_t year, int mon, int day, int hour,
-                                 int min, int sec, std::int64_t offset) const {
-  TimeInfo ti = MakeTimeInfo(year, mon, day, hour, min, sec);
-  ti.pre = FromUnixSeconds(ToUnixSeconds(ti.pre) + offset);
-  ti.trans = FromUnixSeconds(ToUnixSeconds(ti.trans) + offset);
-  ti.post = FromUnixSeconds(ToUnixSeconds(ti.post) + offset);
-  return ti;
+// MakeTime() translation with a conversion-preserving offset.
+time_zone::civil_lookup TimeZoneInfo::TimeLocal(const civil_second& cs,
+                                                std::int64_t offset) const {
+  time_zone::civil_lookup cl = MakeTime(cs);
+  cl.pre += sys_seconds(offset);
+  cl.trans += sys_seconds(offset);
+  cl.post += sys_seconds(offset);
+  return cl;
 }
 
 time_zone::absolute_lookup TimeZoneInfo::BreakTime(
@@ -590,9 +593,7 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
       const std::int64_t shift = diff / kSecPer400Years + 1;
       const auto d = sys_seconds(shift * kSecPer400Years);
       time_zone::absolute_lookup al = BreakTime(tp - d);
-      al.cs = // TODO: How do we make this nicer (and avoid re-normalization)?
-          civil_second(al.cs.year() + shift * 400, al.cs.month(), al.cs.day(),
-                       al.cs.hour(), al.cs.minute(), al.cs.second());
+      al.cs = YearShift(al.cs, shift * 400);
       return al;
     }
     const int type_index = transitions_[timecnt - 1].type_index;
@@ -618,19 +619,17 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
   return LocalTime(unix_time, transition_types_[type_index]);
 }
 
-TimeInfo TimeZoneInfo::MakeTimeInfo(std::int64_t year, int mon, int day,
-                                    int hour, int min, int sec) const {
+time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
   Transition target;
   DateTime& dt(target.date_time);
-  dt.offset = civil_second(year, mon, day, hour, min, sec) - unix_epoch;
-  const bool normalized = false;  // No longer exposed; will be removed.
+  dt.Assign(cs);
 
   const size_t timecnt = transitions_.size();
   if (timecnt == 0) {
     // Use the default offset.
     int32_t offset = transition_types_[default_transition_type_].utc_offset;
     std::int64_t unix_time = (dt - DateTime{0}) - offset;
-    return MakeUnique(unix_time, normalized);
+    return MakeUnique(unix_time);
   }
 
   // Find the first transition after our target date/time.
@@ -661,10 +660,10 @@ TimeInfo TimeZoneInfo::MakeTimeInfo(std::int64_t year, int mon, int day,
       // Before first transition, so use the default offset.
       int offset = transition_types_[default_transition_type_].utc_offset;
       std::int64_t unix_time = (dt - DateTime{0}) - offset;
-      return MakeUnique(unix_time, normalized);
+      return MakeUnique(unix_time);
     }
     // tr->prev_date_time < dt < tr->date_time
-    return MakeSkipped(*tr, dt, normalized);
+    return MakeSkipped(*tr, dt);
   }
 
   if (tr == end) {
@@ -672,31 +671,30 @@ TimeInfo TimeZoneInfo::MakeTimeInfo(std::int64_t year, int mon, int day,
       // After the last transition. If we extended the transitions using
       // future_spec_, shift back to a supported year using the 400-year
       // cycle of calendaric equivalence and then compensate accordingly.
-      if (extended_ && year > last_year_) {
-        const std::int64_t shift = (year - last_year_) / 400 + 1;
-        return TimeLocal(year - shift * 400, mon, day, hour, min, sec,
-                         shift * kSecPer400Years);
+      if (extended_ && cs.year() > last_year_) {
+        const std::int64_t shift = (cs.year() - last_year_) / 400 + 1;
+        return TimeLocal(YearShift(cs, shift * -400), shift * kSecPer400Years);
       }
       std::int64_t unix_time = tr->unix_time + (dt - tr->date_time);
-      return MakeUnique(unix_time, normalized);
+      return MakeUnique(unix_time);
     }
     // tr->date_time <= dt <= tr->prev_date_time
-    return MakeRepeated(*tr, dt, normalized);
+    return MakeRepeated(*tr, dt);
   }
 
   if (tr->prev_date_time < dt) {
     // tr->prev_date_time < dt < tr->date_time
-    return MakeSkipped(*tr, dt, normalized);
+    return MakeSkipped(*tr, dt);
   }
 
   if (!((--tr)->prev_date_time < dt)) {
     // tr->date_time <= dt <= tr->prev_date_time
-    return MakeRepeated(*tr, dt, normalized);
+    return MakeRepeated(*tr, dt);
   }
 
   // In between transitions.
   std::int64_t unix_time = tr->unix_time + (dt - tr->date_time);
-  return MakeUnique(unix_time, normalized);
+  return MakeUnique(unix_time);
 }
 
 }  // namespace cctz

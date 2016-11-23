@@ -93,101 +93,26 @@ time_zone::absolute_lookup TimeZoneLibC::BreakTime(
   return al;
 }
 
-namespace {
-
-// Normalize *val so that 0 <= *val < base, returning any carry.
-int NormalizeField(int base, int* val, bool* normalized) {
-  int carry = *val / base;
-  *val %= base;
-  if (*val < 0) {
-    carry -= 1;
-    *val += base;
-  }
-  if (carry != 0) *normalized = true;
-  return carry;
-}
-
-bool IsLeap(std::int64_t year) {
-  return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
-}
-
-// The month lengths in non-leap and leap years respectively.
-const int kDaysPerMonth[2][1+12] = {
-  {-1, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
-  {-1, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
-};
-
-// The number of days in non-leap and leap years respectively.
-const int kDaysPerYear[2] = {365, 366};
-
-// Map a (normalized) Y/M/D to the number of days before/after 1970-01-01.
-// See http://howardhinnant.github.io/date_algorithms.html#days_from_civil.
-std::time_t DayOrdinal(std::int64_t year, int month, int day) {
-  year -= (month <= 2 ? 1 : 0);
-  const std::time_t era = (year >= 0 ? year : year - 399) / 400;
-  const int yoe = static_cast<int>(year - era * 400);
-  const int doy = (153 * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;
-  const int doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-  return era * 146097 + doe - 719468;  // shift epoch to 1970-01-01
-}
-
-}  // namespace
-
-TimeInfo TimeZoneLibC::MakeTimeInfo(std::int64_t year, int mon, int day,
-                                    int hour, int min, int sec) const {
-  bool normalized = false;
+time_zone::civil_lookup TimeZoneLibC::MakeTime(const civil_second& cs) const {
+  time_zone::civil_lookup cl;
   std::time_t t;
   if (local_) {
     // Does not handle SKIPPED/AMBIGUOUS or huge years.
     std::tm tm;
-    tm.tm_year = static_cast<int>(year - 1900);
-    tm.tm_mon = mon - 1;
-    tm.tm_mday = day;
-    tm.tm_hour = hour;
-    tm.tm_min = min;
-    tm.tm_sec = sec;
+    tm.tm_year = static_cast<int>(cs.year() - 1900);
+    tm.tm_mon = cs.month() - 1;
+    tm.tm_mday = cs.day();
+    tm.tm_hour = cs.hour();
+    tm.tm_min = cs.minute();
+    tm.tm_sec = cs.second();
     tm.tm_isdst = -1;
     t = std::mktime(&tm);
-    if (tm.tm_year != year - 1900 || tm.tm_mon != mon - 1 ||
-        tm.tm_mday != day || tm.tm_hour != hour ||
-        tm.tm_min != min || tm.tm_sec != sec) {
-      normalized = true;
-    }
   } else {
-    min += NormalizeField(60, &sec, &normalized);
-    hour += NormalizeField(60, &min, &normalized);
-    day += NormalizeField(24, &hour, &normalized);
-    mon -= 1;  // months are one-based
-    year += NormalizeField(12, &mon, &normalized);
-    mon += 1;  // restore [1:12]
-    year += (mon > 2 ? 1 : 0);
-    int year_len = kDaysPerYear[IsLeap(year)];
-    while (day > year_len) {
-      day -= year_len;
-      year += 1;
-      year_len = kDaysPerYear[IsLeap(year)];
-    }
-    while (day <= 0) {
-      year -= 1;
-      day += kDaysPerYear[IsLeap(year)];
-    }
-    year -= (mon > 2 ? 1 : 0);
-    bool leap_year = IsLeap(year);
-    while (day > kDaysPerMonth[leap_year][mon]) {
-      day -= kDaysPerMonth[leap_year][mon];
-      if (++mon > 12) {
-        mon = 1;
-        year += 1;
-        leap_year = IsLeap(year);
-      }
-    }
-    t = ((((DayOrdinal(year, mon, day) * 24) + hour) * 60) + min) * 60 + sec;
+    t = cs - civil_second();
   }
-  TimeInfo ti;
-  ti.kind = time_zone::civil_lookup::UNIQUE;
-  ti.pre = ti.trans = ti.post = FromUnixSeconds(t);
-  ti.normalized = normalized;
-  return ti;
+  cl.kind = time_zone::civil_lookup::UNIQUE;
+  cl.pre = cl.trans = cl.post = FromUnixSeconds(t);
+  return cl;
 }
 
 }  // namespace cctz

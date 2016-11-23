@@ -96,8 +96,8 @@ class TimeZoneInfo : public TimeZoneIf {
   // TimeZoneIf implementations.
   time_zone::absolute_lookup BreakTime(
       const time_point<sys_seconds>& tp) const override;
-  TimeInfo MakeTimeInfo(std::int64_t year, int mon, int day,
-                        int hour, int min, int sec) const override;
+  time_zone::civil_lookup MakeTime(
+      const civil_second& cs) const override;
 
  private:
   struct Header {  // counts of:
@@ -121,11 +121,11 @@ class TimeZoneInfo : public TimeZoneIf {
   void ResetToBuiltinUTC(int seconds);
   bool Load(const std::string& name, FILE* fp);
 
-  // Helpers for BreakTime() and MakeTimeInfo() respectively.
+  // Helpers for BreakTime() and MakeTime() respectively.
   time_zone::absolute_lookup LocalTime(std::int64_t unix_time,
                                        const TransitionType& tt) const;
-  TimeInfo TimeLocal(std::int64_t year, int mon, int day,
-                     int hour, int min, int sec, std::int64_t offset) const;
+  time_zone::civil_lookup TimeLocal(const civil_second& cs,
+                                    std::int64_t offset) const;
 
   std::vector<Transition> transitions_;  // ordered by unix_time and date_time
   std::vector<TransitionType> transition_types_;  // distinct transition types
@@ -137,7 +137,7 @@ class TimeZoneInfo : public TimeZoneIf {
   std::int64_t last_year_;   // the final year of the generated transitions
 
   mutable std::atomic<size_t> local_time_hint_;  // BreakTime() search hint
-  mutable std::atomic<size_t> time_local_hint_;  // MakeTimeInfo() search hint
+  mutable std::atomic<size_t> time_local_hint_;  // MakeTime() search hint
 };
 
 }  // namespace cctz

@@ -87,19 +87,6 @@ const time_zone::Impl& time_zone::Impl::get(const time_zone& tz) {
 
 time_zone::Impl::Impl(const std::string& name) : name_(name) {}
 
-time_zone::civil_lookup time_zone::Impl::MakeTimeInfo(
-    const civil_second& cs) const {
-  time_zone::civil_lookup res;
-  // TODO: Eliminate extra normalization.
-  TimeInfo t = zone_->MakeTimeInfo(cs.year(), cs.month(), cs.day(),
-                                   cs.hour(), cs.minute(), cs.second());
-  res.kind = t.kind;
-  res.pre = t.pre;
-  res.trans = t.trans;
-  res.post = t.post;
-  return res;
-}
-
 const time_zone::Impl* time_zone::Impl::UTCImpl() {
   static Impl* utc_impl = [] {
     Impl* impl = new Impl("UTC");
