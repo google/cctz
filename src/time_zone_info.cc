@@ -174,9 +174,8 @@ inline TimeInfo MakeRepeated(const Transition& tr, const DateTime& dt,
 
 }  // namespace
 
-// Assign from a Breakdown, created using a TimeZoneInfo timestamp.
-inline void DateTime::Assign(const Breakdown& bd) {
-  civil_second cs(bd.year, bd.month, bd.day, bd.hour, bd.minute, bd.second);
+// Assign from a civil_second, created using a TimeZoneInfo timestamp.
+inline void DateTime::Assign(const civil_second& cs) {
   offset = cs - unix_epoch;
 }
 
@@ -190,7 +189,7 @@ void TimeZoneInfo::ResetToBuiltinUTC(int seconds) {
   transitions_[0].unix_time = -(1LL << 59);  // zic "BIG_BANG"
   transitions_[0].type_index = 0;
   transitions_[0].date_time.Assign(
-      LocalTime(transitions_[0].unix_time, transition_types_[0]));
+      LocalTime(transitions_[0].unix_time, transition_types_[0]).cs);
   transitions_[0].prev_date_time = transitions_[0].date_time;
   transitions_[0].prev_date_time.offset -= 1;
   default_transition_type_ = 0;
@@ -313,8 +312,8 @@ void TimeZoneInfo::ExtendTransitions(const std::string& name,
   const TransitionType& autumn(tt0.is_dst ? tt1 : tt0);
   CheckTransition(name, spring, posix.dst_offset, true, posix.dst_abbr);
   CheckTransition(name, autumn, posix.std_offset, false, posix.std_abbr);
-  last_year_ = LocalTime(tr0.unix_time, tt0).year;
-  if (LocalTime(tr1.unix_time, tt1).year != last_year_) {
+  last_year_ = LocalTime(tr0.unix_time, tt0).cs.year();
+  if (LocalTime(tr1.unix_time, tt1).cs.year() != last_year_) {
     std::clog << name << ": Final transitions not in same year\n";
   }
 
@@ -469,10 +468,10 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   const TransitionType* ttp = &transition_types_[default_transition_type_];
   for (size_t i = 0; i != transitions_.size(); ++i) {
     Transition& tr(transitions_[i]);
-    tr.prev_date_time.Assign(LocalTime(tr.unix_time, *ttp));
+    tr.prev_date_time.Assign(LocalTime(tr.unix_time, *ttp).cs);
     tr.prev_date_time.offset -= 1;
     ttp = &transition_types_[tr.type_index];
-    tr.date_time.Assign(LocalTime(tr.unix_time, *ttp));
+    tr.date_time.Assign(LocalTime(tr.unix_time, *ttp).cs);
     if (i != 0) {
       // Check that the transitions are ordered by date/time. Essentially
       // this means that an offset change cannot cross another such change.
@@ -548,26 +547,19 @@ bool TimeZoneInfo::Load(const std::string& name) {
 }
 
 // BreakTime() translation for a particular transition type.
-Breakdown TimeZoneInfo::LocalTime(std::int64_t unix_time,
-                                  const TransitionType& tt) const {
-  Breakdown bd;
+time_zone::absolute_lookup TimeZoneInfo::LocalTime(
+    std::int64_t unix_time, const TransitionType& tt) const {
+  time_zone::absolute_lookup al;
 
   // A civil time in "+offset" looks like (time+offset) in UTC.
-  civil_second cs = unix_epoch + (unix_time + tt.utc_offset);
-
-  bd.year = cs.year();
-  bd.month = cs.month();
-  bd.day = cs.day();
-  bd.hour = cs.hour();
-  bd.minute = cs.minute();
-  bd.second = cs.second();
+  al.cs = unix_epoch + (unix_time + tt.utc_offset);
 
   // Handle offset, is_dst, and abbreviation.
-  bd.offset = tt.utc_offset;
-  bd.is_dst = tt.is_dst;
-  bd.abbr = &abbreviations_[tt.abbr_index];
+  al.offset = tt.utc_offset;
+  al.is_dst = tt.is_dst;
+  al.abbr = &abbreviations_[tt.abbr_index];
 
-  return bd;
+  return al;
 }
 
 // MakeTimeInfo() translation with a conversion-preserving offset.
@@ -580,7 +572,8 @@ TimeInfo TimeZoneInfo::TimeLocal(std::int64_t year, int mon, int day, int hour,
   return ti;
 }
 
-Breakdown TimeZoneInfo::BreakTime(const time_point<sys_seconds>& tp) const {
+time_zone::absolute_lookup TimeZoneInfo::BreakTime(
+    const time_point<sys_seconds>& tp) const {
   std::int64_t unix_time = ToUnixSeconds(tp);
   const size_t timecnt = transitions_.size();
   if (timecnt == 0 || unix_time < transitions_[0].unix_time) {
@@ -595,9 +588,11 @@ Breakdown TimeZoneInfo::BreakTime(const time_point<sys_seconds>& tp) const {
       const std::int64_t diff = unix_time - transitions_[timecnt - 1].unix_time;
       const std::int64_t shift = diff / kSecPer400Years + 1;
       const auto d = sys_seconds(shift * kSecPer400Years);
-      Breakdown bd = BreakTime(tp - d);
-      bd.year += shift * 400;
-      return bd;
+      time_zone::absolute_lookup al = BreakTime(tp - d);
+      al.cs = // TODO: How do we make this nicer (and avoid re-normalization)?
+          civil_second(al.cs.year() + shift * 400, al.cs.month(), al.cs.day(),
+                       al.cs.hour(), al.cs.minute(), al.cs.second());
+      return al;
     }
     const int type_index = transitions_[timecnt - 1].type_index;
     return LocalTime(unix_time, transition_types_[type_index]);

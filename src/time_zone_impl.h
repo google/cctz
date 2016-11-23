@@ -37,7 +37,10 @@ class time_zone::Impl {
   static const time_zone::Impl& get(const time_zone& tz);
 
   // Breaks a time_point down to civil-time components in this time zone.
-  time_zone::absolute_lookup BreakTime(const time_point<sys_seconds>& tp) const;
+  time_zone::absolute_lookup BreakTime(
+      const time_point<sys_seconds>& tp) const {
+    return zone_->BreakTime(tp);
+  }
 
   // Converts the civil-time components in this time zone into a time_point.
   // That is, the opposite of BreakTime(). The requested civil time may be

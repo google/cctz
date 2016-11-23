@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include "civil_time.h"
 #include "time_zone_if.h"
 #include "tzfile.h"
 
@@ -42,7 +43,7 @@ namespace cctz {
 // to avoid extended arithmetic) and lose a little range as a result.
 struct DateTime {
   std::int64_t offset;  // seconds from some epoch DateTime
-  void Assign(const Breakdown& bd);
+  void Assign(const civil_second& cs);
 };
 
 inline bool operator<(const DateTime& lhs, const DateTime& rhs) {
@@ -93,7 +94,8 @@ class TimeZoneInfo : public TimeZoneIf {
   bool Load(const std::string& name);
 
   // TimeZoneIf implementations.
-  Breakdown BreakTime(const time_point<sys_seconds>& tp) const override;
+  time_zone::absolute_lookup BreakTime(
+      const time_point<sys_seconds>& tp) const override;
   TimeInfo MakeTimeInfo(std::int64_t year, int mon, int day,
                         int hour, int min, int sec) const override;
 
@@ -120,7 +122,8 @@ class TimeZoneInfo : public TimeZoneIf {
   bool Load(const std::string& name, FILE* fp);
 
   // Helpers for BreakTime() and MakeTimeInfo() respectively.
-  Breakdown LocalTime(std::int64_t unix_time, const TransitionType& tt) const;
+  time_zone::absolute_lookup LocalTime(std::int64_t unix_time,
+                                       const TransitionType& tt) const;
   TimeInfo TimeLocal(std::int64_t year, int mon, int day,
                      int hour, int min, int sec, std::int64_t offset) const;
 

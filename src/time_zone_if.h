@@ -24,26 +24,6 @@
 
 namespace cctz {
 
-// The calendar and wall-clock (a.k.a. "civil time") components of a
-// time_point in a certain time_zone. A better std::tm.  Note that we
-// cannot use time_zone::absolute_lookup because we need a 64-bit year.
-struct Breakdown {
-  std::int64_t year;  // year (e.g., 2013)
-  int month;          // month of year [1:12]
-  int day;            // day of month [1:31]
-  int hour;           // hour of day [0:23]
-  int minute;         // minute of hour [0:59]
-  int second;         // second of minute [0:59]
-
-  // Note: The following fields exist for backward compatibility with older
-  // APIs. Accessing these fields directly is a sign of imprudent logic in the
-  // calling code. Modern time-related code should only access this data
-  // indirectly by way of cctz::format().
-  int offset;        // seconds east of UTC
-  bool is_dst;       // is offset non-standard?
-  std::string abbr;  // time-zone abbreviation (e.g., "PST")
-};
-
 // A TimeInfo represents the conversion of year, month, day, hour, minute,
 // and second values in a particular time_zone to a time instant.
 struct TimeInfo {
@@ -63,7 +43,8 @@ class TimeZoneIf {
 
   virtual ~TimeZoneIf() {}
 
-  virtual Breakdown BreakTime(const time_point<sys_seconds>& tp) const = 0;
+  virtual time_zone::absolute_lookup BreakTime(
+      const time_point<sys_seconds>& tp) const = 0;
   virtual TimeInfo MakeTimeInfo(std::int64_t year, int mon, int day,
                                 int hour, int min, int sec) const = 0;
 

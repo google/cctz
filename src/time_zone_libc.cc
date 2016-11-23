@@ -64,8 +64,9 @@ TimeZoneLibC::TimeZoneLibC(const std::string& name) {
   }
 }
 
-Breakdown TimeZoneLibC::BreakTime(const time_point<sys_seconds>& tp) const {
-  Breakdown bd;
+time_zone::absolute_lookup TimeZoneLibC::BreakTime(
+    const time_point<sys_seconds>& tp) const {
+  time_zone::absolute_lookup al;
   std::time_t t = ToUnixSeconds(tp);
   std::tm tm;
   if (local_) {
@@ -74,25 +75,22 @@ Breakdown TimeZoneLibC::BreakTime(const time_point<sys_seconds>& tp) const {
 #else
     localtime_r(&t, &tm);
 #endif
-    bd.offset = OFFSET(tm);
-    bd.abbr = ABBR(tm);
+    al.offset = OFFSET(tm);
+    al.abbr = ABBR(tm);
   } else {
 #if defined(_WIN32) || defined(_WIN64)
     gmtime_s(&tm, &t);
 #else
     gmtime_r(&t, &tm);
 #endif
-    bd.offset = offset_;
-    bd.abbr = abbr_;
+    al.offset = offset_;
+    al.abbr = abbr_;
   }
-  bd.year = tm.tm_year + 1900;
-  bd.month = tm.tm_mon + 1;
-  bd.day = tm.tm_mday;
-  bd.hour = tm.tm_hour;
-  bd.minute = tm.tm_min;
-  bd.second = tm.tm_sec;
-  bd.is_dst = tm.tm_isdst > 0;
-  return bd;
+  // TODO: Eliminate redundant normalization.
+  al.cs = civil_second(tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                       tm.tm_hour, tm.tm_min, tm.tm_sec);
+  al.is_dst = tm.tm_isdst > 0;
+  return al;
 }
 
 namespace {
