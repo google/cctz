@@ -21,6 +21,7 @@
 #define CCTZ_TIME_ZONE_H_
 
 #include <chrono>
+#include <cstdint>
 #include <string>
 
 #include "civil_time.h"
@@ -30,8 +31,8 @@ namespace cctz {
 // Convenience aliases. Not intended as public API points.
 template <typename D>
 using time_point = std::chrono::time_point<std::chrono::system_clock, D>;
-using sys_seconds = std::chrono::duration<std::chrono::system_clock::rep,
-                                          std::chrono::seconds::period>;
+using sys_seconds =
+    std::chrono::duration<std::int_least64_t, std::chrono::seconds::period>;
 
 // cctz::time_zone is an opaque, small, value-type class representing a
 // geo-political region within which particular rules are used for mapping
