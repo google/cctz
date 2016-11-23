@@ -69,12 +69,6 @@ char* errmsg(int errnum, char* buf, size_t buflen) {
 // then have normal argument-passing semantics (i.e., single evaluation).
 inline bool IsLeap(std::int64_t year) { return isleap(year); }
 
-// The month lengths in non-leap and leap years respectively.
-const int8_t kDaysPerMonth[2][1 + MONSPERYEAR] = {
-  {-1, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
-  {-1, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
-};
-
 // The day offsets of the beginning of each (1-based) month in non-leap
 // and leap years respectively. That is, sigma[1:n]:kDaysPerMonth[][i].
 // For example, in a leap year there are 335 days before December.
@@ -86,124 +80,17 @@ const int16_t kMonthOffsets[2][1 + MONSPERYEAR + 1] = {
 // 400-year chunks always have 146097 days (20871 weeks).
 const std::int64_t kSecPer400Years = 146097LL * SECSPERDAY;
 
-// The number of seconds in an aligned 100-year chunk, for those that
-// do not begin with a leap year and those that do respectively.
-const std::int64_t kSecPer100Years[2] = {
-  (76LL * DAYSPERNYEAR + 24LL * DAYSPERLYEAR) * SECSPERDAY,
-  (75LL * DAYSPERNYEAR + 25LL * DAYSPERLYEAR) * SECSPERDAY,
-};
-
-// The number of seconds in an aligned 4-year chunk, for those that
-// do not begin with a leap year and those that do respectively.
-const int32_t kSecPer4Years[2] = {
-  (4 * DAYSPERNYEAR + 0 * DAYSPERLYEAR) * SECSPERDAY,
-  (3 * DAYSPERNYEAR + 1 * DAYSPERLYEAR) * SECSPERDAY,
-};
-
 // The number of seconds in non-leap and leap years respectively.
 const int32_t kSecPerYear[2] = {
   DAYSPERNYEAR * SECSPERDAY,
   DAYSPERLYEAR * SECSPERDAY,
 };
 
-// The number of days in the 100 years starting in the mod-400 index year,
-// stored as a 36524-deficit value (i.e., 0 == 36524, 1 == 36525).
-const int8_t kDaysPer100Years[401] = {
-  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-};
-
-inline int DaysPer100Years(int eyear) {
-  return 36524 + kDaysPer100Years[eyear];
-}
-
-// The number of days in the 4 years starting in the mod-400 index year,
-// stored as a 1460-deficit value (i.e., 0 == 1460, 1 == 1461).
-const int8_t kDaysPer4Years[401] = {
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-};
-
-inline int DaysPer4Years(int eyear) { return 1460 + kDaysPer4Years[eyear]; }
-
 // Like kSecPerYear[] but scaled down by a factor of SECSPERDAY.
 const int32_t kDaysPerYear[2] = {DAYSPERNYEAR, DAYSPERLYEAR};
 
-inline int DaysPerYear(int year) { return kDaysPerYear[IsLeap(year)]; }
-
-// Map a (normalized) Y/M/D to the number of days before/after 1970-01-01.
-// See http://howardhinnant.github.io/date_algorithms.html#days_from_civil.
-std::int64_t DayOrdinal(std::int64_t year, int month, int day) {
-  year -= (month <= 2 ? 1 : 0);
-  const std::int64_t era = (year >= 0 ? year : year - 399) / 400;
-  const int yoe = static_cast<int>(year - era * 400);
-  const int doy = (153 * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;
-  const int doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-  return era * 146097 + doe - 719468;  // shift epoch to 1970-01-01
-}
-
-// Normalize (*valp + carry_in) so that [zero <= *valp < (zero + base)],
-// returning multiples of base to carry out. "zero" must be >= 0, and
-// base must be sufficiently large to avoid overflowing the return value.
-// Inlining admits significant gains as base and zero are literals.
-inline int NormalizeField(int base, int zero, int* valp, int carry_in) {
-  int carry_out = 0;
-  int val = *valp;
-  if (zero != 0 && val < 0) {
-    val += base;
-    carry_out -= 1;
-  }
-  val -= zero;
-  carry_out += val / base;
-  int rem = val % base;
-  if (carry_in != 0) {
-    carry_out += carry_in / base;
-    rem += carry_in % base;
-    if (rem < 0) {
-      carry_out -= 1;
-      rem += base;
-    } else if (rem >= base) {
-      carry_out += 1;
-      rem -= base;
-    }
-  }
-  if (rem < 0) {
-    carry_out -= 1;
-    rem += base;
-  }
-  *valp = rem + zero;
-  return carry_out;
-}
+// January 1st at 00:00:00 in the epoch year.
+const civil_second unix_epoch(EPOCH_YEAR, 1, 1, 0, 0, 0);
 
 // Multi-byte, numeric values are encoded using a MSB first,
 // twos-complement representation. These helpers decode, from
@@ -287,81 +174,10 @@ inline TimeInfo MakeRepeated(const Transition& tr, const DateTime& dt,
 
 }  // namespace
 
-// Normalize from individual date/time fields.
-bool DateTime::Normalize(std::int64_t year, int mon, int day,
-                         int hour, int min, int sec) {
-  int min_carry = NormalizeField(SECSPERMIN, 0, &sec, 0);
-  int hour_carry = NormalizeField(MINSPERHOUR, 0, &min, min_carry);
-  int day_carry = NormalizeField(HOURSPERDAY, 0, &hour, hour_carry);
-  int year_carry = NormalizeField(MONSPERYEAR, 1, &mon, 0);
-  bool normalized = min_carry || hour_carry || day_carry || year_carry;
-
-  // Normalize the number of days within a 400-year (146097-day) period.
-  if (int c4_carry = NormalizeField(146097, 1, &day, day_carry)) {
-    year_carry += c4_carry * 400;
-    normalized = true;
-  }
-
-  // Extract a [0:399] year calendrically equivalent to (year + year_carry)
-  // from that sum in order to simplify year/day normalization and to defer
-  // the possibility of std::int64_t overflow until the final stage.
-  int eyear = year % 400;
-  if (year_carry != 0) { eyear += year_carry; eyear %= 400; }
-  if (eyear < 0) eyear += 400;
-  year_carry -= eyear;
-
-  int orig_day = day;
-  if (day > DAYSPERNYEAR) {
-    eyear += (mon > 2 ? 1 : 0);
-    if (day > 146097 - DAYSPERNYEAR) {
-      // We often hit the 400th year when stepping a civil time backwards,
-      // so special case it to avoid counting up by 100/4/1 year chunks.
-      day = DaysPerYear(eyear += 400 - 1) - (146097 - day);
-    } else {
-      // Handle days in chunks of 100/4/1 years.
-      for (int ydays = DaysPer100Years(eyear); day > ydays;
-           day -= ydays, ydays = DaysPer100Years(eyear)) {
-        if ((eyear += 100) > 400) { eyear -= 400; year_carry += 400; }
-      }
-      for (int ydays = DaysPer4Years(eyear); day > ydays;
-           day -= ydays, ydays = DaysPer4Years(eyear)) {
-        if ((eyear += 4) > 400) { eyear -= 400; year_carry += 400; }
-      }
-      for (int ydays = DaysPerYear(eyear); day > ydays;
-           day -= ydays, ydays = DaysPerYear(eyear)) {
-        eyear += 1;
-      }
-    }
-    eyear -= (mon > 2 ? 1 : 0);
-  }
-  // Handle days within one year.
-  bool leap_year = IsLeap(eyear);
-  for (int mdays = kDaysPerMonth[leap_year][mon]; day > mdays;
-       day -= mdays, mdays = kDaysPerMonth[leap_year][mon]) {
-    if (++mon > MONSPERYEAR) { mon = 1; leap_year = IsLeap(++eyear); }
-  }
-  if (day != orig_day) normalized = true;
-
-  // Add the updated eyear back into (year + year_carry).
-  year_carry += eyear;
-
-  // Finally, set the DateTime offset.
-  offset = DayOrdinal(year + year_carry, mon, day);
-  if (offset < 0) {
-    offset += 1;
-    offset *= SECSPERHOUR * HOURSPERDAY;
-    offset += hour * SECSPERHOUR + min * SECSPERMIN + sec;
-    offset -= SECSPERHOUR * HOURSPERDAY;
-  } else {
-    offset *= SECSPERHOUR * HOURSPERDAY;
-    offset += hour * SECSPERHOUR + min * SECSPERMIN + sec;
-  }
-  return normalized;
-}
-
 // Assign from a Breakdown, created using a TimeZoneInfo timestamp.
 inline void DateTime::Assign(const Breakdown& bd) {
-  Normalize(bd.year, bd.month, bd.day, bd.hour, bd.minute, bd.second);
+  civil_second cs(bd.year, bd.month, bd.day, bd.hour, bd.minute, bd.second);
+  offset = cs - unix_epoch;
 }
 
 // What (no leap-seconds) UTC+seconds zoneinfo would look like.
@@ -506,10 +322,9 @@ void TimeZoneInfo::ExtendTransitions(const std::string& name,
   const PosixTransition& pt1(tt0.is_dst ? posix.dst_end : posix.dst_start);
   const PosixTransition& pt0(tt0.is_dst ? posix.dst_start : posix.dst_end);
   Transition* tr = &transitions_[hdr.timecnt];  // next trans to fill
-  const std::int64_t jan1_ord = DayOrdinal(last_year_, 1, 1);
-  std::int64_t jan1_time = jan1_ord * SECSPERDAY;
-  int jan1_weekday = (EPOCH_WDAY + jan1_ord) % DAYSPERWEEK;
-  if (jan1_weekday < 0) jan1_weekday += DAYSPERWEEK;
+  const civil_day jan1(last_year_, 1, 1);
+  std::int64_t jan1_time = civil_second(jan1) - unix_epoch;
+  int jan1_weekday = (static_cast<int>(get_weekday(jan1)) + 1) % DAYSPERWEEK;
   bool leap_year = IsLeap(last_year_);
   for (const std::int64_t limit = last_year_ + 400; last_year_ < limit;) {
     last_year_ += 1;  // an additional year of generated transitions
@@ -737,81 +552,15 @@ Breakdown TimeZoneInfo::LocalTime(std::int64_t unix_time,
                                   const TransitionType& tt) const {
   Breakdown bd;
 
-  bd.year = EPOCH_YEAR;
-  std::int64_t seconds = unix_time;
-
-  // Shift to a base year that is 400-year aligned.
-  static_assert(EPOCH_YEAR == 1970, "Unexpected value for EPOCH_YEAR");
-  if (seconds >= 0) {
-    seconds -= 10957LL * SECSPERDAY;
-    bd.year += 30;  // == 2000
-  } else {
-    seconds += (146097LL - 10957LL) * SECSPERDAY;
-    bd.year -= 370;  // == 1600
-  }
-
   // A civil time in "+offset" looks like (time+offset) in UTC.
-  if (seconds >= 0) {
-    if (tt.utc_offset > 0 && seconds > INT64_MAX - tt.utc_offset) {
-      seconds -= kSecPer400Years;
-      bd.year += 400;
-    }
-  } else {
-    if (tt.utc_offset < 0 && seconds < INT64_MIN - tt.utc_offset) {
-      seconds += kSecPer400Years;
-      bd.year -= 400;
-    }
-  }
-  seconds += tt.utc_offset;
+  civil_second cs = unix_epoch + (unix_time + tt.utc_offset);
 
-  // Handle years in chunks of 400/100/4/1.
-  bd.year += 400 * (seconds / kSecPer400Years);
-  seconds %= kSecPer400Years;
-  if (seconds < 0) {
-    seconds += kSecPer400Years;
-    bd.year -= 400;
-  }
-  bool leap_year = true;  // 4-century aligned
-  std::int64_t sec_per_100years = kSecPer100Years[leap_year];
-  while (seconds >= sec_per_100years) {
-    seconds -= sec_per_100years;
-    bd.year += 100;
-    leap_year = false;  // 1-century, non 4-century aligned
-    sec_per_100years = kSecPer100Years[leap_year];
-  }
-  int32_t sec_per_4years = kSecPer4Years[leap_year];
-  while (seconds >= sec_per_4years) {
-    seconds -= sec_per_4years;
-    bd.year += 4;
-    leap_year = true;  // 4-year, non century aligned
-    sec_per_4years = kSecPer4Years[leap_year];
-  }
-  int32_t sec_per_year = kSecPerYear[leap_year];
-  while (seconds >= sec_per_year) {
-    seconds -= sec_per_year;
-    bd.year += 1;
-    leap_year = false;  // non 4-year aligned
-    sec_per_year = kSecPerYear[leap_year];
-  }
-
-  // Handle months and days.
-  bd.month = TM_DECEMBER + 1;
-  bd.day = static_cast<int>(seconds / SECSPERDAY) + 1;
-  seconds %= SECSPERDAY;
-  while (bd.month != TM_JANUARY + 1) {
-    int month_offset = kMonthOffsets[leap_year][bd.month];
-    if (bd.day > month_offset) {
-      bd.day -= month_offset;
-      break;
-    }
-    bd.month -= 1;
-  }
-
-  // Handle hours, minutes, and seconds.
-  bd.hour = static_cast<int>(seconds / SECSPERHOUR);
-  seconds %= SECSPERHOUR;
-  bd.minute = static_cast<int>(seconds / SECSPERMIN);
-  bd.second = seconds % SECSPERMIN;
+  bd.year = cs.year();
+  bd.month = cs.month();
+  bd.day = cs.day();
+  bd.hour = cs.hour();
+  bd.minute = cs.minute();
+  bd.second = cs.second();
 
   // Handle offset, is_dst, and abbreviation.
   bd.offset = tt.utc_offset;
@@ -877,7 +626,8 @@ TimeInfo TimeZoneInfo::MakeTimeInfo(std::int64_t year, int mon, int day,
                                     int hour, int min, int sec) const {
   Transition target;
   DateTime& dt(target.date_time);
-  const bool normalized = dt.Normalize(year, mon, day, hour, min, sec);
+  dt.offset = civil_second(year, mon, day, hour, min, sec) - unix_epoch;
+  const bool normalized = false;  // No longer exposed; will be removed.
 
   const size_t timecnt = transitions_.size();
   if (timecnt == 0) {

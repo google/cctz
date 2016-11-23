@@ -31,7 +31,7 @@ namespace cctz {
 // account the value of, or changes in any time_zone's UTC offset (i.e., as
 // if the date/time was in UTC). This allows "Y/M/D H:M:S" values to be
 // quickly ordered by offset (although this may not be the same ordering as
-// their corresponding times in a time_zone). Also, if two DateTimes are not
+// their corresponding times in a time_zone). But, if two DateTimes are not
 // separated by a UTC-offset change in some time_zone, then the number of
 // seconds between them can be computed as a simple difference of offsets.
 //
@@ -42,8 +42,6 @@ namespace cctz {
 // to avoid extended arithmetic) and lose a little range as a result.
 struct DateTime {
   std::int64_t offset;  // seconds from some epoch DateTime
-  bool Normalize(std::int64_t year, int mon, int day,
-                 int hour, int min, int sec);
   void Assign(const Breakdown& bd);
 };
 
