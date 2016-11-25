@@ -28,9 +28,8 @@
 #         install install_shared_lib
 
 # local configuration
-CXX = g++
-STD = c++11
-OPT = -O
+CXXFLAGS ?= -O3
+STD ?= c++11
 PREFIX = /usr/local
 DESTDIR =
 
@@ -38,11 +37,10 @@ DESTDIR =
 ## TESTS = civil_time_test time_zone_lookup_test time_zone_format_test
 ## TEST_FLAGS = ...
 ## TEST_LIBS = ...
-
 VPATH = $(SRC)include:$(SRC)src:$(SRC)examples
 CC = $(CXX)
 CPPFLAGS = -Wall -I$(SRC)include -std=$(STD) -pthread \
-	   $(TEST_FLAGS) $(OPT) -fPIC -MMD
+	   $(TEST_FLAGS) -fPIC -MMD
 ARFLAGS = rcs
 LDFLAGS = -pthread
 LDLIBS = $(TEST_LIBS)
