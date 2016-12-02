@@ -35,13 +35,12 @@ PREFIX = /usr/local
 DESTDIR =
 
 VPATH = $(SRC)include:$(SRC)src:$(SRC)examples
-CC = $(CXX)
 CXXFLAGS += -g -Wall -I$(SRC)include -std=$(STD) -pthread -fPIC -MMD
 ARFLAGS = rcs
 LDFLAGS += -pthread
 LDLIBS = $(TEST_LIBS)
 SHARED_LDFLAGS = -shared
-
+LINK.o = $(LINK.cc)
 INSTALL = install
 
 CCTZ = cctz
