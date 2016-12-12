@@ -258,10 +258,7 @@ bool TimeZoneInfo::EquivTransitions(uint8_t tt1_index,
 void TimeZoneInfo::ExtendTransitions(const std::string& name,
                                      const Header& hdr) {
   extended_ = false;
-  if (future_spec_.empty()) {
-    std::clog << name << ": Missing POSIX spec\n";
-    return;
-  }
+  if (future_spec_.empty()) return;  // last transition wins
 
   PosixTimeZone posix;
   if (!ParsePosixSpec(future_spec_, &posix)) {
