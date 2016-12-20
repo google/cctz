@@ -55,19 +55,6 @@ cc_library(
     deps = [":civil_time"],
 )
 
-cc_library(
-    name = "cctz_v1",
-    hdrs = [
-        "src/cctz.h",
-    ],
-    includes = ["include"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":civil_time",
-        ":time_zone",
-    ],
-)
-
 ### tests
 
 # Builds the Google Test source that was fetched from another repository.
@@ -123,17 +110,6 @@ cc_test(
         "@gtest//:gtest",
         ":civil_time",
         ":time_zone",
-    ],
-)
-
-cc_test(
-    name = "cctz_v1_test",
-    size = "small",
-    srcs = ["src/cctz_v1_test.cc"],
-    defines = ["CCTZ_ACK_V1_DEPRECATION=1"],
-    deps = [
-        "@gtest//:gtest",
-        ":cctz_v1",
     ],
 )
 
