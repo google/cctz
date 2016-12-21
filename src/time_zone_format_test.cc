@@ -1022,10 +1022,10 @@ TEST(Parse, ExtendedSubeconds) {
   // parsed, while the second (and any subsecond field >=2^31) failed.
   time_point<nanoseconds> tp = unix_epoch;
   EXPECT_TRUE(parse("%E*f", "2147483647", tz, &tp));
-  EXPECT_EQ(unix_epoch + nanoseconds(214748364) + nanoseconds(1) / 2, tp);
+  EXPECT_EQ(unix_epoch + nanoseconds(214748364), tp);
   tp = unix_epoch;
   EXPECT_TRUE(parse("%E*f", "2147483648", tz, &tp));
-  EXPECT_EQ(unix_epoch + nanoseconds(214748364) + nanoseconds(3) / 4, tp);
+  EXPECT_EQ(unix_epoch + nanoseconds(214748364), tp);
 
   // We should also be able to specify long strings of digits far
   // beyond the current resolution and have them convert the same way.
@@ -1033,7 +1033,7 @@ TEST(Parse, ExtendedSubeconds) {
   EXPECT_TRUE(parse(
       "%E*f", "214748364801234567890123456789012345678901234567890123456789",
       tz, &tp));
-  EXPECT_EQ(unix_epoch + nanoseconds(214748364) + nanoseconds(3) / 4, tp);
+  EXPECT_EQ(unix_epoch + nanoseconds(214748364), tp);
 }
 
 TEST(Parse, ExtendedSubecondsScan) {
