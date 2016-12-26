@@ -31,8 +31,7 @@ namespace cctz {
 // Convenience aliases. Not intended as public API points.
 template <typename D>
 using time_point = std::chrono::time_point<std::chrono::system_clock, D>;
-using sys_seconds =
-    std::chrono::duration<std::int_least64_t, std::chrono::seconds::period>;
+using sys_seconds = std::chrono::duration<std::int_fast64_t>;
 
 // cctz::time_zone is an opaque, small, value-type class representing a
 // geo-political region within which particular rules are used for mapping
@@ -188,10 +187,11 @@ inline std::pair<time_point<sys_seconds>, sys_seconds>
 split_seconds(const time_point<sys_seconds>& tp) {
   return {tp, sys_seconds(0)};
 }
+using femtoseconds = std::chrono::duration<std::int_fast64_t, std::femto>;
 std::string format(const std::string&, const time_point<sys_seconds>&,
-                   const std::chrono::nanoseconds&, const time_zone&);
+                   const femtoseconds&, const time_zone&);
 bool parse(const std::string&, const std::string&, const time_zone&,
-           time_point<sys_seconds>*, std::chrono::nanoseconds*);
+           time_point<sys_seconds>*, femtoseconds*);
 }  // namespace detail
 
 // Formats the given time_point in the given cctz::time_zone according to
@@ -225,7 +225,7 @@ template <typename D>
 inline std::string format(const std::string& fmt, const time_point<D>& tp,
                           const time_zone& tz) {
   const auto p = detail::split_seconds(tp);
-  const auto n = std::chrono::duration_cast<std::chrono::nanoseconds>(p.second);
+  const auto n = std::chrono::duration_cast<detail::femtoseconds>(p.second);
   return detail::format(fmt, p.first, n, tz);
 }
 
@@ -275,12 +275,12 @@ inline std::string format(const std::string& fmt, const time_point<D>& tp,
 template <typename D>
 inline bool parse(const std::string& fmt, const std::string& input,
                   const time_zone& tz, time_point<D>* tpp) {
-  time_point<sys_seconds> sec{};
-  std::chrono::nanoseconds ns{0};
-  const bool b = detail::parse(fmt, input, tz, &sec, &ns);
+  time_point<sys_seconds> sec;
+  detail::femtoseconds fs;
+  const bool b = detail::parse(fmt, input, tz, &sec, &fs);
   if (b) {
     *tpp = std::chrono::time_point_cast<D>(sec);
-    *tpp += std::chrono::duration_cast<D>(ns);
+    *tpp += std::chrono::duration_cast<D>(fs);
   }
   return b;
 }

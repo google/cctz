@@ -98,6 +98,36 @@ TEST(Format, TimePointResolution) {
             format(kFmt, time_point_cast<hours>(t0), utc));
 }
 
+TEST(Format, TimePointExtendedResolution) {
+  const char kFmt[] = "%H:%M:%E*S";
+  const time_zone utc = utc_time_zone();
+  const time_point<sys_seconds> tp =
+      std::chrono::time_point_cast<sys_seconds>(
+          std::chrono::system_clock::from_time_t(0)) +
+      std::chrono::hours(12) + std::chrono::minutes(34) +
+      std::chrono::seconds(56);
+
+  EXPECT_EQ(
+      "12:34:56.123456789012345",
+      detail::format(kFmt, tp, detail::femtoseconds(123456789012345), utc));
+  EXPECT_EQ(
+      "12:34:56.012345678901234",
+      detail::format(kFmt, tp, detail::femtoseconds(12345678901234), utc));
+  EXPECT_EQ(
+      "12:34:56.001234567890123",
+      detail::format(kFmt, tp, detail::femtoseconds(1234567890123), utc));
+  EXPECT_EQ(
+      "12:34:56.000123456789012",
+      detail::format(kFmt, tp, detail::femtoseconds(123456789012), utc));
+
+  EXPECT_EQ("12:34:56.000000000000123",
+            detail::format(kFmt, tp, detail::femtoseconds(123), utc));
+  EXPECT_EQ("12:34:56.000000000000012",
+            detail::format(kFmt, tp, detail::femtoseconds(12), utc));
+  EXPECT_EQ("12:34:56.000000000000001",
+            detail::format(kFmt, tp, detail::femtoseconds(1), utc));
+}
+
 TEST(Format, Basics) {
   time_zone tz = utc_time_zone();
   time_point<nanoseconds> tp = system_clock::from_time_t(0);
@@ -544,6 +574,26 @@ TEST(Parse, TimePointResolution) {
   time_point<hours> tp_h;
   EXPECT_TRUE(parse(kFmt, "03:04:05", utc, &tp_h));
   EXPECT_EQ("03:00:00", format(kFmt, tp_h, utc));
+}
+
+TEST(Parse, TimePointExtendedResolution) {
+  const char kFmt[] = "%H:%M:%E*S";
+  const time_zone utc = utc_time_zone();
+
+  time_point<sys_seconds> tp;
+  detail::femtoseconds fs;
+  EXPECT_TRUE(detail::parse(kFmt, "12:34:56.123456789012345", utc, &tp, &fs));
+  EXPECT_EQ("12:34:56.123456789012345", detail::format(kFmt, tp, fs, utc));
+  EXPECT_TRUE(detail::parse(kFmt, "12:34:56.012345678901234", utc, &tp, &fs));
+  EXPECT_EQ("12:34:56.012345678901234", detail::format(kFmt, tp, fs, utc));
+  EXPECT_TRUE(detail::parse(kFmt, "12:34:56.001234567890123", utc, &tp, &fs));
+  EXPECT_EQ("12:34:56.001234567890123", detail::format(kFmt, tp, fs, utc));
+  EXPECT_TRUE(detail::parse(kFmt, "12:34:56.000000000000123", utc, &tp, &fs));
+  EXPECT_EQ("12:34:56.000000000000123", detail::format(kFmt, tp, fs, utc));
+  EXPECT_TRUE(detail::parse(kFmt, "12:34:56.000000000000012", utc, &tp, &fs));
+  EXPECT_EQ("12:34:56.000000000000012", detail::format(kFmt, tp, fs, utc));
+  EXPECT_TRUE(detail::parse(kFmt, "12:34:56.000000000000001", utc, &tp, &fs));
+  EXPECT_EQ("12:34:56.000000000000001", detail::format(kFmt, tp, fs, utc));
 }
 
 TEST(Parse, Basics) {

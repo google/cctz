@@ -98,7 +98,7 @@ const char kDigits[] = "0123456789";
 // Formats a 64-bit integer in the given field width.  Note that it is up
 // to the caller of Format64() [and Format02d()/FormatOffset()] to ensure
 // that there is sufficient space before ep to hold the conversion.
-char* Format64(char* ep, int width, std::int64_t v) {
+char* Format64(char* ep, int width, std::int_fast64_t v) {
   bool neg = false;
   if (v < 0) {
     --width;
@@ -215,11 +215,12 @@ const char* ParseInt(const char* dp, int width, T min, T max, T* vp) {
   return dp;
 }
 
-// The number of base-10 digits that can be represented by an std::int64_t.
-const int kDigits10_64 = std::numeric_limits<std::int64_t>::digits10;
+// The number of base-10 digits that can be represented by a signed 64-bit
+// integer.  That is, 10^kDigits10_64 <= 2^63 - 1 < 10^(kDigits10_64 + 1).
+const int kDigits10_64 = 18;
 
-// 10^n for everything that can be represented by an std::int64_t.
-const std::int64_t kExp10[kDigits10_64 + 1] = {
+// 10^n for everything that can be represented by a signed 64-bit integer.
+const std::int_fast64_t kExp10[kDigits10_64 + 1] = {
     1,
     10,
     100,
@@ -260,8 +261,10 @@ const std::int64_t kExp10[kDigits10_64 + 1] = {
 //
 // We also handle the %z and %Z specifiers to accommodate platforms that do
 // not support the tm_gmtoff and tm_zone extensions to std::tm.
+//
+// Requires that zero() <= fs < seconds(1).
 std::string format(const std::string& format, const time_point<sys_seconds>& tp,
-                   const std::chrono::nanoseconds& ns, const time_zone& tz) {
+                   const detail::femtoseconds& fs, const time_zone& tz) {
   std::string result;
   const time_zone::absolute_lookup al = tz.lookup(tp);
   const std::tm tm = ToTM(al);
@@ -379,7 +382,7 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
         FormatTM(&result, std::string(pending, cur - 2), tm);
       }
       char* cp = ep;
-      bp = Format64(cp, 9, ns.count());
+      bp = Format64(cp, 15, fs.count());
       while (cp != bp && cp[-1] == '0') --cp;
       switch (*(cur + 1)) {
         case 'S':
@@ -412,8 +415,8 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
           bp = ep;
           if (n > 0) {
             if (n > kDigits10_64) n = kDigits10_64;
-            bp = Format64(bp, n, (n > 9) ? ns.count() * kExp10[n - 9]
-                                         : ns.count() / kExp10[9 - n]);
+            bp = Format64(bp, n, (n > 15) ? fs.count() * kExp10[n - 15]
+                                          : fs.count() / kExp10[15 - n]);
             if (*np == 'S') *--bp = '.';
           }
           if (*np == 'S') bp = Format02d(bp, al.cs.second());
@@ -467,16 +470,15 @@ const char* ParseZone(const char* dp, std::string* zone) {
   return dp;
 }
 
-const char* ParseSubSeconds(const char* dp,
-                            std::chrono::nanoseconds* subseconds) {
+const char* ParseSubSeconds(const char* dp, detail::femtoseconds* subseconds) {
   if (dp != nullptr) {
-    std::int64_t v = 0;
-    std::int64_t exp = 0;
+    std::int_fast64_t v = 0;
+    std::int_fast64_t exp = 0;
     const char* const bp = dp;
     while (const char* cp = strchr(kDigits, *dp)) {
       int d = static_cast<int>(cp - kDigits);
       if (d >= 10) break;
-      if (exp < 9) {
+      if (exp < 15) {
         exp += 1;
         v *= 10;
         v += d;
@@ -484,8 +486,8 @@ const char* ParseSubSeconds(const char* dp,
       ++dp;
     }
     if (dp != bp) {
-      v *= kExp10[9 - exp];
-      *subseconds = std::chrono::nanoseconds(v);
+      v *= kExp10[15 - exp];
+      *subseconds = detail::femtoseconds(v);
     } else {
       dp = nullptr;
     }
@@ -520,7 +522,7 @@ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
 // TODO: Support parsing year values beyond the width to tm_year.
 bool parse(const std::string& format, const std::string& input,
            const time_zone& tz, time_point<sys_seconds>* sec,
-           std::chrono::nanoseconds* ns) {
+           detail::femtoseconds* fs) {
   // The unparsed input.
   const char* data = input.c_str();  // NUL terminated
 
@@ -541,7 +543,7 @@ bool parse(const std::string& format, const std::string& input,
   tm.tm_wday = 4;  // Thu
   tm.tm_yday = 0;
   tm.tm_isdst = 0;
-  auto subseconds = std::chrono::nanoseconds(0);
+  auto subseconds = detail::femtoseconds::zero();
   int offset = kintmin;
   std::string zone = "UTC";
 
@@ -550,7 +552,7 @@ bool parse(const std::string& format, const std::string& input,
   bool afternoon = false;
 
   bool saw_percent_s = false;
-  std::int64_t percent_s_time = 0;
+  std::int_fast64_t percent_s = 0;
 
   // Steps through format, one specifier at a time.
   while (data != nullptr && *fmt != '\0') {
@@ -618,7 +620,7 @@ bool parse(const std::string& format, const std::string& input,
         data = ParseZone(data, &zone);
         continue;
       case 's':
-        data = ParseInt(data, 0, INT64_MIN, INT64_MAX, &percent_s_time);
+        data = ParseInt(data, 0, INT_FAST64_MIN, INT_FAST64_MAX, &percent_s);
         if (data != nullptr) saw_percent_s = true;
         continue;
       case 'E':
@@ -724,8 +726,8 @@ bool parse(const std::string& format, const std::string& input,
 
   // If we saw %s then we ignore anything else and return that time.
   if (saw_percent_s) {
-    *sec = FromUnixSeconds(percent_s_time);
-    *ns = std::chrono::nanoseconds::zero();
+    *sec = FromUnixSeconds(percent_s);
+    *fs = detail::femtoseconds::zero();
     return true;
   }
 
@@ -743,12 +745,12 @@ bool parse(const std::string& format, const std::string& input,
   if (tm.tm_sec == 60) {
     tm.tm_sec -= 1;
     offset -= 1;
-    subseconds = std::chrono::nanoseconds::zero();
+    subseconds = detail::femtoseconds::zero();
   }
 
-  std::int64_t year = tm.tm_year;
-  if (year > INT64_MAX - 1900) {
-    year = INT64_MAX;
+  cctz::year_t year = tm.tm_year;
+  if (year > std::numeric_limits<cctz::year_t>::max() - 1900) {
+    year = std::numeric_limits<cctz::year_t>::max();
   } else {
     year += 1900;
   }
@@ -766,7 +768,7 @@ bool parse(const std::string& format, const std::string& input,
   }
 
   *sec = ptz.lookup(cs).pre - sys_seconds(offset);
-  *ns = subseconds;
+  *fs = subseconds;
   return true;
 }
 

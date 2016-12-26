@@ -43,7 +43,7 @@ class TimeZoneIf {
 };
 
 // Converts tp to a count of seconds since the Unix epoch.
-inline std::int64_t ToUnixSeconds(const time_point<sys_seconds>& tp) {
+inline std::int_fast64_t ToUnixSeconds(const time_point<sys_seconds>& tp) {
   return (tp - std::chrono::time_point_cast<sys_seconds>(
                    std::chrono::system_clock::from_time_t(0)))
       .count();
@@ -51,7 +51,7 @@ inline std::int64_t ToUnixSeconds(const time_point<sys_seconds>& tp) {
 
 // Converts a count of seconds since the Unix epoch to a
 // time_point<sys_seconds>.
-inline time_point<sys_seconds> FromUnixSeconds(std::int64_t t) {
+inline time_point<sys_seconds> FromUnixSeconds(std::int_fast64_t t) {
   return std::chrono::time_point_cast<sys_seconds>(
              std::chrono::system_clock::from_time_t(0)) +
          sys_seconds(t);

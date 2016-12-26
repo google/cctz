@@ -327,7 +327,7 @@ class civil_time {
     if (n != std::numeric_limits<diff_t>::min()) {
       f_ = step(T{}, f_, -n);
     } else {
-      f_ = step(T(), step(T{}, f_, -(n + 1)), 1);
+      f_ = step(T{}, step(T{}, f_, -(n + 1)), 1);
     }
     return *this;
   }
