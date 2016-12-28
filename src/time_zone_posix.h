@@ -70,15 +70,15 @@ struct PosixTransition {
     DateFormat fmt;
     union {
       struct {
-        int16_t day;  // day of non-leap year [1:365]
+        int_fast16_t day;  // day of non-leap year [1:365]
       } j;
       struct {
-        int16_t day;  // day of year [0:365]
+        int_fast16_t day;  // day of year [0:365]
       } n;
       struct {
-        int8_t month;    // month of year [1:12]
-        int8_t week;     // week of month [1:5] (5==last)
-        int8_t weekday;  // 0==Sun, ..., 6=Sat
+        int_fast8_t month;    // month of year [1:12]
+        int_fast8_t week;     // week of month [1:5] (5==last)
+        int_fast8_t weekday;  // 0==Sun, ..., 6=Sat
       } m;
     };
   } date;
