@@ -56,6 +56,8 @@ class time_zone {
   time_zone(const time_zone&) = default;
   time_zone& operator=(const time_zone&) = default;
 
+  std::string name() const;
+
   // An absolute_lookup represents the civil time (cctz::civil_second) within
   // this time_zone at the given absolute time (time_point). There are
   // additionally a few other fields that may be useful when working with
@@ -138,6 +140,10 @@ class time_zone {
   explicit time_zone(const Impl* impl) : impl_(impl) {}
   const Impl* impl_ = nullptr;
 };
+
+// Relational operators.
+bool operator==(time_zone lhs, time_zone rhs);
+inline bool operator!=(time_zone lhs, time_zone rhs) { return !(lhs == rhs); }
 
 // Loads the named time zone. May perform I/O on the initial load.
 // If the name is invalid, or some other kind of error occurs, returns

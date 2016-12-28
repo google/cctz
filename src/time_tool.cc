@@ -117,7 +117,7 @@ void InstantInfo(const std::string& label, time_point<sys_seconds> when,
   const cctz::time_zone utc = cctz::utc_time_zone();  // might == zone
   const std::string time_label = "time_t";
   const std::string utc_label = "UTC";
-  const std::string zone_label = "in-tz";
+  const std::string zone_label = "in-tz";  // perhaps zone.name()?
   std::size_t width =
       2 + std::max(std::max(time_label.size(), utc_label.size()),
                    zone_label.size());
@@ -134,6 +134,7 @@ void InstantInfo(const std::string& label, time_point<sys_seconds> when,
 
 // Report everything we know about a cctz::civil_second (YMDHMS).
 int BreakdownInfo(const cctz::civil_second& cs, cctz::time_zone zone) {
+  std::cout << "tz: " << zone.name() << "\n";
   cctz::time_zone::civil_lookup cl = zone.lookup(cs);
   switch (cl.kind) {
     case cctz::time_zone::civil_lookup::UNIQUE: {
@@ -163,6 +164,7 @@ int BreakdownInfo(const cctz::civil_second& cs, cctz::time_zone zone) {
 
 // Report everything we know about a time_point<sys_seconds>.
 int TimeInfo(time_point<sys_seconds> when, cctz::time_zone zone) {
+  std::cout << "tz: " << zone.name() << "\n";
   std::cout << "kind: UNIQUE\n";
   InstantInfo("when", when, zone);
   return 0;

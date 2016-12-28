@@ -20,6 +20,27 @@
 
 namespace cctz {
 
+std::string time_zone::name() const {
+  return time_zone::Impl::get(*this).name();
+}
+
+time_zone::absolute_lookup time_zone::lookup(
+    const time_point<sys_seconds>& tp) const {
+  return time_zone::Impl::get(*this).BreakTime(tp);
+}
+
+time_zone::civil_lookup time_zone::lookup(const civil_second& cs) const {
+  return time_zone::Impl::get(*this).MakeTime(cs);
+}
+
+bool operator==(time_zone lhs, time_zone rhs) {
+  return &time_zone::Impl::get(lhs) == &time_zone::Impl::get(rhs);
+}
+
+bool load_time_zone(const std::string& name, time_zone* tz) {
+  return time_zone::Impl::LoadTimeZone(name, tz);
+}
+
 time_zone utc_time_zone() {
   return time_zone::Impl::UTC();
 }
@@ -43,19 +64,6 @@ time_zone local_time_zone() {
   free(tz_env);
 #endif
   return tz;
-}
-
-bool load_time_zone(const std::string& name, time_zone* tz) {
-  return time_zone::Impl::LoadTimeZone(name, tz);
-}
-
-time_zone::absolute_lookup time_zone::lookup(
-    const time_point<sys_seconds>& tp) const {
-  return time_zone::Impl::get(*this).BreakTime(tp);
-}
-
-time_zone::civil_lookup time_zone::lookup(const civil_second& cs) const {
-  return time_zone::Impl::get(*this).MakeTime(cs);
 }
 
 }  // namespace cctz

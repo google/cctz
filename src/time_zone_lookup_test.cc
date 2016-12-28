@@ -142,6 +142,7 @@ const char* const kTimeZoneNames[] = {
   "America/Eirunepe",
   "America/El_Salvador",
   "America/Ensenada",
+  "America/Fort_Nelson",
   "America/Fort_Wayne",
   "America/Fortaleza",
   "America/Glace_Bay",
@@ -270,10 +271,12 @@ const char* const kTimeZoneNames[] = {
   "Asia/Aqtobe",
   "Asia/Ashgabat",
   "Asia/Ashkhabad",
+  "Asia/Atyrau",
   "Asia/Baghdad",
   "Asia/Bahrain",
   "Asia/Baku",
   "Asia/Bangkok",
+  "Asia/Barnaul",
   "Asia/Beirut",
   "Asia/Bishkek",
   "Asia/Brunei",
@@ -289,6 +292,7 @@ const char* const kTimeZoneNames[] = {
   "Asia/Dili",
   "Asia/Dubai",
   "Asia/Dushanbe",
+  "Asia/Famagusta",
   "Asia/Gaza",
   "Asia/Harbin",
   "Asia/Hebron",
@@ -345,6 +349,7 @@ const char* const kTimeZoneNames[] = {
   "Asia/Thimbu",
   "Asia/Thimphu",
   "Asia/Tokyo",
+  "Asia/Tomsk",
   "Asia/Ujung_Pandang",
   "Asia/Ulaanbaatar",
   "Asia/Ulan_Bator",
@@ -353,6 +358,7 @@ const char* const kTimeZoneNames[] = {
   "Asia/Vientiane",
   "Asia/Vladivostok",
   "Asia/Yakutsk",
+  "Asia/Yangon",
   "Asia/Yekaterinburg",
   "Asia/Yerevan",
   "Atlantic/Azores",
@@ -450,6 +456,7 @@ const char* const kTimeZoneNames[] = {
   "Etc/Zulu",
   "Europe/Amsterdam",
   "Europe/Andorra",
+  "Europe/Astrakhan",
   "Europe/Athens",
   "Europe/Belfast",
   "Europe/Belgrade",
@@ -470,6 +477,7 @@ const char* const kTimeZoneNames[] = {
   "Europe/Jersey",
   "Europe/Kaliningrad",
   "Europe/Kiev",
+  "Europe/Kirov",
   "Europe/Lisbon",
   "Europe/Ljubljana",
   "Europe/London",
@@ -490,6 +498,7 @@ const char* const kTimeZoneNames[] = {
   "Europe/Samara",
   "Europe/San_Marino",
   "Europe/Sarajevo",
+  "Europe/Saratov",
   "Europe/Simferopol",
   "Europe/Skopje",
   "Europe/Sofia",
@@ -497,6 +506,7 @@ const char* const kTimeZoneNames[] = {
   "Europe/Tallinn",
   "Europe/Tirane",
   "Europe/Tiraspol",
+  "Europe/Ulyanovsk",
   "Europe/Uzhgorod",
   "Europe/Vaduz",
   "Europe/Vatican",
@@ -650,6 +660,7 @@ TEST(TimeZones, LoadZonesConcurrently) {
     time_zone tz;
     for (const char* const* np = kTimeZoneNames; *np != nullptr; ++np) {
       EXPECT_TRUE(load_time_zone(*np, &tz));
+      EXPECT_EQ(*np, tz.name());
     }
   };
 
@@ -687,6 +698,21 @@ TEST(TimeZone, Failures) {
   EXPECT_FALSE(load_time_zone("", &tz));
   EXPECT_EQ(system_clock::from_time_t(0),
             convert(civil_second(1970, 1, 1, 0, 0, 0), tz));  // UTC
+}
+
+TEST(TimeZone, Equality) {
+  time_zone a, b;
+  EXPECT_EQ(a, b);
+  EXPECT_EQ(a.name(), b.name());
+
+  time_zone implicit_utc;
+  time_zone explicit_utc = utc_time_zone();
+  EXPECT_EQ(implicit_utc, explicit_utc);
+  EXPECT_EQ(implicit_utc.name(), explicit_utc.name());
+
+  time_zone la = LoadZone("America/Los_Angeles");
+  time_zone nyc = LoadZone("America/New_York");
+  EXPECT_NE(la, nyc);
 }
 
 TEST(StdChronoTimePoint, TimeTAlignment) {
