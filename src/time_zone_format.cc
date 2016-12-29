@@ -519,7 +519,7 @@ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
 // We also handle the %z specifier to accommodate platforms that do not
 // support the tm_gmtoff extension to std::tm.  %Z is parsed but ignored.
 //
-// TODO: Support parsing year values beyond the width to tm_year.
+// TODO: Support parsing year values beyond the width of tm_year.
 bool parse(const std::string& format, const std::string& input,
            const time_zone& tz, time_point<sys_seconds>* sec,
            detail::femtoseconds* fs) {

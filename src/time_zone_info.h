@@ -129,7 +129,7 @@ class TimeZoneInfo : public TimeZoneIf {
 
   std::vector<Transition> transitions_;  // ordered by unix_time and date_time
   std::vector<TransitionType> transition_types_;  // distinct transition types
-  int default_transition_type_;  // for before the first transition
+  std::uint_fast8_t default_transition_type_;  // for before first transition
   std::string abbreviations_;  // all the NUL-terminated abbreviations
 
   std::string future_spec_;  // for after the last zic transition

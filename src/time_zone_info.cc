@@ -273,7 +273,7 @@ void TimeZoneInfo::ExtendTransitions(const std::string& name,
   if (posix.dst_abbr.empty()) {  // std only
     // The future specification should match the last/default transition,
     // and that means that handling the future will fall out naturally.
-    int index = default_transition_type_;
+    std::uint_fast8_t index = default_transition_type_;
     if (hdr.timecnt != 0) index = transitions_[hdr.timecnt - 1].type_index;
     const TransitionType& tt(transition_types_[index]);
     CheckTransition(name, tt, posix.std_offset, false, posix.std_abbr);
@@ -556,6 +556,8 @@ time_zone::absolute_lookup TimeZoneInfo::LocalTime(
   time_zone::absolute_lookup al;
 
   // A civil time in "+offset" looks like (time+offset) in UTC.
+  // Note: We perform two additions in the civil_second domain to
+  // sidestep the chance of overflow in (unix_time + tt.utc_offset).
   al.cs = unix_epoch + unix_time;
   al.cs += tt.utc_offset;
 
@@ -582,7 +584,7 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
   std::int_fast64_t unix_time = ToUnixSeconds(tp);
   const std::size_t timecnt = transitions_.size();
   if (timecnt == 0 || unix_time < transitions_[0].unix_time) {
-    const int type_index = default_transition_type_;
+    const std::uint_fast8_t type_index = default_transition_type_;
     return LocalTime(unix_time, transition_types_[type_index]);
   }
   if (unix_time >= transitions_[timecnt - 1].unix_time) {
@@ -598,7 +600,7 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
       al.cs = YearShift(al.cs, shift * 400);
       return al;
     }
-    const int type_index = transitions_[timecnt - 1].type_index;
+    const std::uint_fast8_t type_index = transitions_[timecnt - 1].type_index;
     return LocalTime(unix_time, transition_types_[type_index]);
   }
 
@@ -606,7 +608,7 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
   if (0 < hint && hint < timecnt) {
     if (unix_time < transitions_[hint].unix_time) {
       if (!(unix_time < transitions_[hint - 1].unix_time)) {
-        const int type_index = transitions_[hint - 1].type_index;
+        const std::uint_fast8_t type_index = transitions_[hint - 1].type_index;
         return LocalTime(unix_time, transition_types_[type_index]);
       }
     }
@@ -617,7 +619,7 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
   const Transition* tr = std::upper_bound(begin, begin + timecnt, target,
                                           Transition::ByUnixTime());
   local_time_hint_.store(tr - begin, std::memory_order_relaxed);
-  const int type_index = (--tr)->type_index;
+  const std::uint_fast8_t type_index = (--tr)->type_index;
   return LocalTime(unix_time, transition_types_[type_index]);
 }
 
