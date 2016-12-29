@@ -42,7 +42,7 @@ static long get_timezone() {
 }
 static std::string get_tzname(int index) {
   char time_zone_name[32] = {0};
-  size_t size_in_bytes = sizeof time_zone_name;
+  std::size_t size_in_bytes = sizeof time_zone_name;
   _get_tzname(&size_in_bytes, time_zone_name, size_in_bytes, index);
   return time_zone_name;
 }

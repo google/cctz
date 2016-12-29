@@ -63,7 +63,7 @@ const char* ParseAbbr(const char* p, std::string* abbr) {
 
 // offset = [+|-]hh[:mm[:ss]] (aggregated into single seconds value)
 const char* ParseOffset(const char* p, int min_hour, int max_hour, int sign,
-                        int* offset) {
+                        std::int_fast32_t* offset) {
   if (p == nullptr) return nullptr;
   if (*p == '+' || *p == '-') {
     if (*p++ == '-') sign = -sign;
@@ -71,6 +71,7 @@ const char* ParseOffset(const char* p, int min_hour, int max_hour, int sign,
   int hours = 0;
   int minutes = 0;
   int seconds = 0;
+
   p = ParseInt(p, min_hour, max_hour, &hours);
   if (p == nullptr) return nullptr;
   if (*p == ':') {

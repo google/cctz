@@ -50,7 +50,7 @@ namespace {
 
 // Convert errnum to a message, using buf[buflen] if necessary.
 // buf must be non-null, and buflen non-zero.
-char* errmsg(int errnum, char* buf, size_t buflen) {
+char* errmsg(int errnum, char* buf, std::size_t buflen) {
 #if defined(_MSC_VER)
   strerror_s(buf, buflen, errnum);
   return buf;
@@ -67,54 +67,57 @@ char* errmsg(int errnum, char* buf, size_t buflen) {
 
 // Wrap the tzfile.h isleap() macro with an inline function, which will
 // then have normal argument-passing semantics (i.e., single evaluation).
-inline bool IsLeap(std::int64_t year) { return isleap(year); }
+inline bool IsLeap(cctz::year_t year) { return isleap(year); }
 
 // The day offsets of the beginning of each (1-based) month in non-leap
 // and leap years respectively. That is, sigma[1:n]:kDaysPerMonth[][i].
 // For example, in a leap year there are 335 days before December.
-const int16_t kMonthOffsets[2][1 + MONSPERYEAR + 1] = {
+const std::int_least16_t kMonthOffsets[2][1 + MONSPERYEAR + 1] = {
   {-1, 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365},
   {-1, 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366},
 };
 
 // 400-year chunks always have 146097 days (20871 weeks).
-const std::int64_t kSecPer400Years = 146097LL * SECSPERDAY;
+const std::int_least64_t kSecPer400Years = 146097LL * SECSPERDAY;
 
 // The number of seconds in non-leap and leap years respectively.
-const int32_t kSecPerYear[2] = {
+const std::int_least32_t kSecPerYear[2] = {
   DAYSPERNYEAR * SECSPERDAY,
   DAYSPERLYEAR * SECSPERDAY,
 };
 
 // Like kSecPerYear[] but scaled down by a factor of SECSPERDAY.
-const int32_t kDaysPerYear[2] = {DAYSPERNYEAR, DAYSPERLYEAR};
+const std::int_least32_t kDaysPerYear[2] = {DAYSPERNYEAR, DAYSPERLYEAR};
 
 // January 1st at 00:00:00 in the epoch year.
 const civil_second unix_epoch(EPOCH_YEAR, 1, 1, 0, 0, 0);
 
+// Single-byte, unsigned numeric values are encoded directly.
+inline std::uint_fast8_t Decode8(const char* cp) {
+  return static_cast<std::uint_fast8_t>(*cp) & 0xff;
+}
+
 // Multi-byte, numeric values are encoded using a MSB first,
 // twos-complement representation. These helpers decode, from
 // the given address, 4-byte and 8-byte values respectively.
-int32_t Decode32(const char* cp) {
-  uint32_t v = 0;
-  for (int i = 0; i != (32 / 8); ++i)
-    v = (v << 8) | (static_cast<uint8_t>(*cp++) & 0xff);
+std::int_fast32_t Decode32(const char* cp) {
+  std::uint_fast32_t v = 0;
+  for (int i = 0; i != (32 / 8); ++i) v = (v << 8) | Decode8(cp++);
   if ((v & ~(UINT32_MAX >> 1)) == 0) return v;
-  return -static_cast<int32_t>(~v) - 1;
+  return -static_cast<std::int_fast32_t>(~v) - 1;
 }
 
-std::int64_t Decode64(const char* cp) {
-  uint64_t v = 0;
-  for (int i = 0; i != (64 / 8); ++i)
-    v = (v << 8) | (static_cast<uint8_t>(*cp++) & 0xff);
+std::int_fast64_t Decode64(const char* cp) {
+  std::uint_fast64_t v = 0;
+  for (int i = 0; i != (64 / 8); ++i) v = (v << 8) | Decode8(cp++);
   if ((v & ~(UINT64_MAX >> 1)) == 0) return v;
-  return -static_cast<std::int64_t>(~v) - 1;
+  return -static_cast<std::int_fast64_t>(~v) - 1;
 }
 
 // Generate a year-relative offset for a PosixTransition.
-std::int64_t TransOffset(bool leap_year, int jan1_weekday,
-                         const PosixTransition& pt) {
-  int days = 0;
+std::int_fast64_t TransOffset(bool leap_year, int jan1_weekday,
+                              const PosixTransition& pt) {
+  std::int_fast64_t days = 0;
   switch (pt.date.fmt) {
     case PosixTransition::J: {
       days = pt.date.j.day;
@@ -142,7 +145,7 @@ std::int64_t TransOffset(bool leap_year, int jan1_weekday,
   return (days * SECSPERDAY) + pt.time.offset;
 }
 
-inline time_zone::civil_lookup MakeUnique(std::int64_t unix_time) {
+inline time_zone::civil_lookup MakeUnique(std::int_fast64_t unix_time) {
   time_zone::civil_lookup cl;
   cl.pre = cl.trans = cl.post = FromUnixSeconds(unix_time);
   cl.kind = time_zone::civil_lookup::UNIQUE;
@@ -169,7 +172,7 @@ inline time_zone::civil_lookup MakeRepeated(const Transition& tr,
   return cl;
 }
 
-civil_second YearShift(const civil_second& cs, std::int64_t year_shift) {
+civil_second YearShift(const civil_second& cs, cctz::year_t year_shift) {
   // TODO: How do we do this while avoiding any normalization tests?
   return civil_second(cs.year() + year_shift, cs.month(), cs.day(),
                       cs.hour(), cs.minute(), cs.second());
@@ -183,7 +186,7 @@ inline void DateTime::Assign(const civil_second& cs) {
 }
 
 // What (no leap-seconds) UTC+seconds zoneinfo would look like.
-void TimeZoneInfo::ResetToBuiltinUTC(int seconds) {
+void TimeZoneInfo::ResetToBuiltinUTC(std::int_fast32_t seconds) {
   transition_types_.resize(1);
   transition_types_[0].utc_offset = seconds;
   transition_types_[0].is_dst = false;
@@ -214,8 +217,8 @@ void TimeZoneInfo::Header::Build(const tzhead& tzh) {
 
 // How many bytes of data are associated with this header. The result
 // depends upon whether this is a section with 4-byte or 8-byte times.
-size_t TimeZoneInfo::Header::DataLength(size_t time_len) const {
-  size_t len = 0;
+std::size_t TimeZoneInfo::Header::DataLength(std::size_t time_len) const {
+  std::size_t len = 0;
   len += (time_len + 1) * timecnt;  // unix_time + type_index
   len += (4 + 1 + 1) * typecnt;     // utc_offset + is_dst + abbr_index
   len += 1 * charcnt;               // abbreviations
@@ -227,8 +230,9 @@ size_t TimeZoneInfo::Header::DataLength(size_t time_len) const {
 
 // Check that the TransitionType has the expected offset/is_dst/abbreviation.
 void TimeZoneInfo::CheckTransition(const std::string& name,
-                                   const TransitionType& tt, int32_t offset,
-                                   bool is_dst, const std::string& abbr) const {
+                                   const TransitionType& tt,
+                                   std::int_fast32_t offset, bool is_dst,
+                                   const std::string& abbr) const {
   if (tt.utc_offset != offset || tt.is_dst != is_dst ||
       &abbreviations_[tt.abbr_index] != abbr) {
     std::clog << name << ": Transition"
@@ -242,8 +246,8 @@ void TimeZoneInfo::CheckTransition(const std::string& name,
 // zic(8) can generate no-op transitions when a zone changes rules at an
 // instant when there is actually no discontinuity.  So we check whether
 // two transitions have equivalent types (same offset/is_dst/abbr).
-bool TimeZoneInfo::EquivTransitions(uint8_t tt1_index,
-                                    uint8_t tt2_index) const {
+bool TimeZoneInfo::EquivTransitions(std::uint_fast8_t tt1_index,
+                                    std::uint_fast8_t tt2_index) const {
   if (tt1_index == tt2_index) return true;
   const TransitionType& tt1(transition_types_[tt1_index]);
   const TransitionType& tt2(transition_types_[tt2_index]);
@@ -281,8 +285,8 @@ void TimeZoneInfo::ExtendTransitions(const std::string& name,
     std::clog << name << ": Too few transitions for POSIX spec\n";
     return;
   }
-  uint8_t index = hdr.timecnt - 1;
-  const uint8_t type_index = transitions_[index].type_index;
+  std::uint_fast8_t index = hdr.timecnt - 1;
+  const std::uint_fast8_t type_index = transitions_[index].type_index;
   while (EquivTransitions(type_index, transitions_[index - 1].type_index)) {
     if (--index == 0) {
       std::clog << name << ": Too few types for POSIX spec\n";
@@ -322,19 +326,19 @@ void TimeZoneInfo::ExtendTransitions(const std::string& name,
   const PosixTransition& pt0(tt0.is_dst ? posix.dst_start : posix.dst_end);
   Transition* tr = &transitions_[hdr.timecnt];  // next trans to fill
   const civil_day jan1(last_year_, 1, 1);
-  std::int64_t jan1_time = civil_second(jan1) - unix_epoch;
+  std::int_fast64_t jan1_time = civil_second(jan1) - unix_epoch;
   int jan1_weekday = (static_cast<int>(get_weekday(jan1)) + 1) % DAYSPERWEEK;
   bool leap_year = IsLeap(last_year_);
-  for (const std::int64_t limit = last_year_ + 400; last_year_ < limit;) {
+  for (const cctz::year_t limit = last_year_ + 400; last_year_ < limit;) {
     last_year_ += 1;  // an additional year of generated transitions
     jan1_time += kSecPerYear[leap_year];
     jan1_weekday = (jan1_weekday + kDaysPerYear[leap_year]) % DAYSPERWEEK;
     leap_year = !leap_year && IsLeap(last_year_);
-    const std::int64_t tr1_offset = TransOffset(leap_year, jan1_weekday, pt1);
-    tr->unix_time = jan1_time + tr1_offset - tt0.utc_offset;
+    tr->unix_time =
+        jan1_time + TransOffset(leap_year, jan1_weekday, pt1) - tt0.utc_offset;
     tr++->type_index = tr1.type_index;
-    const std::int64_t tr0_offset = TransOffset(leap_year, jan1_weekday, pt0);
-    tr->unix_time = jan1_time + tr0_offset - tt1.utc_offset;
+    tr->unix_time =
+        jan1_time + TransOffset(leap_year, jan1_weekday, pt0) - tt1.utc_offset;
     tr++->type_index = tr0.type_index;
   }
 }
@@ -348,7 +352,7 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
     return false;
   Header hdr;
   hdr.Build(tzh);
-  size_t time_len = 4;
+  std::size_t time_len = 4;
   if (tzh.tzh_version[0] != '\0') {
     // Skip the 4-byte data.
     if (fseek(fp, static_cast<long>(hdr.DataLength(time_len)), SEEK_CUR) != 0)
@@ -378,7 +382,7 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
     return false;
 
   // Read the data into a local buffer.
-  size_t len = hdr.DataLength(time_len);
+  std::size_t len = hdr.DataLength(time_len);
   std::vector<char> tbuf(len);
   if (fread(tbuf.data(), 1, len, fp) != len)
     return false;
@@ -386,7 +390,7 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
 
   // Decode and validate the transitions.
   transitions_.resize(hdr.timecnt);
-  for (int32_t i = 0; i != hdr.timecnt; ++i) {
+  for (std::int_fast32_t i = 0; i != hdr.timecnt; ++i) {
     transitions_[i].unix_time = (time_len == 4) ? Decode32(bp) : Decode64(bp);
     bp += time_len;
     if (i != 0) {
@@ -396,8 +400,8 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
     }
   }
   bool seen_type_0 = false;
-  for (int32_t i = 0; i != hdr.timecnt; ++i) {
-    transitions_[i].type_index = (static_cast<uint8_t>(*bp++) & 0xff);
+  for (std::int_fast32_t i = 0; i != hdr.timecnt; ++i) {
+    transitions_[i].type_index = Decode8(bp++);
     if (transitions_[i].type_index >= hdr.typecnt)
       return false;
     if (transitions_[i].type_index == 0)
@@ -406,14 +410,14 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
 
   // Decode and validate the transition types.
   transition_types_.resize(hdr.typecnt);
-  for (int32_t i = 0; i != hdr.typecnt; ++i) {
+  for (std::int_fast32_t i = 0; i != hdr.typecnt; ++i) {
     transition_types_[i].utc_offset = Decode32(bp);
     if (transition_types_[i].utc_offset >= SECSPERDAY ||
         transition_types_[i].utc_offset <= -SECSPERDAY)
       return false;
     bp += 4;
-    transition_types_[i].is_dst = ((static_cast<uint8_t>(*bp++) & 0xff) != 0);
-    transition_types_[i].abbr_index = (static_cast<uint8_t>(*bp++) & 0xff);
+    transition_types_[i].is_dst = (Decode8(bp++) != 0);
+    transition_types_[i].abbr_index = Decode8(bp++);
     if (transition_types_[i].abbr_index >= hdr.charcnt)
       return false;
   }
@@ -421,7 +425,7 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   // Determine the before-first-transition type.
   default_transition_type_ = 0;
   if (seen_type_0 && hdr.timecnt != 0) {
-    uint8_t index = 0;
+    std::uint_fast8_t index = 0;
     if (transition_types_[0].is_dst) {
       index = transitions_[0].type_index;
       while (index != 0 && transition_types_[index].is_dst)
@@ -466,7 +470,7 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   // Compute the local civil time for each transition and the preceeding
   // second. These will be used for reverse conversions in MakeTime().
   const TransitionType* ttp = &transition_types_[default_transition_type_];
-  for (size_t i = 0; i != transitions_.size(); ++i) {
+  for (std::size_t i = 0; i != transitions_.size(); ++i) {
     Transition& tr(transitions_[i]);
     tr.prev_date_time.Assign(LocalTime(tr.unix_time, *ttp).cs);
     tr.prev_date_time.offset -= 1;
@@ -548,7 +552,7 @@ bool TimeZoneInfo::Load(const std::string& name) {
 
 // BreakTime() translation for a particular transition type.
 time_zone::absolute_lookup TimeZoneInfo::LocalTime(
-    std::int64_t unix_time, const TransitionType& tt) const {
+    std::int_fast64_t unix_time, const TransitionType& tt) const {
   time_zone::absolute_lookup al;
 
   // A civil time in "+offset" looks like (time+offset) in UTC.
@@ -564,8 +568,8 @@ time_zone::absolute_lookup TimeZoneInfo::LocalTime(
 }
 
 // MakeTime() translation with a conversion-preserving offset.
-time_zone::civil_lookup TimeZoneInfo::TimeLocal(const civil_second& cs,
-                                                std::int64_t offset) const {
+time_zone::civil_lookup TimeZoneInfo::TimeLocal(
+    const civil_second& cs, std::int_fast64_t offset) const {
   time_zone::civil_lookup cl = MakeTime(cs);
   cl.pre += sys_seconds(offset);
   cl.trans += sys_seconds(offset);
@@ -575,8 +579,8 @@ time_zone::civil_lookup TimeZoneInfo::TimeLocal(const civil_second& cs,
 
 time_zone::absolute_lookup TimeZoneInfo::BreakTime(
     const time_point<sys_seconds>& tp) const {
-  std::int64_t unix_time = ToUnixSeconds(tp);
-  const size_t timecnt = transitions_.size();
+  std::int_fast64_t unix_time = ToUnixSeconds(tp);
+  const std::size_t timecnt = transitions_.size();
   if (timecnt == 0 || unix_time < transitions_[0].unix_time) {
     const int type_index = default_transition_type_;
     return LocalTime(unix_time, transition_types_[type_index]);
@@ -586,8 +590,9 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
     // future_spec_, shift back to a supported year using the 400-year
     // cycle of calendaric equivalence and then compensate accordingly.
     if (extended_) {
-      const std::int64_t diff = unix_time - transitions_[timecnt - 1].unix_time;
-      const std::int64_t shift = diff / kSecPer400Years + 1;
+      const std::int_fast64_t diff =
+          unix_time - transitions_[timecnt - 1].unix_time;
+      const cctz::year_t shift = diff / kSecPer400Years + 1;
       const auto d = sys_seconds(shift * kSecPer400Years);
       time_zone::absolute_lookup al = BreakTime(tp - d);
       al.cs = YearShift(al.cs, shift * 400);
@@ -597,7 +602,7 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
     return LocalTime(unix_time, transition_types_[type_index]);
   }
 
-  const size_t hint = local_time_hint_.load(std::memory_order_relaxed);
+  const std::size_t hint = local_time_hint_.load(std::memory_order_relaxed);
   if (0 < hint && hint < timecnt) {
     if (unix_time < transitions_[hint].unix_time) {
       if (!(unix_time < transitions_[hint - 1].unix_time)) {
@@ -621,12 +626,12 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
   DateTime& dt(target.date_time);
   dt.Assign(cs);
 
-  const size_t timecnt = transitions_.size();
+  const std::size_t timecnt = transitions_.size();
   if (timecnt == 0) {
     // Use the default offset.
-    int32_t offset = transition_types_[default_transition_type_].utc_offset;
-    std::int64_t unix_time = (dt - DateTime{0}) - offset;
-    return MakeUnique(unix_time);
+    const std::int_fast32_t default_offset =
+        transition_types_[default_transition_type_].utc_offset;
+    return MakeUnique((dt - DateTime{0}) - default_offset);
   }
 
   // Find the first transition after our target date/time.
@@ -638,7 +643,7 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
   } else if (!(dt < transitions_[timecnt - 1].date_time)) {
     tr = end;
   } else {
-    const size_t hint = time_local_hint_.load(std::memory_order_relaxed);
+    const std::size_t hint = time_local_hint_.load(std::memory_order_relaxed);
     if (0 < hint && hint < timecnt) {
       if (dt < transitions_[hint].date_time) {
         if (!(dt < transitions_[hint - 1].date_time)) {
@@ -655,9 +660,9 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
   if (tr == begin) {
     if (!(tr->prev_date_time < dt)) {
       // Before first transition, so use the default offset.
-      int offset = transition_types_[default_transition_type_].utc_offset;
-      std::int64_t unix_time = (dt - DateTime{0}) - offset;
-      return MakeUnique(unix_time);
+      const std::int_fast32_t default_offset =
+          transition_types_[default_transition_type_].utc_offset;
+      return MakeUnique((dt - DateTime{0}) - default_offset);
     }
     // tr->prev_date_time < dt < tr->date_time
     return MakeSkipped(*tr, dt);
@@ -669,11 +674,10 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
       // future_spec_, shift back to a supported year using the 400-year
       // cycle of calendaric equivalence and then compensate accordingly.
       if (extended_ && cs.year() > last_year_) {
-        const std::int64_t shift = (cs.year() - last_year_) / 400 + 1;
+        const cctz::year_t shift = (cs.year() - last_year_) / 400 + 1;
         return TimeLocal(YearShift(cs, shift * -400), shift * kSecPer400Years);
       }
-      std::int64_t unix_time = tr->unix_time + (dt - tr->date_time);
-      return MakeUnique(unix_time);
+      return MakeUnique(tr->unix_time + (dt - tr->date_time));
     }
     // tr->date_time <= dt <= tr->prev_date_time
     return MakeRepeated(*tr, dt);
@@ -690,8 +694,7 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
   }
 
   // In between transitions.
-  std::int64_t unix_time = tr->unix_time + (dt - tr->date_time);
-  return MakeUnique(unix_time);
+  return MakeUnique(tr->unix_time + (dt - tr->date_time));
 }
 
 }  // namespace cctz

@@ -991,23 +991,17 @@ TEST(CivilTime, LeapYears) {
       {2100, 365, {3, 1}},
   };
 
-  for (size_t i = 0; i < (sizeof kLeapYearTable) / (sizeof kLeapYearTable[0]);
-       ++i) {
-    const int y = kLeapYearTable[i].year;
-    const int m = kLeapYearTable[i].leap_day.month;
-    const int d = kLeapYearTable[i].leap_day.day;
-    const int n = kLeapYearTable[i].days;
-
+  for (const auto& e : kLeapYearTable) {
     // Tests incrementing through the leap day.
-    const civil_day feb28(y, 2, 28);
+    const civil_day feb28(e.year, 2, 28);
     const civil_day next_day = feb28 + 1;
-    EXPECT_EQ(m, next_day.month());
-    EXPECT_EQ(d, next_day.day());
+    EXPECT_EQ(e.leap_day.month, next_day.month());
+    EXPECT_EQ(e.leap_day.day, next_day.day());
 
     // Tests difference in days of leap years.
     const civil_year year(feb28);
     const civil_year next_year = year + 1;
-    EXPECT_EQ(n, civil_day(next_year) - civil_day(year));
+    EXPECT_EQ(e.days, civil_day(next_year) - civil_day(year));
   }
 }
 

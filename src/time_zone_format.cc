@@ -154,9 +154,9 @@ void FormatTM(std::string* out, const std::string& fmt, const std::tm& tm) {
   // the following code grows the buffer size from 2x the format string
   // length up to 32x.
   for (int i = 2; i != 32; i *= 2) {
-    size_t buf_size = fmt.size() * i;
+    std::size_t buf_size = fmt.size() * i;
     std::vector<char> buf(buf_size);
-    if (size_t len = strftime(&buf[0], buf_size, fmt.c_str(), &tm)) {
+    if (std::size_t len = strftime(&buf[0], buf_size, fmt.c_str(), &tm)) {
       out->append(&buf[0], len);
       return;
     }
@@ -301,7 +301,7 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
     // If the new pending text is all percents, copy out one
     // percent for every matched pair, then skip those pairs.
     if (cur != start && pending == start) {
-      size_t escaped = (cur - pending) / 2;
+      std::size_t escaped = (cur - pending) / 2;
       result.append(pending, escaped);
       pending += escaped * 2;
       // Also copy out a single trailing percent.

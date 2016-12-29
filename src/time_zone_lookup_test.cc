@@ -665,7 +665,7 @@ TEST(TimeZones, LoadZonesConcurrently) {
   };
 
   std::vector<std::thread> threads;
-  for (size_t i = 0; i != 256; ++i) {
+  for (std::size_t i = 0; i != 256; ++i) {
     std::promise<void> started;
     threads.emplace_back(load_zones, &started);
     started.get_future().wait();
