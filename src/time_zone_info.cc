@@ -280,21 +280,8 @@ void TimeZoneInfo::ExtendTransitions(const std::string& name,
     return;
   }
 
-  // Locate the last (real) change between transition types.
   if (hdr.timecnt < 2) {
     std::clog << name << ": Too few transitions for POSIX spec\n";
-    return;
-  }
-  std::uint_fast8_t index = hdr.timecnt - 1;
-  const std::uint_fast8_t type_index = transitions_[index].type_index;
-  while (EquivTransitions(type_index, transitions_[index - 1].type_index)) {
-    if (--index == 0) {
-      std::clog << name << ": Too few types for POSIX spec\n";
-      return;
-    }
-  }
-  if (transitions_[index - 1].unix_time < 0) {
-    std::clog << name << ": Old transitions for POSIX spec\n";
     return;
   }
 
@@ -307,9 +294,10 @@ void TimeZoneInfo::ExtendTransitions(const std::string& name,
 
   // The future specification should match the last two transitions,
   // and those transitions should have different is_dst flags but be
-  // in the same calendar year.
-  const Transition& tr0(transitions_[index]);
-  const Transition& tr1(transitions_[index - 1]);
+  // in the same year.
+  // TODO: Investigate the actual guarantees made by zic.
+  const Transition& tr0(transitions_[hdr.timecnt - 1]);
+  const Transition& tr1(transitions_[hdr.timecnt - 2]);
   const TransitionType& tt0(transition_types_[tr0.type_index]);
   const TransitionType& tt1(transition_types_[tr1.type_index]);
   const TransitionType& spring(tt0.is_dst ? tt0 : tt1);
@@ -463,6 +451,19 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   }
 
   // We don't check for EOF so that we're forwards compatible.
+
+  // Trim redundant transitions. zic may have added these to work around
+  // differences between the glibc and reference implementations (see
+  // zic.c:dontmerge) and the Qt library (see zic.c:WORK_AROUND_QTBUG_53071).
+  // For us, they just get in the way when we do future_spec_ extension.
+  while (hdr.timecnt > 1) {
+    if (!EquivTransitions(transitions_[hdr.timecnt - 1].type_index,
+                          transitions_[hdr.timecnt - 2].type_index)) {
+      break;
+    }
+    hdr.timecnt -= 1;
+  }
+  transitions_.resize(hdr.timecnt);
 
   // Extend the transitions using the future specification.
   ExtendTransitions(name, hdr);
