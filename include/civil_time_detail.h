@@ -246,6 +246,27 @@ CONSTEXPR_F diff_t ymd_ord(year_t y, month_t m, day_t d) noexcept {
   return era * 146097 + doe - 719468;
 }
 
+// Returns the difference in days between two normalized Y-M-D tuples.
+// ymd_ord() will encounter integer overflow given extreme year values,
+// yet the difference between two such extreme values may actually be
+// small, so we take a little care to avoid overflow when possible by
+// exploiting the 146097-day cycle.
+CONSTEXPR_F diff_t day_difference(year_t y1, month_t m1, day_t d1,
+                                  year_t y2, month_t m2, day_t d2) {
+  const diff_t a_c4_off = y1 % 400;
+  const diff_t b_c4_off = y2 % 400;
+  diff_t c4_diff = (y1 - a_c4_off) - (y2 - b_c4_off);
+  diff_t delta = ymd_ord(a_c4_off, m1, d1) - ymd_ord(b_c4_off, m2, d2);
+  if (c4_diff > 0 && delta < 0) {
+    delta += 2 * 146097;
+    c4_diff -= 2 * 400;
+  } else if (c4_diff < 0 && delta > 0) {
+    delta -= 2 * 146097;
+    c4_diff += 2 * 400;
+  }
+  return (c4_diff / 400 * 146097) + delta;
+}
+
 }  // namespace impl
 
 // Returns the difference between fields structs using the indicated unit.
@@ -256,9 +277,7 @@ CONSTEXPR_F diff_t difference(month_tag, fields f1, fields f2) noexcept {
   return difference(year_tag{}, f1, f2) * 12 + (f1.m - f2.m);
 }
 CONSTEXPR_F diff_t difference(day_tag, fields f1, fields f2) noexcept {
-  // TODO: It is possible to get the right answer despite year values that
-  // cause overflow in ymd_ord().  For example, Y-01-02 - Y-01-01 == 1.
-  return impl::ymd_ord(f1.y, f1.m, f1.d) - impl::ymd_ord(f2.y, f2.m, f2.d);
+  return impl::day_difference(f1.y, f1.m, f1.d, f2.y, f2.m, f2.d);
 }
 CONSTEXPR_F diff_t difference(hour_tag, fields f1, fields f2) noexcept {
   return difference(day_tag{}, f1, f2) * 24 + (f1.hh - f2.hh);

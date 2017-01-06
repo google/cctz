@@ -223,11 +223,49 @@ TEST(CivilTime, Subtraction) {
   static_assert(cs2.second() == 22, "Subtraction.second");
 }
 
-TEST(CivilTime, Diff) {
+TEST(CivilTime, Difference) {
   constexpr civil_day cd1(2016, 1, 28);
   constexpr civil_day cd2(2015, 1, 28);
   constexpr int diff = cd1 - cd2;
-  static_assert(diff == 365, "Diff");
+  static_assert(diff == 365, "Difference");
+}
+
+// NOTE: Run this with --copt=-ftrapv to detect overflow problems.
+TEST(CivilTime, DifferenceWithHugeYear) {
+  {
+    constexpr civil_day d1(9223372036854775807, 1, 1);
+    constexpr civil_day d2(9223372036854775807, 12, 31);
+    static_assert(d2 - d1 == 364, "DifferenceWithHugeYear");
+  }
+  {
+    constexpr civil_day d1(-9223372036854775807 - 1, 1, 1);
+    constexpr civil_day d2(-9223372036854775807 - 1, 12, 31);
+    static_assert(d2 - d1 == 365, "DifferenceWithHugeYear");
+  }
+  {
+    // Check the limits of the return value at the end of the year range.
+    constexpr civil_day d1(9223372036854775807, 1, 1);
+    constexpr civil_day d2(9198119301927009252, 6, 6);
+    static_assert(d1 - d2 == 9223372036854775807, "DifferenceWithHugeYear");
+    static_assert((d2 - 1) - d1 == -9223372036854775807 - 1,
+                  "DifferenceWithHugeYear");
+  }
+  {
+    // Check the limits of the return value at the start of the year range.
+    constexpr civil_day d1(-9223372036854775807 - 1, 1, 1);
+    constexpr civil_day d2(-9198119301927009254, 7, 28);
+    static_assert(d2 - d1 == 9223372036854775807, "DifferenceWithHugeYear");
+    static_assert(d1 - (d2 + 1) == -9223372036854775807 - 1,
+                  "DifferenceWithHugeYear");
+  }
+  {
+    // Check the limits of the return value from either side of year 0.
+    constexpr civil_day d1(-12626367463883278, 9, 3);
+    constexpr civil_day d2(12626367463883277, 3, 28);
+    static_assert(d2 - d1 == 9223372036854775807, "DifferenceWithHugeYear");
+    static_assert(d1 - (d2 + 1) == -9223372036854775807 - 1,
+                  "DifferenceWithHugeYear");
+  }
 }
 
 // Helper constexpr tests
@@ -922,48 +960,16 @@ TEST(CivilTime, NextPrevWeekday) {
   EXPECT_EQ(d - 7, prev_weekday(thursday, weekday::wednesday));
 }
 
-// NOTE: Run this with --copt=-ftrapv to detect overflow problems.
-TEST(CivilTime, DifferenceWithHugeYear) {
-  civil_day d1(5881579, 1, 1);
-  civil_day d2(5881579, 12, 31);
-  EXPECT_EQ(364, d2 - d1);
-
-  d1 = civil_day(-5877640, 1, 1);
-  d2 = civil_day(-5877640, 12, 31);
-  EXPECT_EQ(365, d2 - d1);
-
-  // Check the limits of the return value with large positive year.
-  d1 = civil_day(5881580, 7, 11);
-  d2 = civil_day(1970, 1, 1);
-  EXPECT_EQ(2147483647, d1 - d2);
-  d2 = d2 - 1;
-  EXPECT_EQ(-2147483647 - 1, d2 - d1);
-
-  // Check the limits of the return value with large negative year.
-  d1 = civil_day(-5877641, 6, 23);
-  d2 = civil_day(1969, 12, 31);
-  EXPECT_EQ(2147483647, d2 - d1);
-  d2 = d2 + 1;
-  EXPECT_EQ(-2147483647 - 1, d1 - d2);
-
-  // Check the limits of the return value from either side of year 0.
-  d1 = civil_day(-2939806, 9, 26);
-  d2 = civil_day(2939805, 4, 6);
-  EXPECT_EQ(2147483647, d2 - d1);
-  d2 = d2 + 1;
-  EXPECT_EQ(-2147483647 - 1, d1 - d2);
-}
-
 TEST(CivilTime, NormalizeWithHugeYear) {
-  civil_month c(2147483647, 1);
-  EXPECT_EQ("2147483647-01", Format(c));
+  civil_month c(9223372036854775807, 1);
+  EXPECT_EQ("9223372036854775807-01", Format(c));
   c = c - 1;  // Causes normalization
-  EXPECT_EQ("2147483646-12", Format(c));
+  EXPECT_EQ("9223372036854775806-12", Format(c));
 
-  c = civil_month(-2147483647 - 1, 1);
-  EXPECT_EQ("-2147483648-01", Format(c));
+  c = civil_month(-9223372036854775807 - 1, 1);
+  EXPECT_EQ("-9223372036854775808-01", Format(c));
   c = c + 12;  // Causes normalization
-  EXPECT_EQ("-2147483647-01", Format(c));
+  EXPECT_EQ("-9223372036854775807-01", Format(c));
 }
 
 TEST(CivilTime, LeapYears) {
