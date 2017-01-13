@@ -103,15 +103,15 @@ inline std::uint_fast8_t Decode8(const char* cp) {
 std::int_fast32_t Decode32(const char* cp) {
   std::uint_fast32_t v = 0;
   for (int i = 0; i != (32 / 8); ++i) v = (v << 8) | Decode8(cp++);
-  if ((v & ~(UINT32_MAX >> 1)) == 0) return v;
-  return -static_cast<std::int_fast32_t>(~v) - 1;
+  if (v <= INT32_MAX) return static_cast<std::int_fast32_t>(v);
+  return static_cast<std::int_fast32_t>(v - INT32_MAX - 1) + INT32_MIN;
 }
 
 std::int_fast64_t Decode64(const char* cp) {
   std::uint_fast64_t v = 0;
   for (int i = 0; i != (64 / 8); ++i) v = (v << 8) | Decode8(cp++);
-  if ((v & ~(UINT64_MAX >> 1)) == 0) return v;
-  return -static_cast<std::int_fast64_t>(~v) - 1;
+  if (v <= INT64_MAX) return static_cast<std::int_fast64_t>(v);
+  return static_cast<std::int_fast64_t>(v - INT64_MAX - 1) + INT64_MIN;
 }
 
 // Generate a year-relative offset for a PosixTransition.
