@@ -187,7 +187,7 @@ bool LooksLikeNegOffset(const char* s) {
 }
 
 int main(int argc, char** argv) {
-  std::string prog = argv[0] ? Basename(argv[0]) : "time_tool";
+  const std::string prog = argv[0] ? Basename(argv[0]) : "time_tool";
 
   // Escape arguments that look like negative offsets so that they
   // don't look like flags.
