@@ -2,3 +2,15 @@
 /bazel-*
 # ignore non-bazel build products
 /build
+*.o
+*.d
+*.a
+*.so
+classic
+epoch_shift
+example1
+example2
+example3
+example4
+hello
+time_tool
