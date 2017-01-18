@@ -1242,4 +1242,22 @@ TEST(FormatParse, RoundTrip) {
   }
 }
 
+TEST(FormatParse, RoundTripDistantFuture) {
+  const time_zone utc = utc_time_zone();
+  const time_point<sys_seconds> in = time_point<sys_seconds>::max();
+  const std::string s = format(RFC3339_full, in, utc);
+  time_point<sys_seconds> out;
+  EXPECT_TRUE(parse(RFC3339_full, s, utc, &out)) << s;
+  EXPECT_EQ(in, out);
+}
+
+TEST(FormatParse, RoundTripDistantPast) {
+  const time_zone utc = utc_time_zone();
+  const time_point<sys_seconds> in = time_point<sys_seconds>::min();
+  const std::string s = format(RFC3339_full, in, utc);
+  time_point<sys_seconds> out;
+  EXPECT_TRUE(parse(RFC3339_full, s, utc, &out)) << s;
+  EXPECT_EQ(in, out);
+}
+
 }  // namespace cctz

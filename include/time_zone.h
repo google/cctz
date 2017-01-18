@@ -285,6 +285,7 @@ inline bool parse(const std::string& fmt, const std::string& input,
   detail::femtoseconds fs;
   const bool b = detail::parse(fmt, input, tz, &sec, &fs);
   if (b) {
+    // TODO: Return false if unrepresentable as a time_point<D>.
     *tpp = std::chrono::time_point_cast<D>(sec);
     *tpp += std::chrono::duration_cast<D>(fs);
   }

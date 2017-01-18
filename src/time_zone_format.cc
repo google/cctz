@@ -320,7 +320,7 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
       }
       switch (*cur) {
         case 'Y':
-          // This avoids the tm_year overflow problem for %Y, however
+          // This avoids the tm.tm_year overflow problem for %Y, however
           // tm.tm_year will still be used by other specifiers like %D.
           bp = Format64(ep, 0, al.cs.year());
           result.append(bp, ep - bp);
@@ -518,8 +518,6 @@ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
 //
 // We also handle the %z specifier to accommodate platforms that do not
 // support the tm_gmtoff extension to std::tm.  %Z is parsed but ignored.
-//
-// TODO: Support parsing year values beyond the width of tm_year.
 bool parse(const std::string& format, const std::string& input,
            const time_zone& tz, time_point<sys_seconds>* sec,
            detail::femtoseconds* fs) {
@@ -529,10 +527,12 @@ bool parse(const std::string& format, const std::string& input,
   // Skips leading whitespace.
   while (std::isspace(*data)) ++data;
 
-  const int kintmax = std::numeric_limits<int>::max();
-  const int kintmin = std::numeric_limits<int>::min();
+  const year_t kyearmax = std::numeric_limits<year_t>::max();
+  const year_t kyearmin = std::numeric_limits<year_t>::min();
 
   // Sets default values for unspecified fields.
+  bool saw_year = false;
+  year_t year = 1970;
   std::tm tm{};
   tm.tm_year = 1970 - 1900;
   tm.tm_mon = 1 - 1;  // Jan
@@ -544,7 +544,8 @@ bool parse(const std::string& format, const std::string& input,
   tm.tm_yday = 0;
   tm.tm_isdst = 0;
   auto subseconds = detail::femtoseconds::zero();
-  int offset = kintmin;
+  bool saw_offset = false;
+  int offset = 0;  // No offset from passed tz.
   std::string zone = "UTC";
 
   const char* fmt = format.c_str();  // NUL terminated
@@ -579,11 +580,11 @@ bool parse(const std::string& format, const std::string& input,
     }
     switch (*fmt++) {
       case 'Y':
-        // We're more liberal than the 4-digit year typically handled by
-        // strptime(), but we still need to store the result in an int,
-        // and the intermediate value has a 1900 excess.
-        data = ParseInt(data, 0, kintmin + 1900, kintmax, &tm.tm_year);
-        if (data != nullptr) tm.tm_year -= 1900;
+        // Symmetrically with FormatTime(), directly handing %Y avoids the
+        // tm.tm_year overflow problem.  However, tm.tm_year will still be
+        // used by other specifiers like %D.
+        data = ParseInt(data, 0, kyearmin, kyearmax, &year);
+        if (data != nullptr) saw_year = true;
         continue;
       case 'm':
         data = ParseInt(data, 2, 1, 12, &tm.tm_mon);
@@ -615,6 +616,7 @@ bool parse(const std::string& format, const std::string& input,
         break;
       case 'z':
         data = ParseOffset(data, '\0', &offset);
+        if (data != nullptr) saw_offset = true;
         continue;
       case 'Z':  // ignored; zone abbreviations are ambiguous
         data = ParseZone(data, &zone);
@@ -631,19 +633,20 @@ bool parse(const std::string& format, const std::string& input,
           } else {
             data = ParseOffset(data, ':', &offset);
           }
+          if (data != nullptr) saw_offset = true;
           fmt += 1;
           continue;
         }
         if (*fmt == '*' && *(fmt + 1) == 'S') {
           data = ParseInt(data, 2, 0, 60, &tm.tm_sec);
-          if (data != NULL && *data == '.') {
+          if (data != nullptr && *data == '.') {
             data = ParseSubSeconds(data + 1, &subseconds);
           }
           fmt += 2;
           continue;
         }
         if (*fmt == '*' && *(fmt + 1) == 'f') {
-          if (data != NULL && std::isdigit(*data)) {
+          if (data != nullptr && std::isdigit(*data)) {
             data = ParseSubSeconds(data, &subseconds);
           }
           fmt += 2;
@@ -651,10 +654,10 @@ bool parse(const std::string& format, const std::string& input,
         }
         if (*fmt == '4' && *(fmt + 1) == 'Y') {
           const char* bp = data;
-          data = ParseInt(data, 4, -999, 9999, &tm.tm_year);
+          data = ParseInt(data, 4, year_t{-999}, year_t{9999}, &year);
           if (data != nullptr) {
             if (data - bp == 4) {
-              tm.tm_year -= 1900;
+              saw_year = true;
             } else {
               data = nullptr;  // stopped too soon
             }
@@ -667,14 +670,14 @@ bool parse(const std::string& format, const std::string& input,
           if (const char* np = ParseInt(fmt, 0, 0, 1024, &n)) {
             if (*np == 'S') {
               data = ParseInt(data, 2, 0, 60, &tm.tm_sec);
-              if (data != NULL && *data == '.') {
+              if (data != nullptr && *data == '.') {
                 data = ParseSubSeconds(data + 1, &subseconds);
               }
               fmt = ++np;
               continue;
             }
             if (*np == 'f') {
-              if (data != NULL && std::isdigit(*data)) {
+              if (data != nullptr && std::isdigit(*data)) {
                 data = ParseSubSeconds(data, &subseconds);
               }
               fmt = ++np;
@@ -734,12 +737,7 @@ bool parse(const std::string& format, const std::string& input,
   // If we saw %z or %Ez then we want to interpret the parsed fields in
   // UTC and then shift by that offset.  Otherwise we want to interpret
   // the fields directly in the passed time_zone.
-  time_zone ptz = tz;
-  if (offset != kintmin) {
-    ptz = utc_time_zone();  // Override tz.  Offset applied later.
-  } else {
-    offset = 0;  // No offset from passed tz.
-  }
+  time_zone ptz = saw_offset ? utc_time_zone() : tz;
 
   // Allows a leap second of 60 to normalize forward to the following ":00".
   if (tm.tm_sec == 60) {
@@ -748,10 +746,9 @@ bool parse(const std::string& format, const std::string& input,
     subseconds = detail::femtoseconds::zero();
   }
 
-  cctz::year_t year = tm.tm_year;
-  if (year > std::numeric_limits<cctz::year_t>::max() - 1900) {
-    year = std::numeric_limits<cctz::year_t>::max();
-  } else {
+  if (!saw_year) {
+    year = year_t{tm.tm_year};
+    if (year > kyearmax - 1900) return false;
     year += 1900;
   }
 
