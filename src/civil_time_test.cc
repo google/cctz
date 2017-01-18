@@ -268,6 +268,26 @@ TEST(CivilTime, DifferenceWithHugeYear) {
   }
 }
 
+// NOTE: Run this with --copt=-ftrapv to detect overflow problems.
+TEST(CivilTime, DifferenceNoIntermediateOverflow) {
+  {
+    // The difference up to the minute field would be below the minimum
+    // diff_t, but the 52 extra seconds brings us back to the minimum.
+    constexpr civil_second s1(-292277022657, 1, 27, 8, 29 - 1, 52);
+    constexpr civil_second s2(1970, 1, 1, 0, 0 - 1, 0);
+    static_assert(s1 - s2 == -9223372036854775807 - 1,
+                  "DifferenceNoIntermediateOverflow");
+  }
+  {
+    // The difference up to the minute field would be above the maximum
+    // diff_t, but the -53 extra seconds brings us back to the maximum.
+    constexpr civil_second s1(292277026596, 12, 4, 15, 30, 7 - 7);
+    constexpr civil_second s2(1970, 1, 1, 0, 0, 0 - 7);
+    static_assert(s1 - s2 == 9223372036854775807,
+                  "DifferenceNoIntermediateOverflow");
+  }
+}
+
 // Helper constexpr tests
 
 TEST(CivilTime, WeekDay) {

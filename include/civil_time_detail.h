@@ -211,29 +211,12 @@ CONSTEXPR_F fields step(year_tag, fields f, diff_t n) noexcept {
 
 ////////////////////////////////////////////////////////////////////////
 
-// Aligns the (normalized) fields struct to the indicated field.
-CONSTEXPR_F fields align(second_tag, fields f) noexcept {
-  return f;
-}
-CONSTEXPR_F fields align(minute_tag, fields f) noexcept {
-  return fields{f.y, f.m, f.d, f.hh, f.mm, 0};
-}
-CONSTEXPR_F fields align(hour_tag, fields f) noexcept {
-  return fields{f.y, f.m, f.d, f.hh, 0, 0};
-}
-CONSTEXPR_F fields align(day_tag, fields f) noexcept {
-  return fields{f.y, f.m, f.d, 0, 0, 0};
-}
-CONSTEXPR_F fields align(month_tag, fields f) noexcept {
-  return fields{f.y, f.m, 1, 0, 0, 0};
-}
-CONSTEXPR_F fields align(year_tag, fields f) noexcept {
-  return fields{f.y, 1, 1, 0, 0, 0};
-}
-
-////////////////////////////////////////////////////////////////////////
-
 namespace impl {
+
+// Returns (v * f + a) but avoiding intermediate overflow when possible.
+CONSTEXPR_F diff_t scale_add(diff_t v, diff_t f, diff_t a) noexcept {
+  return (v < 0) ? ((v + 1) * f + a) - f : ((v - 1) * f + a) + f;
+}
 
 // Map a (normalized) Y/M/D to the number of days before/after 1970-01-01.
 // Probably overflows for years outside [-292277022656:292277026595].
@@ -252,7 +235,7 @@ CONSTEXPR_F diff_t ymd_ord(year_t y, month_t m, day_t d) noexcept {
 // small, so we take a little care to avoid overflow when possible by
 // exploiting the 146097-day cycle.
 CONSTEXPR_F diff_t day_difference(year_t y1, month_t m1, day_t d1,
-                                  year_t y2, month_t m2, day_t d2) {
+                                  year_t y2, month_t m2, day_t d2) noexcept {
   const diff_t a_c4_off = y1 % 400;
   const diff_t b_c4_off = y2 % 400;
   diff_t c4_diff = (y1 - a_c4_off) - (y2 - b_c4_off);
@@ -274,19 +257,41 @@ CONSTEXPR_F diff_t difference(year_tag, fields f1, fields f2) noexcept {
   return f1.y - f2.y;
 }
 CONSTEXPR_F diff_t difference(month_tag, fields f1, fields f2) noexcept {
-  return difference(year_tag{}, f1, f2) * 12 + (f1.m - f2.m);
+  return impl::scale_add(difference(year_tag{}, f1, f2), 12, (f1.m - f2.m));
 }
 CONSTEXPR_F diff_t difference(day_tag, fields f1, fields f2) noexcept {
   return impl::day_difference(f1.y, f1.m, f1.d, f2.y, f2.m, f2.d);
 }
 CONSTEXPR_F diff_t difference(hour_tag, fields f1, fields f2) noexcept {
-  return difference(day_tag{}, f1, f2) * 24 + (f1.hh - f2.hh);
+  return impl::scale_add(difference(day_tag{}, f1, f2), 24, (f1.hh - f2.hh));
 }
 CONSTEXPR_F diff_t difference(minute_tag, fields f1, fields f2) noexcept {
-  return difference(hour_tag{}, f1, f2) * 60 + (f1.mm - f2.mm);
+  return impl::scale_add(difference(hour_tag{}, f1, f2), 60, (f1.mm - f2.mm));
 }
 CONSTEXPR_F diff_t difference(second_tag, fields f1, fields f2) noexcept {
-  return difference(minute_tag{}, f1, f2) * 60 + (f1.ss - f2.ss);
+  return impl::scale_add(difference(minute_tag{}, f1, f2), 60, f1.ss - f2.ss);
+}
+
+////////////////////////////////////////////////////////////////////////
+
+// Aligns the (normalized) fields struct to the indicated field.
+CONSTEXPR_F fields align(second_tag, fields f) noexcept {
+  return f;
+}
+CONSTEXPR_F fields align(minute_tag, fields f) noexcept {
+  return fields{f.y, f.m, f.d, f.hh, f.mm, 0};
+}
+CONSTEXPR_F fields align(hour_tag, fields f) noexcept {
+  return fields{f.y, f.m, f.d, f.hh, 0, 0};
+}
+CONSTEXPR_F fields align(day_tag, fields f) noexcept {
+  return fields{f.y, f.m, f.d, 0, 0, 0};
+}
+CONSTEXPR_F fields align(month_tag, fields f) noexcept {
+  return fields{f.y, f.m, 1, 0, 0, 0};
+}
+CONSTEXPR_F fields align(year_tag, fields f) noexcept {
+  return fields{f.y, 1, 1, 0, 0, 0};
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -381,7 +386,7 @@ class civil_time {
     return a -= n;
   }
   inline friend CONSTEXPR_M diff_t operator-(const civil_time& lhs,
-                                            const civil_time& rhs) noexcept {
+                                             const civil_time& rhs) noexcept {
     return difference(T{}, lhs.f_, rhs.f_);
   }
 
