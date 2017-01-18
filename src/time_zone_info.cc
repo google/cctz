@@ -181,28 +181,37 @@ civil_second YearShift(const civil_second& cs, cctz::year_t year_shift) {
 }  // namespace
 
 // Assign from a civil_second, created using a TimeZoneInfo timestamp.
-inline void DateTime::Assign(const civil_second& cs) {
+void DateTime::Assign(const civil_second& cs) {
   offset = cs - unix_epoch;
 }
 
 // What (no leap-seconds) UTC+seconds zoneinfo would look like.
-void TimeZoneInfo::ResetToBuiltinUTC(std::int_fast32_t seconds) {
+bool TimeZoneInfo::ResetToBuiltinUTC(std::int_fast32_t seconds) {
   transition_types_.resize(1);
-  transition_types_[0].utc_offset = seconds;
-  transition_types_[0].is_dst = false;
-  transition_types_[0].abbr_index = 0;
-  transitions_.resize(1);
-  transitions_[0].unix_time = -(1LL << 59);  // zic "BIG_BANG"
-  transitions_[0].type_index = 0;
-  transitions_[0].date_time.Assign(
-      LocalTime(transitions_[0].unix_time, transition_types_[0]).cs);
-  transitions_[0].prev_date_time = transitions_[0].date_time;
-  transitions_[0].prev_date_time.offset -= 1;
+  TransitionType& tt(transition_types_.back());
+  tt.utc_offset = seconds;
+  tt.is_dst = false;
+  tt.abbr_index = 0;
+
+  transitions_.clear();
+  transitions_.reserve(2);
+  for (const std::int_fast64_t unix_time : {-(1LL << 59), 2147483647LL}) {
+    Transition& tr(*transitions_.emplace(transitions_.end()));
+    tr.unix_time = unix_time;
+    tr.type_index = 0;
+    tr.date_time.Assign(LocalTime(tr.unix_time, tt).cs);
+    tr.prev_date_time = tr.date_time;
+    tr.prev_date_time.offset -= 1;
+  }
+
   default_transition_type_ = 0;
   abbreviations_ = "UTC";  // TODO: Handle non-zero offset.
   abbreviations_.append(1, '\0');  // add NUL
   future_spec_.clear();  // never needed for a fixed-offset zone
   extended_ = false;
+
+  transitions_.shrink_to_fit();
+  return true;
 }
 
 // Builds the in-memory header using the raw bytes from the file.
@@ -262,27 +271,42 @@ bool TimeZoneInfo::EquivTransitions(std::uint_fast8_t tt1_index,
 void TimeZoneInfo::ExtendTransitions(const std::string& name,
                                      const Header& hdr) {
   extended_ = false;
-  if (future_spec_.empty()) return;  // last transition wins
+  bool extending = !future_spec_.empty();
 
   PosixTimeZone posix;
-  if (!ParsePosixSpec(future_spec_, &posix)) {
+  if (extending && !ParsePosixSpec(future_spec_, &posix)) {
     std::clog << name << ": Failed to parse '" << future_spec_ << "'\n";
-    return;
+    extending = false;
   }
 
-  if (posix.dst_abbr.empty()) {  // std only
+  if (extending && posix.dst_abbr.empty()) {  // std only
     // The future specification should match the last/default transition,
     // and that means that handling the future will fall out naturally.
     std::uint_fast8_t index = default_transition_type_;
     if (hdr.timecnt != 0) index = transitions_[hdr.timecnt - 1].type_index;
     const TransitionType& tt(transition_types_[index]);
     CheckTransition(name, tt, posix.std_offset, false, posix.std_abbr);
-    return;
+    extending = false;
   }
 
-  if (hdr.timecnt < 2) {
+  if (extending && hdr.timecnt < 2) {
     std::clog << name << ": Too few transitions for POSIX spec\n";
-    return;
+    extending = false;
+  }
+
+  if (!extending) {
+    // Ensure that there is always a transition in the second half of the
+    // time line (the BIG_BANG transition is in the first half) so that the
+    // signed difference between a DateTime and the DateTime of its previous
+    // transition is always representable, without overflow.
+    const Transition& last(transitions_.back());
+    if (last.unix_time < 0) {
+      const std::uint_fast8_t type_index = last.type_index;
+      Transition& tr(*transitions_.emplace(transitions_.end()));
+      tr.unix_time = 2147483647;  // 2038-01-19T03:14:07+00:00
+      tr.type_index = type_index;
+    }
+    return;  // last transition wins
   }
 
   // Extend the transitions for an additional 400 years using the
@@ -377,6 +401,7 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   const char* bp = tbuf.data();
 
   // Decode and validate the transitions.
+  transitions_.reserve(hdr.timecnt + 2);  // We might add a couple.
   transitions_.resize(hdr.timecnt);
   for (std::int_fast32_t i = 0; i != hdr.timecnt; ++i) {
     transitions_[i].unix_time = (time_len == 4) ? Decode32(bp) : Decode64(bp);
@@ -465,6 +490,18 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   }
   transitions_.resize(hdr.timecnt);
 
+  // Ensure that there is always a transition in the first half of the
+  // time line (the second half is handled in ExtendTransitions()) so
+  // that the signed difference between a DateTime and the DateTime of
+  // its previous transition is always representable, without overflow.
+  // A contemporary zic will usually have already done this for us.
+  if (transitions_.empty() || transitions_.front().unix_time >= 0) {
+    Transition& tr(*transitions_.emplace(transitions_.begin()));
+    tr.unix_time = -(1LL << 59);  // see tz/zic.c "BIG_BANG"
+    tr.type_index = default_transition_type_;
+    hdr.timecnt += 1;
+  }
+
   // Extend the transitions using the future specification.
   ExtendTransitions(name, hdr);
 
@@ -492,18 +529,16 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   local_time_hint_ = 0;
   time_local_hint_ = 0;
 
+  transitions_.shrink_to_fit();
   return true;
 }
 
 bool TimeZoneInfo::Load(const std::string& name) {
   // We can ensure that the loading of UTC or any other fixed-offset
-  // zone never fails because the simple, no-transition state can be
+  // zone never fails because the simple, fixed-offset state can be
   // internally generated. Note that this depends on our choice to not
   // accept leap-second encoded ("right") zoneinfo.
-  if (name == "UTC") {
-    ResetToBuiltinUTC(0);
-    return true;
-  }
+  if (name == "UTC") return ResetToBuiltinUTC(0);
 
   // Map time-zone name to its machine-specific path.
   std::string path;
