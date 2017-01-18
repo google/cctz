@@ -28,11 +28,12 @@
 #         install install_shared_lib
 
 # local configuration
-CXX = g++
-STD = c++11
-OPT = -O
-PREFIX = /usr/local
-DESTDIR =
+CXX ?= g++
+CXXFLAGS ?= -O3
+STD ?= c++11
+LDFLAGS ?= -O3
+PREFIX ?= /usr/local
+DESTDIR ?=
 
 # possible support for googletest
 ## TESTS = civil_time_test time_zone_lookup_test time_zone_format_test
@@ -40,16 +41,14 @@ DESTDIR =
 ## TEST_LIBS = ...
 
 VPATH = $(SRC)include:$(SRC)src:$(SRC)examples
-CC = $(CXX)
-CPPFLAGS = -Wall -I$(SRC)include -std=$(STD) -pthread \
-	   $(TEST_FLAGS) $(OPT) -fPIC -MMD
+CXXFLAGS += -g -Wall -I$(SRC)include -std=$(STD) -pthread \
+            $(TEST_FLAGS) -fPIC -MMD
 ARFLAGS = rcs
-LDFLAGS = -pthread
-LDLIBS = $(TEST_LIBS)
+LINK.o = $(LINK.cc)
+LDFLAGS += -pthread
+LDLIBS += $(TEST_LIBS)
 SHARED_LDFLAGS = -shared
-
 INSTALL = install
-SUDO =
 
 CCTZ = cctz
 CCTZ_LIB = lib$(CCTZ).a
@@ -82,21 +81,21 @@ $(CCTZ_LIB): $(CCTZ_OBJS)
 	$(AR) $(ARFLAGS) $@ $(CCTZ_OBJS)
 
 $(CCTZ_SHARED_LIB): $(CCTZ_OBJS)
-	$(CC) $(LDFLAGS) $(SHARED_LDFLAGS) -o $@ $(CCTZ_OBJS)
+	$(LINK.o) $(LDFLAGS) $(SHARED_LDFLAGS) -o $@ $(CCTZ_OBJS)
 
 install: install_hdrs install_lib
 
 install_hdrs: $(CCTZ_HDRS)
-	$(SUDO) $(INSTALL) -d $(DESTDIR)$(PREFIX)/include
-	$(SUDO) $(INSTALL) -m 644 -p $? $(DESTDIR)$(PREFIX)/include
+	$(INSTALL) -d $(DESTDIR)$(PREFIX)/include
+	$(INSTALL) -m 644 -p $? $(DESTDIR)$(PREFIX)/include
 
 install_lib: $(CCTZ_LIB)
-	$(SUDO) $(INSTALL) -d $(DESTDIR)$(PREFIX)/lib
-	$(SUDO) $(INSTALL) -m 644 -p $? $(DESTDIR)$(PREFIX)/lib
+	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib
+	$(INSTALL) -m 644 -p $? $(DESTDIR)$(PREFIX)/lib
 
 install_shared_lib: $(CCTZ_SHARED_LIB)
-	$(SUDO) $(INSTALL) -d $(DESTDIR)$(PREFIX)/lib
-	$(SUDO) $(INSTALL) -m 644 -p $? $(DESTDIR)$(PREFIX)/lib
+	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib
+	$(INSTALL) -m 644 -p $? $(DESTDIR)$(PREFIX)/lib
 
 clean:
 	@$(RM) $(EXAMPLES:=.dSYM) $(EXAMPLES:=.o) $(EXAMPLES:=.d) $(EXAMPLES)
