@@ -752,7 +752,6 @@ bool parse(const std::string& format, const std::string& input,
     year += 1900;
   }
 
-  // TODO: Eliminate extra normalization.
   const civil_second cs(year, tm.tm_mon + 1, tm.tm_mday,
                         tm.tm_hour, tm.tm_min, tm.tm_sec);
 

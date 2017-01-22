@@ -172,8 +172,7 @@ inline time_zone::civil_lookup MakeRepeated(const Transition& tr,
   return cl;
 }
 
-civil_second YearShift(const civil_second& cs, cctz::year_t year_shift) {
-  // TODO: How do we do this while avoiding any normalization tests?
+inline civil_second YearShift(const civil_second& cs, cctz::year_t year_shift) {
   return civil_second(cs.year() + year_shift, cs.month(), cs.day(),
                       cs.hour(), cs.minute(), cs.second());
 }
