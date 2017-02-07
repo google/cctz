@@ -33,6 +33,7 @@
 #include "time_zone_info.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cerrno>
 #include <chrono>
 #include <cstdint>
@@ -461,6 +462,7 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   bp += (8 + 4) * hdr.leapcnt;  // leap-time + TAI-UTC
   bp += 1 * hdr.ttisstdcnt;     // UTC/local indicators
   bp += 1 * hdr.ttisgmtcnt;     // standard/wall indicators
+  assert(bp == tbuf.data() + tbuf.size());
 
   future_spec_.clear();
   if (tzh.tzh_version[0] != '\0') {
