@@ -55,7 +55,7 @@ char* errmsg(int errnum, char* buf, std::size_t buflen) {
 #if defined(_MSC_VER)
   strerror_s(buf, buflen, errnum);
   return buf;
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
   strerror_r(errnum, buf, buflen);
   return buf;
 #elif (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE
