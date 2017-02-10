@@ -45,7 +45,6 @@ CXXFLAGS += -g -Wall -I$(SRC)include -std=$(STD) \
             $(TEST_FLAGS) -fPIC -MMD
 ARFLAGS = rcs
 LINK.o = $(LINK.cc)
-LDFLAGS += -pthread
 LDLIBS += $(TEST_LIBS)
 SHARED_LDFLAGS = -shared
 INSTALL = install

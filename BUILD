@@ -47,9 +47,6 @@ cc_library(
         "include/time_zone.h",
     ],
     includes = ["include"],
-    linkopts = [
-        "-lm",
-    ],
     visibility = ["//visibility:public"],
     deps = [":civil_time"],
 )
