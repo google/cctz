@@ -49,7 +49,6 @@ cc_library(
     includes = ["include"],
     linkopts = [
         "-lm",
-        "-lpthread",
     ],
     visibility = ["//visibility:public"],
     deps = [":civil_time"],
@@ -86,8 +85,8 @@ cc_test(
     size = "small",
     srcs = ["src/civil_time_test.cc"],
     deps = [
-        "@gtest//:gtest",
         ":civil_time",
+        "@gtest//:gtest",
     ],
 )
 
@@ -96,9 +95,9 @@ cc_test(
     size = "small",
     srcs = ["src/time_zone_format_test.cc"],
     deps = [
-        "@gtest//:gtest",
         ":civil_time",
         ":time_zone",
+        "@gtest//:gtest",
     ],
 )
 
@@ -107,9 +106,9 @@ cc_test(
     size = "small",
     srcs = ["src/time_zone_lookup_test.cc"],
     deps = [
-        "@gtest//:gtest",
         ":civil_time",
         ":time_zone",
+        "@gtest//:gtest",
     ],
 )
 

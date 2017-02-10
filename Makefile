@@ -41,7 +41,7 @@ DESTDIR ?=
 ## TEST_LIBS = ...
 
 VPATH = $(SRC)include:$(SRC)src:$(SRC)examples
-CXXFLAGS += -g -Wall -I$(SRC)include -std=$(STD) -pthread \
+CXXFLAGS += -g -Wall -I$(SRC)include -std=$(STD) \
             $(TEST_FLAGS) -fPIC -MMD
 ARFLAGS = rcs
 LINK.o = $(LINK.cc)
