@@ -118,9 +118,9 @@ void InstantInfo(const std::string& label, time_point<sys_seconds> when,
   const std::string time_label = "time_t";
   const std::string utc_label = "UTC";
   const std::string zone_label = "in-tz";  // perhaps zone.name()?
-  std::size_t width =
+  int width = static_cast<int>(
       2 + std::max(std::max(time_label.size(), utc_label.size()),
-                   zone_label.size());
+                   zone_label.size()));
   std::cout << label << " {\n";
   std::cout << std::setw(width) << std::right << time_label << ": ";
   std::cout << std::setw(10) << format("%s", when, utc);

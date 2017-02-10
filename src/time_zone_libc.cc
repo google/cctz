@@ -75,7 +75,7 @@ time_zone::absolute_lookup TimeZoneLibC::BreakTime(
 #else
     localtime_r(&t, &tm);
 #endif
-    al.offset = OFFSET(tm);
+    al.offset = static_cast<int>(OFFSET(tm));
     al.abbr = ABBR(tm);
   } else {
 #if defined(_WIN32) || defined(_WIN64)

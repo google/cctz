@@ -134,7 +134,7 @@ std::int_fast64_t TransOffset(bool leap_year, int jan1_weekday,
     case PosixTransition::M: {
       const bool last_week = (pt.date.m.week == 5);
       days = kMonthOffsets[leap_year][pt.date.m.month + last_week];
-      const int weekday = (jan1_weekday + days) % 7;
+      const std::int_fast64_t weekday = (jan1_weekday + days) % 7;
       if (last_week) {
         days -= (weekday + 7 - 1 - pt.date.m.weekday) % 7 + 1;
       } else {
@@ -190,7 +190,7 @@ void DateTime::Assign(const civil_second& cs) {
 bool TimeZoneInfo::ResetToBuiltinUTC(std::int_fast32_t seconds) {
   transition_types_.resize(1);
   TransitionType& tt(transition_types_.back());
-  tt.utc_offset = seconds;
+  tt.utc_offset = static_cast<std::int_least32_t>(seconds);
   tt.is_dst = false;
   tt.abbr_index = 0;
 
@@ -216,13 +216,21 @@ bool TimeZoneInfo::ResetToBuiltinUTC(std::int_fast32_t seconds) {
 }
 
 // Builds the in-memory header using the raw bytes from the file.
-void TimeZoneInfo::Header::Build(const tzhead& tzh) {
-  timecnt = Decode32(tzh.tzh_timecnt);
-  typecnt = Decode32(tzh.tzh_typecnt);
-  charcnt = Decode32(tzh.tzh_charcnt);
-  leapcnt = Decode32(tzh.tzh_leapcnt);
-  ttisstdcnt = Decode32(tzh.tzh_ttisstdcnt);
-  ttisgmtcnt = Decode32(tzh.tzh_ttisgmtcnt);
+bool TimeZoneInfo::Header::Build(const tzhead& tzh) {
+  std::int_fast32_t v;
+  if ((v = Decode32(tzh.tzh_timecnt)) < 0) return false;
+  timecnt = static_cast<std::size_t>(v);
+  if ((v = Decode32(tzh.tzh_typecnt)) < 0) return false;
+  typecnt = static_cast<std::size_t>(v);
+  if ((v = Decode32(tzh.tzh_charcnt)) < 0) return false;
+  charcnt = static_cast<std::size_t>(v);
+  if ((v = Decode32(tzh.tzh_leapcnt)) < 0) return false;
+  leapcnt = static_cast<std::size_t>(v);
+  if ((v = Decode32(tzh.tzh_ttisstdcnt)) < 0) return false;
+  ttisstdcnt = static_cast<std::size_t>(v);
+  if ((v = Decode32(tzh.tzh_ttisgmtcnt)) < 0) return false;
+  ttisgmtcnt = static_cast<std::size_t>(v);
+  return true;
 }
 
 // How many bytes of data are associated with this header. The result
@@ -364,7 +372,8 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   if (strncmp(tzh.tzh_magic, TZ_MAGIC, sizeof(tzh.tzh_magic)) != 0)
     return false;
   Header hdr;
-  hdr.Build(tzh);
+  if (!hdr.Build(tzh))
+    return false;
   std::size_t time_len = 4;
   if (tzh.tzh_version[0] != '\0') {
     // Skip the 4-byte data.
@@ -377,10 +386,11 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
       return false;
     if (tzh.tzh_version[0] == '\0')
       return false;
-    hdr.Build(tzh);
+    if (!hdr.Build(tzh))
+      return false;
     time_len = 8;
   }
-  if (hdr.timecnt < 0 || hdr.typecnt <= 0)
+  if (hdr.typecnt == 0)
     return false;
   if (hdr.leapcnt != 0) {
     // This code assumes 60-second minutes so we do not want
@@ -404,7 +414,7 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   // Decode and validate the transitions.
   transitions_.reserve(hdr.timecnt + 2);  // We might add a couple.
   transitions_.resize(hdr.timecnt);
-  for (std::int_fast32_t i = 0; i != hdr.timecnt; ++i) {
+  for (std::size_t i = 0; i != hdr.timecnt; ++i) {
     transitions_[i].unix_time = (time_len == 4) ? Decode32(bp) : Decode64(bp);
     bp += time_len;
     if (i != 0) {
@@ -414,7 +424,7 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
     }
   }
   bool seen_type_0 = false;
-  for (std::int_fast32_t i = 0; i != hdr.timecnt; ++i) {
+  for (std::size_t i = 0; i != hdr.timecnt; ++i) {
     transitions_[i].type_index = Decode8(bp++);
     if (transitions_[i].type_index >= hdr.typecnt)
       return false;
@@ -424,8 +434,9 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
 
   // Decode and validate the transition types.
   transition_types_.resize(hdr.typecnt);
-  for (std::int_fast32_t i = 0; i != hdr.typecnt; ++i) {
-    transition_types_[i].utc_offset = Decode32(bp);
+  for (std::size_t i = 0; i != hdr.typecnt; ++i) {
+    transition_types_[i].utc_offset =
+        static_cast<std::int_least32_t>(Decode32(bp));
     if (transition_types_[i].utc_offset >= kSecsPerDay ||
         transition_types_[i].utc_offset <= -kSecsPerDay)
       return false;
@@ -656,7 +667,8 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
   const Transition* begin = &transitions_[0];
   const Transition* tr = std::upper_bound(begin, begin + timecnt, target,
                                           Transition::ByUnixTime());
-  local_time_hint_.store(tr - begin, std::memory_order_relaxed);
+  local_time_hint_.store(static_cast<std::size_t>(tr - begin),
+                         std::memory_order_relaxed);
   const std::uint_fast8_t type_index = (--tr)->type_index;
   return LocalTime(unix_time, transition_types_[type_index]);
 }
@@ -693,7 +705,8 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
     }
     if (tr == nullptr) {
       tr = std::upper_bound(begin, end, target, Transition::ByDateTime());
-      time_local_hint_.store(tr - begin, std::memory_order_relaxed);
+      time_local_hint_.store(static_cast<std::size_t>(tr - begin),
+                             std::memory_order_relaxed);
     }
   }
 

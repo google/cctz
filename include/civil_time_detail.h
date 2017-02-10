@@ -80,7 +80,7 @@ CONSTEXPR_F bool is_leap_year(year_t y) noexcept {
   return y % 4 == 0 && (y % 100 != 0 || y % 400 == 0);
 }
 CONSTEXPR_F int year_index(year_t y, month_t m) noexcept {
-  return (((y + (m > 2)) % 400) + 400) % 400;
+  return (static_cast<int>((y + (m > 2)) % 400) + 400) % 400;
 }
 CONSTEXPR_F int days_per_century(year_t y, month_t m) noexcept {
   const int yi = year_index(y, m);
@@ -140,7 +140,7 @@ CONSTEXPR_F fields n_day(year_t y, month_t m, diff_t d, diff_t cd,
       }
     }
   }
-  return fields(y, m, d, hh, mm, ss);
+  return fields(y, m, static_cast<day_t>(d), hh, mm, ss);
 }
 CONSTEXPR_F fields n_mon(year_t y, diff_t m, diff_t d, diff_t cd,
                          hour_t hh, minute_t mm, second_t ss) noexcept {
@@ -152,7 +152,7 @@ CONSTEXPR_F fields n_mon(year_t y, diff_t m, diff_t d, diff_t cd,
       m += 12;
     }
   }
-  return n_day(y, m, d, cd, hh, mm, ss);
+  return n_day(y, static_cast<month_t>(m), d, cd, hh, mm, ss);
 }
 CONSTEXPR_F fields n_hour(year_t y, diff_t m, diff_t d, diff_t cd,
                           diff_t hh, minute_t mm, second_t ss) noexcept {
@@ -162,7 +162,7 @@ CONSTEXPR_F fields n_hour(year_t y, diff_t m, diff_t d, diff_t cd,
     cd -= 1;
     hh += 24;
   }
-  return n_mon(y, m, d, cd, hh, mm, ss);
+  return n_mon(y, m, d, cd, static_cast<hour_t>(hh), mm, ss);
 }
 CONSTEXPR_F fields n_min(year_t y, diff_t m, diff_t d, diff_t hh, diff_t ch,
                          diff_t mm, second_t ss) noexcept {
@@ -172,7 +172,8 @@ CONSTEXPR_F fields n_min(year_t y, diff_t m, diff_t d, diff_t hh, diff_t ch,
     ch -= 1;
     mm += 60;
   }
-  return n_hour(y, m, d, hh / 24 + ch / 24, hh % 24 + ch % 24, mm, ss);
+  return n_hour(y, m, d, hh / 24 + ch / 24, hh % 24 + ch % 24,
+                static_cast<minute_t>(mm), ss);
 }
 CONSTEXPR_F fields n_sec(year_t y, diff_t m, diff_t d, diff_t hh, diff_t mm,
                          diff_t ss) noexcept {
@@ -181,13 +182,17 @@ CONSTEXPR_F fields n_sec(year_t y, diff_t m, diff_t d, diff_t hh, diff_t mm,
     if (0 <= mm && mm < 60) {
       if (0 <= hh && hh < 24) {
         if (1 <= d && d <= 28 && 1 <= m && m <= 12) {
-          return fields(y, m, d, hh, mm, ss);
+          return fields(y, static_cast<month_t>(m), static_cast<day_t>(d),
+                        static_cast<hour_t>(hh), static_cast<minute_t>(mm),
+                        static_cast<second_t>(ss));
         }
-        return n_mon(y, m, d, 0, hh, mm, ss);
+        return n_mon(y, m, d, 0, static_cast<hour_t>(hh),
+                     static_cast<minute_t>(mm), static_cast<second_t>(ss));
       }
-      return n_hour(y, m, d, hh / 24, hh % 24, mm, ss);
+      return n_hour(y, m, d, hh / 24, hh % 24, static_cast<minute_t>(mm),
+                    static_cast<second_t>(ss));
     }
-    return n_min(y, m, d, hh, mm / 60, mm % 60, ss);
+    return n_min(y, m, d, hh, mm / 60, mm % 60, static_cast<second_t>(ss));
   }
   diff_t cm = ss / 60;
   ss %= 60;
@@ -195,7 +200,8 @@ CONSTEXPR_F fields n_sec(year_t y, diff_t m, diff_t d, diff_t hh, diff_t mm,
     cm -= 1;
     ss += 60;
   }
-  return n_min(y, m, d, hh, mm / 60 + cm / 60, mm % 60 + cm % 60, ss);
+  return n_min(y, m, d, hh, mm / 60 + cm / 60, mm % 60 + cm % 60,
+               static_cast<second_t>(ss));
 }
 
 }  // namespace impl
@@ -568,7 +574,7 @@ CONSTEXPR_F civil_day prev_weekday(civil_day cd, weekday wd) noexcept {
 }
 
 CONSTEXPR_F int get_yearday(const civil_day& cd) noexcept {
-  return cd - civil_day(civil_year(cd)) + 1;
+  return static_cast<int>(cd - civil_day(civil_year(cd))) + 1;
 }
 
 }  // namespace detail

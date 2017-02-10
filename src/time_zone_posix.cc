@@ -48,7 +48,7 @@ const char* ParseAbbr(const char* p, std::string* abbr) {
     while (*++p != '>') {
       if (*p == '\0') return nullptr;
     }
-    abbr->assign(op + 1, p - op - 1);
+    abbr->assign(op + 1, static_cast<std::size_t>(p - op) - 1);
     return ++p;
   }
   while (*p != '\0') {
@@ -57,7 +57,7 @@ const char* ParseAbbr(const char* p, std::string* abbr) {
     ++p;
   }
   if (p - op < 3) return nullptr;
-  abbr->assign(op, p - op);
+  abbr->assign(op, static_cast<std::size_t>(p - op));
   return p;
 }
 
