@@ -103,8 +103,8 @@ char* Format64(char* ep, int width, std::int_fast64_t v) {
   if (v < 0) {
     --width;
     neg = true;
-    if (v == INT64_MIN) {
-      // Avoid negating INT64_MIN.
+    if (v == std::numeric_limits<std::int_fast64_t>::min()) {
+      // Avoid negating minimum value.
       std::int_fast64_t last_digit = -(v % 10);
       v /= 10;
       if (last_digit < 0) {
@@ -622,7 +622,10 @@ bool parse(const std::string& format, const std::string& input,
         data = ParseZone(data, &zone);
         continue;
       case 's':
-        data = ParseInt(data, 0, INT_FAST64_MIN, INT_FAST64_MAX, &percent_s);
+        data = ParseInt(data, 0,
+                        std::numeric_limits<std::int_fast64_t>::min(),
+                        std::numeric_limits<std::int_fast64_t>::max(),
+                        &percent_s);
         if (data != nullptr) saw_percent_s = true;
         continue;
       case 'E':

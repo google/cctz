@@ -106,15 +106,21 @@ inline std::uint_fast8_t Decode8(const char* cp) {
 std::int_fast32_t Decode32(const char* cp) {
   std::uint_fast32_t v = 0;
   for (int i = 0; i != (32 / 8); ++i) v = (v << 8) | Decode8(cp++);
-  if (v <= INT32_MAX) return static_cast<std::int_fast32_t>(v);
-  return static_cast<std::int_fast32_t>(v - INT32_MAX - 1) + INT32_MIN;
+  if (v <= std::numeric_limits<std::int_fast32_t>::max())
+    return static_cast<std::int_fast32_t>(v);
+  return static_cast<std::int_fast32_t>(
+             v - std::numeric_limits<std::int_fast32_t>::max() - 1) +
+         std::numeric_limits<std::int_fast32_t>::min();
 }
 
 std::int_fast64_t Decode64(const char* cp) {
   std::uint_fast64_t v = 0;
   for (int i = 0; i != (64 / 8); ++i) v = (v << 8) | Decode8(cp++);
-  if (v <= INT64_MAX) return static_cast<std::int_fast64_t>(v);
-  return static_cast<std::int_fast64_t>(v - INT64_MAX - 1) + INT64_MIN;
+  if (v <= std::numeric_limits<std::int_fast64_t>::max())
+    return static_cast<std::int_fast64_t>(v);
+  return static_cast<std::int_fast64_t>(
+             v - std::numeric_limits<std::int_fast32_t>::max() - 1) +
+         std::numeric_limits<std::int_fast32_t>::min();
 }
 
 // Generate a year-relative offset for a PosixTransition.
