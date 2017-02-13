@@ -119,8 +119,8 @@ std::int_fast64_t Decode64(const char* cp) {
   if (v <= std::numeric_limits<std::int_fast64_t>::max())
     return static_cast<std::int_fast64_t>(v);
   return static_cast<std::int_fast64_t>(
-             v - std::numeric_limits<std::int_fast32_t>::max() - 1) +
-         std::numeric_limits<std::int_fast32_t>::min();
+             v - std::numeric_limits<std::int_fast64_t>::max() - 1) +
+         std::numeric_limits<std::int_fast64_t>::min();
 }
 
 // Generate a year-relative offset for a PosixTransition.
