@@ -40,6 +40,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <iostream>
 #include <limits>
 
@@ -49,20 +50,42 @@ namespace cctz {
 
 namespace {
 
-// Convert errnum to a message, using buf[buflen] if necessary.
-// buf must be non-null, and buflen non-zero.
-char* errmsg(int errnum, char* buf, std::size_t buflen) {
+// A function that converts an errnum to an error string.
+using ErrorFormatter = std::function<std::string(int errnum)>;
+
+// Wraps a GNU-specific strerror, e.g.:
+//   char *strerror_r(int errnum, char *buf, size_t buflen);
+template <typename ErrNum>
+ErrorFormatter wrap_strerror(char* (*f)(ErrNum, char*, size_t)) {
+  return [f](int errnum) -> std::string {
+    char buf[64];
+    return f(errnum, buf, sizeof(buf));
+  };
+}
+
+// Wraps an XSI-compliant strerror, e.g.:
+//   int strerror_r(int errnum, char *buf, size_t buflen);
+template <typename R, typename ErrNum>
+ErrorFormatter wrap_strerror(R (*f)(ErrNum, char*, size_t)) {
+  return [f](int errnum) -> std::string {
+    char buf[64];
+    f(errnum, buf, sizeof(buf));
+    return buf;
+  };
+}
+
+// Makes an ErrorFormatter that uses a system-provided function like strerror_r
+// or strerror_s. The correct function is selected using preprocessor defines
+// and/or the overloaded wrap_strerror() functions.
+ErrorFormatter make_error_formatter() {
 #if defined(_MSC_VER)
-  strerror_s(buf, buflen, errnum);
-  return buf;
-#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(ANDROID)
-  strerror_r(errnum, buf, buflen);
-  return buf;
-#elif (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE
-  strerror_r(errnum, buf, buflen);
-  return buf;
+  return [](int errnum) -> std::string {
+    char buf[64];
+    strerror_s(buf, errnum);
+    return buf;
+  };
 #else
-  return strerror_r(errnum, buf, buflen);
+  return wrap_strerror(&strerror_r);
 #endif
 }
 
@@ -599,8 +622,8 @@ bool TimeZoneInfo::Load(const std::string& name) {
     loaded = Load(name, fp);
     fclose(fp);
   } else {
-    char ebuf[64];
-    std::clog << path << ": " << errmsg(errno, ebuf, sizeof ebuf) << "\n";
+    const auto errnum = errno;
+    std::clog << path << ": " << make_error_formatter()(errnum) << "\n";
   }
   return loaded;
 }
