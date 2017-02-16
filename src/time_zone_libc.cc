@@ -48,6 +48,9 @@ static std::string get_tzname(int index) {
 }
 # define OFFSET(tm) (get_timezone() + ((tm).tm_isdst > 0 ? 60 * 60 : 0))
 # define ABBR(tm)   (get_tzname((tm).tm_isdst > 0))
+#elif defined(MYRIAD2)
+# define OFFSET(tm) (_timezone + ((tm).tm_isdst > 0 ? 60 * 60 : 0))
+# define ABBR(tm)   (tzname[(tm).tm_isdst > 0])
 #else
 # define OFFSET(tm) (timezone + ((tm).tm_isdst > 0 ? 60 * 60 : 0))
 # define ABBR(tm)   (tzname[(tm).tm_isdst > 0])
