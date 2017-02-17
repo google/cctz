@@ -351,46 +351,58 @@ void TimeZoneInfo::ExtendTransitions(const std::string& name,
   // future specification. Years beyond those can be handled by
   // mapping back to a cycle-equivalent year within that range.
   // zic(8) should probably do this so that we don't have to.
+  // TODO: Reduce the extension by the number of compatible
+  // transitions already in place.
+  transitions_.reserve(hdr.timecnt + 400 * 2 + 1);
   transitions_.resize(hdr.timecnt + 400 * 2);
   extended_ = true;
 
   // The future specification should match the last two transitions,
-  // and those transitions should have different is_dst flags but be
-  // in the same year.
-  // TODO: Investigate the actual guarantees made by zic.
-  const Transition& tr0(transitions_[hdr.timecnt - 1]);
-  const Transition& tr1(transitions_[hdr.timecnt - 2]);
-  const TransitionType& tt0(transition_types_[tr0.type_index]);
-  const TransitionType& tt1(transition_types_[tr1.type_index]);
-  const TransitionType& spring(tt0.is_dst ? tt0 : tt1);
-  const TransitionType& autumn(tt0.is_dst ? tt1 : tt0);
+  // and those transitions should have different is_dst flags.
+  const Transition* tr0 = &transitions_[hdr.timecnt - 1];
+  const Transition* tr1 = &transitions_[hdr.timecnt - 2];
+  const TransitionType* tt0 = &transition_types_[tr0->type_index];
+  const TransitionType* tt1 = &transition_types_[tr1->type_index];
+  const TransitionType& spring(tt0->is_dst ? *tt0 : *tt1);
+  const TransitionType& autumn(tt0->is_dst ? *tt1 : *tt0);
   CheckTransition(name, spring, posix.dst_offset, true, posix.dst_abbr);
   CheckTransition(name, autumn, posix.std_offset, false, posix.std_abbr);
-  last_year_ = LocalTime(tr0.unix_time, tt0).cs.year();
-  if (LocalTime(tr1.unix_time, tt1).cs.year() != last_year_) {
-    std::clog << name << ": Final transitions not in same year\n";
-  }
 
   // Add the transitions to tr1 and back to tr0 for each extra year.
-  const PosixTransition& pt1(tt0.is_dst ? posix.dst_end : posix.dst_start);
-  const PosixTransition& pt0(tt0.is_dst ? posix.dst_start : posix.dst_end);
-  Transition* tr = &transitions_[hdr.timecnt];  // next trans to fill
+  last_year_ = LocalTime(tr0->unix_time, *tt0).cs.year();
+  bool leap_year = IsLeap(last_year_);
   const civil_day jan1(last_year_, 1, 1);
   std::int_fast64_t jan1_time = civil_second(jan1) - kUnixEpoch;
   int jan1_weekday = (static_cast<int>(get_weekday(jan1)) + 1) % 7;
-  bool leap_year = IsLeap(last_year_);
+  Transition* tr = &transitions_[hdr.timecnt];  // next trans to fill
+  if (LocalTime(tr1->unix_time, *tt1).cs.year() != last_year_) {
+    // Add a single extra transition to align to a calendar year.
+    transitions_.resize(transitions_.size() + 1);
+    assert(tr == &transitions_[hdr.timecnt]);  // no reallocation
+    const PosixTransition& pt1(tt0->is_dst ? posix.dst_end : posix.dst_start);
+    std::int_fast64_t tr1_offset = TransOffset(leap_year, jan1_weekday, pt1);
+    tr->unix_time = jan1_time + tr1_offset - tt0->utc_offset;
+    tr++->type_index = tr1->type_index;
+    tr0 = &transitions_[hdr.timecnt];
+    tr1 = &transitions_[hdr.timecnt - 1];
+    tt0 = &transition_types_[tr0->type_index];
+    tt1 = &transition_types_[tr1->type_index];
+  }
+  const PosixTransition& pt1(tt0->is_dst ? posix.dst_end : posix.dst_start);
+  const PosixTransition& pt0(tt0->is_dst ? posix.dst_start : posix.dst_end);
   for (const cctz::year_t limit = last_year_ + 400; last_year_ < limit;) {
     last_year_ += 1;  // an additional year of generated transitions
     jan1_time += kSecsPerYear[leap_year];
     jan1_weekday = (jan1_weekday + kDaysPerYear[leap_year]) % 7;
     leap_year = !leap_year && IsLeap(last_year_);
-    tr->unix_time =
-        jan1_time + TransOffset(leap_year, jan1_weekday, pt1) - tt0.utc_offset;
-    tr++->type_index = tr1.type_index;
-    tr->unix_time =
-        jan1_time + TransOffset(leap_year, jan1_weekday, pt0) - tt1.utc_offset;
-    tr++->type_index = tr0.type_index;
+    std::int_fast64_t tr1_offset = TransOffset(leap_year, jan1_weekday, pt1);
+    tr->unix_time = jan1_time + tr1_offset - tt0->utc_offset;
+    tr++->type_index = tr1->type_index;
+    std::int_fast64_t tr0_offset = TransOffset(leap_year, jan1_weekday, pt0);
+    tr->unix_time = jan1_time + tr0_offset - tt1->utc_offset;
+    tr++->type_index = tr0->type_index;
   }
+  assert(tr == &transitions_[0] + transitions_.size());
 }
 
 bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
