@@ -517,6 +517,8 @@ CONSTEXPR_F int get_yearday(const civil_day& cd) noexcept {
   return static_cast<int>(cd - civil_day(civil_year(cd))) + 1;
 }
 
+////////////////////////////////////////////////////////////////////////
+
 std::ostream& operator<<(std::ostream& os, const civil_year& y);
 std::ostream& operator<<(std::ostream& os, const civil_month& m);
 std::ostream& operator<<(std::ostream& os, const civil_day& d);
