@@ -13,10 +13,8 @@
 //   limitations under the License.
 
 #include <cstdint>
-#include <iomanip>
 #include <limits>
 #include <ostream>
-#include <sstream>
 #include <type_traits>
 
 // Disable constexpr support unless we are using clang in C++14 mode.
