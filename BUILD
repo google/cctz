@@ -18,6 +18,7 @@ licenses(["notice"])  # Apache License
 
 cc_library(
     name = "civil_time",
+    srcs = ["src/civil_time_detail.cc"],
     hdrs = [
         "include/civil_time.h",
     ],

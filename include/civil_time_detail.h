@@ -482,47 +482,6 @@ CONSTEXPR_T bool operator!=(const civil_time<T1>& lhs,
 
 ////////////////////////////////////////////////////////////////////////
 
-// Output stream operators output a format matching YYYY-MM-DDThh:mm:ss,
-// while omitting fields inferior to the type's alignment. For example,
-// civil_day is formatted only as YYYY-MM-DD.
-inline std::ostream& operator<<(std::ostream& os, const civil_year& y) {
-  std::stringstream ss;
-  ss << y.year();  // No padding.
-  return os << ss.str();
-}
-inline std::ostream& operator<<(std::ostream& os, const civil_month& m) {
-  std::stringstream ss;
-  ss << civil_year(m) << '-';
-  ss << std::setfill('0') << std::setw(2) << m.month();
-  return os << ss.str();
-}
-inline std::ostream& operator<<(std::ostream& os, const civil_day& d) {
-  std::stringstream ss;
-  ss << civil_month(d) << '-';
-  ss << std::setfill('0') << std::setw(2) << d.day();
-  return os << ss.str();
-}
-inline std::ostream& operator<<(std::ostream& os, const civil_hour& h) {
-  std::stringstream ss;
-  ss << civil_day(h) << 'T';
-  ss << std::setfill('0') << std::setw(2) << h.hour();
-  return os << ss.str();
-}
-inline std::ostream& operator<<(std::ostream& os, const civil_minute& m) {
-  std::stringstream ss;
-  ss << civil_hour(m) << ':';
-  ss << std::setfill('0') << std::setw(2) << m.minute();
-  return os << ss.str();
-}
-inline std::ostream& operator<<(std::ostream& os, const civil_second& s) {
-  std::stringstream ss;
-  ss << civil_minute(s) << ':';
-  ss << std::setfill('0') << std::setw(2) << s.second();
-  return os << ss.str();
-}
-
-////////////////////////////////////////////////////////////////////////
-
 enum class weekday {
   monday,
   tuesday,
@@ -532,25 +491,6 @@ enum class weekday {
   saturday,
   sunday,
 };
-
-inline std::ostream& operator<<(std::ostream& os, weekday wd) {
-  switch (wd) {
-    case weekday::monday:
-      return os << "Monday";
-    case weekday::tuesday:
-      return os << "Tuesday";
-    case weekday::wednesday:
-      return os << "Wednesday";
-    case weekday::thursday:
-      return os << "Thursday";
-    case weekday::friday:
-      return os << "Friday";
-    case weekday::saturday:
-      return os << "Saturday";
-    case weekday::sunday:
-      return os << "Sunday";
-  }
-}
 
 CONSTEXPR_F weekday get_weekday(const civil_day& cd) noexcept {
   CONSTEXPR_D weekday k_weekday_by_thu_off[] = {
@@ -576,6 +516,14 @@ CONSTEXPR_F civil_day prev_weekday(civil_day cd, weekday wd) noexcept {
 CONSTEXPR_F int get_yearday(const civil_day& cd) noexcept {
   return static_cast<int>(cd - civil_day(civil_year(cd))) + 1;
 }
+
+std::ostream& operator<<(std::ostream& os, const civil_year& y);
+std::ostream& operator<<(std::ostream& os, const civil_month& m);
+std::ostream& operator<<(std::ostream& os, const civil_day& d);
+std::ostream& operator<<(std::ostream& os, const civil_hour& h);
+std::ostream& operator<<(std::ostream& os, const civil_minute& m);
+std::ostream& operator<<(std::ostream& os, const civil_second& s);
+std::ostream& operator<<(std::ostream& os, weekday wd);
 
 }  // namespace detail
 }  // namespace cctz

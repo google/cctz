@@ -59,6 +59,7 @@ CCTZ_HDRS =			\
 	time_zone.h
 
 CCTZ_OBJS =			\
+	civil_time_detail.o	\
 	time_zone_format.o	\
 	time_zone_if.o		\
 	time_zone_impl.o	\
