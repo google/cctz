@@ -126,24 +126,25 @@ inline std::uint_fast8_t Decode8(const char* cp) {
 // Multi-byte, numeric values are encoded using a MSB first,
 // twos-complement representation. These helpers decode, from
 // the given address, 4-byte and 8-byte values respectively.
+// Note: If int_fastXX_t == intXX_t and this machine is not
+// twos complement, then there will be at least one input value
+// we cannot represent.
 std::int_fast32_t Decode32(const char* cp) {
   std::uint_fast32_t v = 0;
   for (int i = 0; i != (32 / 8); ++i) v = (v << 8) | Decode8(cp++);
-  if (v <= std::numeric_limits<std::int_fast32_t>::max())
-    return static_cast<std::int_fast32_t>(v);
-  return static_cast<std::int_fast32_t>(
-             v - std::numeric_limits<std::int_fast32_t>::max() - 1) +
-         std::numeric_limits<std::int_fast32_t>::min();
+  const std::int_fast32_t s32max = 0x7fffffff;
+  const auto s32maxU = static_cast<std::uint_fast32_t>(s32max);
+  if (v <= s32maxU) return static_cast<std::int_fast32_t>(v);
+  return static_cast<std::int_fast32_t>(v - s32maxU - 1) - s32max - 1;
 }
 
 std::int_fast64_t Decode64(const char* cp) {
   std::uint_fast64_t v = 0;
   for (int i = 0; i != (64 / 8); ++i) v = (v << 8) | Decode8(cp++);
-  if (v <= std::numeric_limits<std::int_fast64_t>::max())
-    return static_cast<std::int_fast64_t>(v);
-  return static_cast<std::int_fast64_t>(
-             v - std::numeric_limits<std::int_fast64_t>::max() - 1) +
-         std::numeric_limits<std::int_fast64_t>::min();
+  const std::int_fast64_t s64max = 0x7fffffffffffffff;
+  const auto s64maxU = static_cast<std::uint_fast64_t>(s64max);
+  if (v <= s64maxU) return static_cast<std::int_fast64_t>(v);
+  return static_cast<std::int_fast64_t>(v - s64maxU - 1) - s64max - 1;
 }
 
 // Generate a year-relative offset for a PosixTransition.
