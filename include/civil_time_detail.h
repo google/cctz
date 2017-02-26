@@ -12,6 +12,9 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
+#ifndef CCTZ_CIVIL_TIME_DETAIL_H_
+#define CCTZ_CIVIL_TIME_DETAIL_H_
+
 #include <cstdint>
 #include <limits>
 #include <ostream>
@@ -532,3 +535,5 @@ std::ostream& operator<<(std::ostream& os, weekday wd);
 #undef CONSTEXPR_M
 #undef CONSTEXPR_F
 #undef CONSTEXPR_D
+
+#endif  // CCTZ_CIVIL_TIME_DETAIL_H_
