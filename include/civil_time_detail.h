@@ -180,20 +180,21 @@ CONSTEXPR_F fields n_sec(year_t y, diff_t m, diff_t d, diff_t hh, diff_t mm,
                          diff_t ss) noexcept {
   // Optimization for when (non-constexpr) fields are already normalized.
   if (0 <= ss && ss < 60) {
+    const second_t nss = static_cast<second_t>(ss);
     if (0 <= mm && mm < 60) {
+      const minute_t nmm = static_cast<minute_t>(mm);
       if (0 <= hh && hh < 24) {
+        const hour_t nhh = static_cast<hour_t>(hh);
         if (1 <= d && d <= 28 && 1 <= m && m <= 12) {
-          return fields(y, static_cast<month_t>(m), static_cast<day_t>(d),
-                        static_cast<hour_t>(hh), static_cast<minute_t>(mm),
-                        static_cast<second_t>(ss));
+          const day_t nd = static_cast<day_t>(d);
+          const month_t nm = static_cast<month_t>(m);
+          return fields(y, nm, nd, nhh, nmm, nss);
         }
-        return n_mon(y, m, d, 0, static_cast<hour_t>(hh),
-                     static_cast<minute_t>(mm), static_cast<second_t>(ss));
+        return n_mon(y, m, d, 0, nhh, nmm, nss);
       }
-      return n_hour(y, m, d, hh / 24, hh % 24, static_cast<minute_t>(mm),
-                    static_cast<second_t>(ss));
+      return n_hour(y, m, d, hh / 24, hh % 24, nmm, nss);
     }
-    return n_min(y, m, d, hh, mm / 60, mm % 60, static_cast<second_t>(ss));
+    return n_min(y, m, d, hh, mm / 60, mm % 60, nss);
   }
   diff_t cm = ss / 60;
   ss %= 60;
