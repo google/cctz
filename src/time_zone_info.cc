@@ -115,9 +115,6 @@ const std::int_least32_t kSecsPerYear[2] = {
   366 * kSecsPerDay,
 };
 
-// The civil second of the UNIX epoch, 1970-01-01 00:00:00.
-const civil_second kUnixEpoch(1970, 1, 1, 0, 0, 0);
-
 // Single-byte, unsigned numeric values are encoded directly.
 inline std::uint_fast8_t Decode8(const char* cp) {
   return static_cast<std::uint_fast8_t>(*cp) & 0xff;
@@ -211,11 +208,6 @@ inline civil_second YearShift(const civil_second& cs, cctz::year_t year_shift) {
 
 }  // namespace
 
-// Assign from a civil_second, created using a TimeZoneInfo timestamp.
-void DateTime::Assign(const civil_second& cs) {
-  offset = cs - kUnixEpoch;
-}
-
 // What (no leap-seconds) UTC+seconds zoneinfo would look like.
 bool TimeZoneInfo::ResetToBuiltinUTC(std::int_fast32_t seconds) {
   transition_types_.resize(1);
@@ -230,7 +222,7 @@ bool TimeZoneInfo::ResetToBuiltinUTC(std::int_fast32_t seconds) {
     Transition& tr(*transitions_.emplace(transitions_.end()));
     tr.unix_time = unix_time;
     tr.type_index = 0;
-    tr.date_time.Assign(LocalTime(tr.unix_time, tt).cs);
+    tr.date_time.offset = LocalTime(tr.unix_time, tt).cs - civil_second();
     tr.prev_date_time = tr.date_time;
     tr.prev_date_time.offset -= 1;
   }
@@ -373,7 +365,7 @@ void TimeZoneInfo::ExtendTransitions(const std::string& name,
   last_year_ = LocalTime(tr0->unix_time, *tt0).cs.year();
   bool leap_year = IsLeap(last_year_);
   const civil_day jan1(last_year_, 1, 1);
-  std::int_fast64_t jan1_time = civil_second(jan1) - kUnixEpoch;
+  std::int_fast64_t jan1_time = civil_second(jan1) - civil_second();
   int jan1_weekday = (static_cast<int>(get_weekday(jan1)) + 1) % 7;
   Transition* tr = &transitions_[hdr.timecnt];  // next trans to fill
   if (LocalTime(tr1->unix_time, *tt1).cs.year() != last_year_) {
@@ -565,10 +557,11 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   const TransitionType* ttp = &transition_types_[default_transition_type_];
   for (std::size_t i = 0; i != transitions_.size(); ++i) {
     Transition& tr(transitions_[i]);
-    tr.prev_date_time.Assign(LocalTime(tr.unix_time, *ttp).cs);
-    tr.prev_date_time.offset -= 1;
+    civil_second cs = LocalTime(tr.unix_time, *ttp).cs;
+    tr.prev_date_time.offset = (cs - civil_second()) - 1;
     ttp = &transition_types_[tr.type_index];
-    tr.date_time.Assign(LocalTime(tr.unix_time, *ttp).cs);
+    cs = LocalTime(tr.unix_time, *ttp).cs;
+    tr.date_time.offset = cs - civil_second();
     if (i != 0) {
       // Check that the transitions are ordered by date/time. Essentially
       // this means that an offset change cannot cross another such change.
@@ -649,8 +642,7 @@ time_zone::absolute_lookup TimeZoneInfo::LocalTime(
   // A civil time in "+offset" looks like (time+offset) in UTC.
   // Note: We perform two additions in the civil_second domain to
   // sidestep the chance of overflow in (unix_time + tt.utc_offset).
-  al.cs = kUnixEpoch + unix_time;
-  al.cs += tt.utc_offset;
+  al.cs = (civil_second() + unix_time) + tt.utc_offset;
 
   // Handle offset, is_dst, and abbreviation.
   al.offset = tt.utc_offset;
@@ -718,7 +710,7 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
 time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
   Transition target;
   DateTime& dt(target.date_time);
-  dt.Assign(cs);
+  dt.offset = cs - civil_second();
 
   const std::size_t timecnt = transitions_.size();
   if (timecnt == 0) {

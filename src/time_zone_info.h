@@ -43,7 +43,6 @@ namespace cctz {
 // to avoid extended arithmetic) and lose a little range as a result.
 struct DateTime {
   std::int_least64_t offset;  // seconds from some epoch DateTime
-  void Assign(const civil_second& cs);
 };
 
 inline bool operator<(const DateTime& lhs, const DateTime& rhs) {
