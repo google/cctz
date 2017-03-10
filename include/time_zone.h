@@ -75,7 +75,7 @@ class time_zone {
     // indirectly by way of cctz::format().
     int offset;        // civil seconds east of UTC
     bool is_dst;       // is offset non-standard?
-    std::string abbr;  // time-zone abbreviation (e.g., "PST")
+    const char* abbr;  // time-zone abbreviation (e.g., "PST")
   };
   absolute_lookup lookup(const time_point<sys_seconds>& tp) const;
   template <typename D>

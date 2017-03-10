@@ -50,7 +50,7 @@ namespace {
     EXPECT_EQ(ss, al.cs.second());                                \
     EXPECT_EQ(off, al.offset);                                    \
     EXPECT_TRUE(isdst == al.is_dst);                              \
-    EXPECT_EQ(zone, al.abbr);                                     \
+    EXPECT_STREQ(zone, al.abbr);                                  \
   } while (0)
 
 const char RFC3339_full[] = "%Y-%m-%dT%H:%M:%E*S%Ez";

@@ -216,6 +216,7 @@ const char* const kTimeZoneNames[] = {
   "America/Porto_Acre",
   "America/Porto_Velho",
   "America/Puerto_Rico",
+  // "America/Punta_Arenas",
   "America/Rainy_River",
   "America/Rankin_Inlet",
   "America/Recife",
@@ -271,7 +272,7 @@ const char* const kTimeZoneNames[] = {
   "Asia/Aqtobe",
   "Asia/Ashgabat",
   "Asia/Ashkhabad",
-  // "Asia/Atyrau",
+  "Asia/Atyrau",
   "Asia/Baghdad",
   "Asia/Bahrain",
   "Asia/Baku",
@@ -292,7 +293,7 @@ const char* const kTimeZoneNames[] = {
   "Asia/Dili",
   "Asia/Dubai",
   "Asia/Dushanbe",
-  // "Asia/Famagusta",
+  "Asia/Famagusta",
   "Asia/Gaza",
   "Asia/Harbin",
   "Asia/Hebron",
@@ -498,7 +499,7 @@ const char* const kTimeZoneNames[] = {
   "Europe/Samara",
   "Europe/San_Marino",
   "Europe/Sarajevo",
-  // "Europe/Saratov",
+  "Europe/Saratov",
   "Europe/Simferopol",
   "Europe/Skopje",
   "Europe/Sofia",
@@ -646,7 +647,7 @@ time_zone LoadZone(const std::string& name) {
     EXPECT_EQ(ss, al.cs.second());                                \
     EXPECT_EQ(off, al.offset);                                    \
     EXPECT_TRUE(isdst == al.is_dst);                              \
-    /* EXPECT_EQ(zone, al.abbr); */                               \
+    /* EXPECT_STREQ(zone, al.abbr); */                            \
   } while (0)
 
 }  // namespace
@@ -746,7 +747,6 @@ TEST(BreakTime, TimePointResolution) {
 
 TEST(BreakTime, LocalTimeInUTC) {
   const auto tp = system_clock::from_time_t(0);
-  const time_zone::absolute_lookup al = utc_time_zone().lookup(tp);
   ExpectTime(tp, utc_time_zone(), 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
   EXPECT_EQ(weekday::thursday,
             get_weekday(civil_day(convert(tp, utc_time_zone()))));
@@ -755,7 +755,6 @@ TEST(BreakTime, LocalTimeInUTC) {
 TEST(BreakTime, LocalTimePosix) {
   // See IEEE Std 1003.1-1988 B.2.3 General Terms, Epoch.
   const auto tp = system_clock::from_time_t(536457599);
-  const time_zone::absolute_lookup al = utc_time_zone().lookup(tp);
   ExpectTime(tp, utc_time_zone(), 1986, 12, 31, 23, 59, 59, 0, false, "UTC");
   EXPECT_EQ(weekday::wednesday,
             get_weekday(civil_day(convert(tp, utc_time_zone()))));
@@ -778,7 +777,6 @@ TEST(BreakTime, LocalTimeInMTV) {
 TEST(BreakTime, LocalTimeInSydney) {
   const time_zone tz = LoadZone("Australia/Sydney");
   const auto tp = system_clock::from_time_t(90);
-  const time_zone::absolute_lookup al = tz.lookup(tp);
   ExpectTime(tp, tz, 1970, 1, 1, 10, 1, 30, 10 * 60 * 60, false, "AEST");
   EXPECT_EQ(weekday::thursday, get_weekday(civil_day(convert(tp, tz))));
 }
@@ -1057,7 +1055,6 @@ TEST(TimeZoneEdgeCase, NegativeYear) {
   // Tests transition from year 0 (aka 1BCE) to year -1.
   const time_zone tz = utc_time_zone();
   auto tp = convert(civil_second(0, 1, 1, 0, 0, 0), tz);
-  time_zone::absolute_lookup al = tz.lookup(tp);
   ExpectTime(tp, tz, 0, 1, 1, 0, 0, 0, 0 * 3600, false, "UTC");
   EXPECT_EQ(weekday::saturday, get_weekday(civil_day(convert(tp, tz))));
   tp -= std::chrono::seconds(1);

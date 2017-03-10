@@ -15,15 +15,15 @@
 #ifndef CCTZ_TIME_ZONE_LIBC_H_
 #define CCTZ_TIME_ZONE_LIBC_H_
 
-#include <cstdint>
 #include <string>
 
 #include "time_zone_if.h"
 
 namespace cctz {
 
-// A time zone backed by gmtime_r(3), localtime_r(3), and mktime(3), and
-// which therefore only supports "localtime" and fixed offsets from UTC.
+// A time zone backed by gmtime_r(3), localtime_r(3), and mktime(3),
+// and which therefore only supports UTC and the local time zone.
+// TODO: Add support fixed offsets from UTC.
 class TimeZoneLibC : public TimeZoneIf {
  public:
   explicit TimeZoneLibC(const std::string& name);
@@ -35,9 +35,7 @@ class TimeZoneLibC : public TimeZoneIf {
       const civil_second& cs) const override;
 
  private:
-  bool local_;        // localtime or UTC
-  int offset_;        // UTC offset when !local_
-  std::string abbr_;  // abbreviation when !local_
+  const bool local_;  // localtime or UTC
 };
 
 }  // namespace cctz

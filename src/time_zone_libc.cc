@@ -12,6 +12,10 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
+#if defined(_WIN32) || defined(_WIN64)
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "time_zone_libc.h"
 
 #include <chrono>
@@ -23,26 +27,25 @@
 namespace cctz {
 
 namespace {
+
 // .first is seconds east of UTC; .second is the time-zone abbreviation.
-using OffsetAbbr = std::pair<int, std::string>;
+using OffsetAbbr = std::pair<int, const char*>;
 
 // Defines a function that can be called as follows:
 //
-//   std::tm tm;
+//   std::tm tm = ...;
 //   OffsetAbbr off_abbr = get_offset_abbr(tm);
 //
 #if defined(_WIN32) || defined(_WIN64)
+// Uses the globals: '_timezone', '_dstbias' and '_tzname'.
 OffsetAbbr get_offset_abbr(const std::tm& tm) {
   const bool is_dst = tm.tm_isdst > 0;
-  long seconds;
-  _get_timezone(&seconds);
-  char abbr[32] = {0};
-  size_t size_in_bytes = sizeof(abbr);
-  _get_tzname(&size_in_bytes, abbr, size_in_bytes, is_dst);
-  const int off = seconds + (is_dst ? 60 * 60 : 0);
+  const int off = _timezone + (is_dst ? _dstbias : 0);
+  const char* abbr = _tzname[is_dst];
   return {off, abbr};
 }
 #elif defined(__sun)
+// Uses the globals: 'timezone', 'altzone' and 'tzname'.
 OffsetAbbr get_offset_abbr(const std::tm& tm) {
   const bool is_dst = tm.tm_isdst > 0;
   const int off = is_dst ? altzone : timezone;
@@ -72,16 +75,11 @@ OffsetAbbr get_offset_abbr(const T& tm, decltype(&T::__tm_gmtoff) = nullptr,
   return {tm.__tm_gmtoff, tm.__tm_zone};
 }
 #endif
+
 }  // namespace
 
-TimeZoneLibC::TimeZoneLibC(const std::string& name) {
-  local_ = (name == "localtime");
-  if (!local_) {
-    // TODO: Support "UTC-05:00", for example.
-    offset_ = 0;
-    abbr_ = "UTC";
-  }
-}
+TimeZoneLibC::TimeZoneLibC(const std::string& name)
+    : local_(name == "localtime") {}
 
 time_zone::absolute_lookup TimeZoneLibC::BreakTime(
     const time_point<sys_seconds>& tp) const {
@@ -101,8 +99,8 @@ time_zone::absolute_lookup TimeZoneLibC::BreakTime(
 #else
     gmtime_r(&t, &tm);
 #endif
-    al.offset = offset_;
-    al.abbr = abbr_;
+    al.offset = 0;
+    al.abbr = "UTC";
   }
   al.cs = civil_second(tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
                        tm.tm_hour, tm.tm_min, tm.tm_sec);
