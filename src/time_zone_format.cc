@@ -520,7 +520,7 @@ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
 // support the tm_gmtoff extension to std::tm.  %Z is parsed but ignored.
 bool parse(const std::string& format, const std::string& input,
            const time_zone& tz, time_point<sys_seconds>* sec,
-           detail::femtoseconds* fs) {
+           detail::femtoseconds* fs, std::string* err) {
   // The unparsed input.
   const char* data = input.c_str();  // NUL terminated
 
@@ -723,13 +723,19 @@ bool parse(const std::string& format, const std::string& input,
     tm.tm_hour += 12;
   }
 
-  if (data == nullptr) return false;
+  if (data == nullptr) {
+    if (err != nullptr) *err = "Failed to parse input";
+    return false;
+  }
 
   // Skip any remaining whitespace.
   while (std::isspace(*data)) ++data;
 
   // parse() must consume the entire input string.
-  if (*data != '\0') return false;
+  if (*data != '\0') {
+    if (err != nullptr) *err = "Illegal trailing data in input string";
+    return false;
+  }
 
   // If we saw %s then we ignore anything else and return that time.
   if (saw_percent_s) {
@@ -752,7 +758,11 @@ bool parse(const std::string& format, const std::string& input,
 
   if (!saw_year) {
     year = year_t{tm.tm_year};
-    if (year > kyearmax - 1900) return false;
+    if (year > kyearmax - 1900) {
+      // Platform-dependent, maybe unreachable.
+      if (err != nullptr) *err = "Out-of-range year";
+      return false;
+    }
     year += 1900;
   }
 
@@ -764,6 +774,7 @@ bool parse(const std::string& format, const std::string& input,
   if (cs.year() != year || cs.month() != tm.tm_mon + 1 ||
       cs.day() != tm.tm_mday || cs.hour() != tm.tm_hour ||
       cs.minute() != tm.tm_min || cs.second() != tm.tm_sec) {
+    if (err != nullptr) *err = "Out-of-range field";
     return false;
   }
 

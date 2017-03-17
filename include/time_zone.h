@@ -197,7 +197,7 @@ using femtoseconds = std::chrono::duration<std::int_fast64_t, std::femto>;
 std::string format(const std::string&, const time_point<sys_seconds>&,
                    const femtoseconds&, const time_zone&);
 bool parse(const std::string&, const std::string&, const time_zone&,
-           time_point<sys_seconds>*, femtoseconds*);
+           time_point<sys_seconds>*, femtoseconds*, std::string* err = nullptr);
 }  // namespace detail
 
 // Formats the given time_point in the given cctz::time_zone according to
