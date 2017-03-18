@@ -27,49 +27,21 @@
 
 namespace cctz {
 
-// A zone-independent date/time. A DateTime represents a "Y/M/D H:M:S"
-// as an offset in seconds from some epoch DateTime, without taking into
-// account the value of, or changes in any time_zone's UTC offset (i.e., as
-// if the date/time was in UTC). This allows "Y/M/D H:M:S" values to be
-// quickly ordered by offset (although this may not be the same ordering as
-// their corresponding times in a time_zone). But, if two DateTimes are not
-// separated by a UTC-offset change in some time_zone, then the number of
-// seconds between them can be computed as a simple difference of offsets.
-//
-// Note: Because the DateTime epoch does not correspond to the time_point
-// epoch (even if only because of the unknown UTC offset) there can be valid
-// times that will not be representable as DateTimes when DateTime only has
-// the same number of "seconds" bits. We accept this at the moment (so as
-// to avoid extended arithmetic) and lose a little range as a result.
-struct DateTime {
-  std::int_least64_t offset;  // seconds from some epoch DateTime
-};
-
-inline bool operator<(const DateTime& lhs, const DateTime& rhs) {
-  return lhs.offset < rhs.offset;
-}
-
-// The difference between two DateTimes in seconds. Requires that all
-// intervening DateTimes share the same UTC offset (i.e., no transitions).
-inline std::int_fast64_t operator-(const DateTime& lhs, const DateTime& rhs) {
-  return lhs.offset - rhs.offset;
-}
-
 // A transition to a new UTC offset.
 struct Transition {
   std::int_least64_t unix_time;   // the instant of this transition
   std::uint_least8_t type_index;  // index of the transition type
-  DateTime date_time;             // local date/time of transition
-  DateTime prev_date_time;        // local date/time one second earlier
+  civil_second civil_sec;         // local civil time of transition
+  civil_second prev_civil_sec;    // local civil time one second earlier
 
   struct ByUnixTime {
     inline bool operator()(const Transition& lhs, const Transition& rhs) const {
       return lhs.unix_time < rhs.unix_time;
     }
   };
-  struct ByDateTime {
+  struct ByCivilTime {
     inline bool operator()(const Transition& lhs, const Transition& rhs) const {
-      return lhs.date_time < rhs.date_time;
+      return lhs.civil_sec < rhs.civil_sec;
     }
   };
 };
@@ -126,7 +98,7 @@ class TimeZoneInfo : public TimeZoneIf {
   time_zone::civil_lookup TimeLocal(const civil_second& cs,
                                     std::int_fast64_t offset) const;
 
-  std::vector<Transition> transitions_;  // ordered by unix_time and date_time
+  std::vector<Transition> transitions_;  // ordered by unix_time and civil_sec
   std::vector<TransitionType> transition_types_;  // distinct transition types
   std::uint_fast8_t default_transition_type_;  // for before first transition
   std::string abbreviations_;  // all the NUL-terminated abbreviations

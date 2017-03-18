@@ -826,6 +826,48 @@ TEST(MakeTime, Normalization) {
   EXPECT_EQ(tp, convert(civil_second(2009, 2, 13, 18, 30, 90), tz));   // second
 }
 
+TEST(MakeTime, SysSecondsLimits) {
+  const char RFC3339[] =  "%Y-%m-%dT%H:%M:%S%Ez";
+  const time_zone utc = utc_time_zone();
+  const time_zone plus14 = LoadZone("Etc/GMT-14");
+  const time_zone minus12 = LoadZone("Etc/GMT+12");
+  time_point<sys_seconds> tp;
+
+  // Approach the maximal time_point<sys_seconds> value from below.
+  tp = convert(civil_second(292277026596, 12, 4, 15, 30, 6), utc);
+  EXPECT_EQ("292277026596-12-04T15:30:06+00:00", format(RFC3339, tp, utc));
+  tp = convert(civil_second(292277026596, 12, 4, 15, 30, 7), utc);
+  EXPECT_EQ("292277026596-12-04T15:30:07+00:00", format(RFC3339, tp, utc));
+  EXPECT_EQ(time_point<sys_seconds>::max(), tp);
+
+  // Checks that we can also get the maximal value for a far-east zone.
+  tp = convert(civil_second(292277026596, 12, 5, 5, 30, 7), plus14);
+  EXPECT_EQ("292277026596-12-05T05:30:07+14:00", format(RFC3339, tp, plus14));
+  EXPECT_EQ(time_point<sys_seconds>::max(), tp);
+
+  // Checks that we can also get the maximal value for a far-west zone.
+  tp = convert(civil_second(292277026596, 12, 4, 3, 30, 7), minus12);
+  EXPECT_EQ("292277026596-12-04T03:30:07-12:00", format(RFC3339, tp, minus12));
+  EXPECT_EQ(time_point<sys_seconds>::max(), tp);
+
+  // Approach the minimal time_point<sys_seconds> value from above.
+  tp = convert(civil_second(-292277022657, 1, 27, 8, 29, 53), utc);
+  EXPECT_EQ("-292277022657-01-27T08:29:53+00:00", format(RFC3339, tp, utc));
+  tp = convert(civil_second(-292277022657, 1, 27, 8, 29, 52), utc);
+  EXPECT_EQ("-292277022657-01-27T08:29:52+00:00", format(RFC3339, tp, utc));
+  EXPECT_EQ(time_point<sys_seconds>::min(), tp);
+
+  // Checks that we can also get the minimal value for a far-east zone.
+  tp = convert(civil_second(-292277022657, 1, 27, 22, 29, 52), plus14);
+  EXPECT_EQ("-292277022657-01-27T22:29:52+14:00", format(RFC3339, tp, plus14));
+  EXPECT_EQ(time_point<sys_seconds>::min(), tp);
+
+  // Checks that we can also get the minimal value for a far-west zone.
+  tp = convert(civil_second(-292277022657, 1, 26, 20, 29, 52), minus12);
+  EXPECT_EQ("-292277022657-01-26T20:29:52-12:00", format(RFC3339, tp, minus12));
+  EXPECT_EQ(time_point<sys_seconds>::min(), tp);
+}
+
 TEST(TimeZoneEdgeCase, AmericaNewYork) {
   const time_zone tz = LoadZone("America/New_York");
 

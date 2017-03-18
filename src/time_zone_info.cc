@@ -182,21 +182,21 @@ inline time_zone::civil_lookup MakeUnique(std::int_fast64_t unix_time) {
 }
 
 inline time_zone::civil_lookup MakeSkipped(const Transition& tr,
-                                           const DateTime& dt) {
+                                           const civil_second& cs) {
   time_zone::civil_lookup cl;
-  cl.pre = FromUnixSeconds(tr.unix_time - 1 + (dt - tr.prev_date_time));
+  cl.pre = FromUnixSeconds(tr.unix_time - 1 + (cs - tr.prev_civil_sec));
   cl.trans = FromUnixSeconds(tr.unix_time);
-  cl.post = FromUnixSeconds(tr.unix_time - (tr.date_time - dt));
+  cl.post = FromUnixSeconds(tr.unix_time - (tr.civil_sec - cs));
   cl.kind = time_zone::civil_lookup::SKIPPED;
   return cl;
 }
 
 inline time_zone::civil_lookup MakeRepeated(const Transition& tr,
-                                            const DateTime& dt) {
+                                            const civil_second& cs) {
   time_zone::civil_lookup cl;
-  cl.pre = FromUnixSeconds(tr.unix_time - 1 - (tr.prev_date_time - dt));
+  cl.pre = FromUnixSeconds(tr.unix_time - 1 - (tr.prev_civil_sec - cs));
   cl.trans = FromUnixSeconds(tr.unix_time);
-  cl.post = FromUnixSeconds(tr.unix_time + (dt - tr.date_time));
+  cl.post = FromUnixSeconds(tr.unix_time + (cs - tr.civil_sec));
   cl.kind = time_zone::civil_lookup::REPEATED;
   return cl;
 }
@@ -222,9 +222,8 @@ bool TimeZoneInfo::ResetToBuiltinUTC(std::int_fast32_t seconds) {
     Transition& tr(*transitions_.emplace(transitions_.end()));
     tr.unix_time = unix_time;
     tr.type_index = 0;
-    tr.date_time.offset = LocalTime(tr.unix_time, tt).cs - civil_second();
-    tr.prev_date_time = tr.date_time;
-    tr.prev_date_time.offset -= 1;
+    tr.civil_sec = LocalTime(tr.unix_time, tt).cs;
+    tr.prev_civil_sec = tr.civil_sec - 1;
   }
 
   default_transition_type_ = 0;
@@ -557,16 +556,14 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   const TransitionType* ttp = &transition_types_[default_transition_type_];
   for (std::size_t i = 0; i != transitions_.size(); ++i) {
     Transition& tr(transitions_[i]);
-    civil_second cs = LocalTime(tr.unix_time, *ttp).cs;
-    tr.prev_date_time.offset = (cs - civil_second()) - 1;
+    tr.prev_civil_sec = LocalTime(tr.unix_time, *ttp).cs - 1;
     ttp = &transition_types_[tr.type_index];
-    cs = LocalTime(tr.unix_time, *ttp).cs;
-    tr.date_time.offset = cs - civil_second();
+    tr.civil_sec = LocalTime(tr.unix_time, *ttp).cs;
     if (i != 0) {
-      // Check that the transitions are ordered by date/time. Essentially
+      // Check that the transitions are ordered by civil time. Essentially
       // this means that an offset change cannot cross another such change.
       // No one does this in practice, and we depend on it in MakeTime().
-      if (!Transition::ByDateTime()(transitions_[i - 1], tr))
+      if (!Transition::ByCivilTime()(transitions_[i - 1], tr))
         return false;  // out of order
     }
   }
@@ -697,7 +694,7 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
     }
   }
 
-  const Transition target = {unix_time, 0, {0}, {0}};
+  const Transition target = {unix_time, 0, civil_second(), civil_second()};
   const Transition* begin = &transitions_[0];
   const Transition* tr = std::upper_bound(begin, begin + timecnt, target,
                                           Transition::ByUnixTime());
@@ -708,55 +705,52 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
 }
 
 time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
-  Transition target;
-  DateTime& dt(target.date_time);
-  dt.offset = cs - civil_second();
-
   const std::size_t timecnt = transitions_.size();
   if (timecnt == 0) {
     // Use the default offset.
     const std::int_fast32_t default_offset =
         transition_types_[default_transition_type_].utc_offset;
-    return MakeUnique((dt - DateTime{0}) - default_offset);
+    return MakeUnique(cs - (civil_second() + default_offset));
   }
 
-  // Find the first transition after our target date/time.
+  // Find the first transition after our target civil time.
   const Transition* tr = nullptr;
   const Transition* begin = &transitions_[0];
   const Transition* end = begin + timecnt;
-  if (dt < begin->date_time) {
+  if (cs < begin->civil_sec) {
     tr = begin;
-  } else if (!(dt < transitions_[timecnt - 1].date_time)) {
+  } else if (!(cs < transitions_[timecnt - 1].civil_sec)) {
     tr = end;
   } else {
     const std::size_t hint = time_local_hint_.load(std::memory_order_relaxed);
     if (0 < hint && hint < timecnt) {
-      if (dt < transitions_[hint].date_time) {
-        if (!(dt < transitions_[hint - 1].date_time)) {
+      if (cs < transitions_[hint].civil_sec) {
+        if (!(cs < transitions_[hint - 1].civil_sec)) {
           tr = begin + hint;
         }
       }
     }
     if (tr == nullptr) {
-      tr = std::upper_bound(begin, end, target, Transition::ByDateTime());
+      const Transition target = {0, 0, cs, civil_second()};
+      tr = std::upper_bound(begin, end, target, Transition::ByCivilTime());
       time_local_hint_.store(static_cast<std::size_t>(tr - begin),
                              std::memory_order_relaxed);
     }
   }
 
   if (tr == begin) {
-    if (!(tr->prev_date_time < dt)) {
+    if (!(tr->prev_civil_sec < cs)) {
       // Before first transition, so use the default offset.
       const std::int_fast32_t default_offset =
           transition_types_[default_transition_type_].utc_offset;
-      return MakeUnique((dt - DateTime{0}) - default_offset);
+      return MakeUnique(cs - (civil_second() + default_offset));
     }
-    // tr->prev_date_time < dt < tr->date_time
-    return MakeSkipped(*tr, dt);
+    // tr->prev_civil_sec < cs < tr->civil_sec
+    return MakeSkipped(*tr, cs);
   }
 
   if (tr == end) {
-    if ((--tr)->prev_date_time < dt) {
+    if ((--tr)->prev_civil_sec < cs) {
       // After the last transition. If we extended the transitions using
       // future_spec_, shift back to a supported year using the 400-year
       // cycle of calendaric equivalence and then compensate accordingly.
@@ -764,24 +758,24 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
         const cctz::year_t shift = (cs.year() - last_year_) / 400 + 1;
         return TimeLocal(YearShift(cs, shift * -400), shift * kSecsPer400Years);
       }
-      return MakeUnique(tr->unix_time + (dt - tr->date_time));
+      return MakeUnique(tr->unix_time + (cs - tr->civil_sec));
     }
-    // tr->date_time <= dt <= tr->prev_date_time
-    return MakeRepeated(*tr, dt);
+    // tr->civil_sec <= cs <= tr->prev_civil_sec
+    return MakeRepeated(*tr, cs);
   }
 
-  if (tr->prev_date_time < dt) {
-    // tr->prev_date_time < dt < tr->date_time
-    return MakeSkipped(*tr, dt);
+  if (tr->prev_civil_sec < cs) {
+    // tr->prev_civil_sec < cs < tr->civil_sec
+    return MakeSkipped(*tr, cs);
   }
 
-  if (!((--tr)->prev_date_time < dt)) {
-    // tr->date_time <= dt <= tr->prev_date_time
-    return MakeRepeated(*tr, dt);
+  if (!((--tr)->prev_civil_sec < cs)) {
+    // tr->civil_sec <= cs <= tr->prev_civil_sec
+    return MakeRepeated(*tr, cs);
   }
 
   // In between transitions.
-  return MakeUnique(tr->unix_time + (dt - tr->date_time));
+  return MakeUnique(tr->unix_time + (cs - tr->civil_sec));
 }
 
 }  // namespace cctz
