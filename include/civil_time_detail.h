@@ -25,12 +25,10 @@
 #define CONSTEXPR_D constexpr  // data
 #define CONSTEXPR_F constexpr  // function
 #define CONSTEXPR_M constexpr  // member
-#define CONSTEXPR_T constexpr  // template
 #else
 #define CONSTEXPR_D const
 #define CONSTEXPR_F inline
 #define CONSTEXPR_M
-#define CONSTEXPR_T
 #endif
 
 namespace cctz {
@@ -440,7 +438,7 @@ using civil_second = civil_time<second_tag>;
 // Relational operators that work with differently aligned objects.
 // Always compares all six fields.
 template <typename T1, typename T2>
-CONSTEXPR_T bool operator<(const civil_time<T1>& lhs,
+CONSTEXPR_F bool operator<(const civil_time<T1>& lhs,
                            const civil_time<T2>& rhs) noexcept {
   return (lhs.year() < rhs.year() ||
           (lhs.year() == rhs.year() &&
@@ -455,29 +453,29 @@ CONSTEXPR_T bool operator<(const civil_time<T1>& lhs,
                    (lhs.second() < rhs.second())))))))))));
 }
 template <typename T1, typename T2>
-CONSTEXPR_T bool operator<=(const civil_time<T1>& lhs,
+CONSTEXPR_F bool operator<=(const civil_time<T1>& lhs,
                             const civil_time<T2>& rhs) noexcept {
   return !(rhs < lhs);
 }
 template <typename T1, typename T2>
-CONSTEXPR_T bool operator>=(const civil_time<T1>& lhs,
+CONSTEXPR_F bool operator>=(const civil_time<T1>& lhs,
                             const civil_time<T2>& rhs) noexcept {
   return !(lhs < rhs);
 }
 template <typename T1, typename T2>
-CONSTEXPR_T bool operator>(const civil_time<T1>& lhs,
+CONSTEXPR_F bool operator>(const civil_time<T1>& lhs,
                            const civil_time<T2>& rhs) noexcept {
   return rhs < lhs;
 }
 template <typename T1, typename T2>
-CONSTEXPR_T bool operator==(const civil_time<T1>& lhs,
+CONSTEXPR_F bool operator==(const civil_time<T1>& lhs,
                             const civil_time<T2>& rhs) noexcept {
   return lhs.year() == rhs.year() && lhs.month() == rhs.month() &&
          lhs.day() == rhs.day() && lhs.hour() == rhs.hour() &&
          lhs.minute() == rhs.minute() && lhs.second() == rhs.second();
 }
 template <typename T1, typename T2>
-CONSTEXPR_T bool operator!=(const civil_time<T1>& lhs,
+CONSTEXPR_F bool operator!=(const civil_time<T1>& lhs,
                             const civil_time<T2>& rhs) noexcept {
   return !(lhs == rhs);
 }
@@ -532,7 +530,6 @@ std::ostream& operator<<(std::ostream& os, weekday wd);
 }  // namespace detail
 }  // namespace cctz
 
-#undef CONSTEXPR_T
 #undef CONSTEXPR_M
 #undef CONSTEXPR_F
 #undef CONSTEXPR_D
