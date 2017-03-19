@@ -327,8 +327,8 @@ void TimeZoneInfo::ExtendTransitions(const std::string& name,
   if (!extending) {
     // Ensure that there is always a transition in the second half of the
     // time line (the BIG_BANG transition is in the first half) so that the
-    // signed difference between a DateTime and the DateTime of its previous
-    // transition is always representable, without overflow.
+    // signed difference between a civil_second and the civil_second of its
+    // previous transition is always representable, without overflow.
     const Transition& last(transitions_.back());
     if (last.unix_time < 0) {
       const std::uint_fast8_t type_index = last.type_index;
@@ -537,8 +537,8 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   transitions_.resize(hdr.timecnt);
 
   // Ensure that there is always a transition in the first half of the
-  // time line (the second half is handled in ExtendTransitions()) so
-  // that the signed difference between a DateTime and the DateTime of
+  // time line (the second half is handled in ExtendTransitions()) so that
+  // the signed difference between a civil_second and the civil_second of
   // its previous transition is always representable, without overflow.
   // A contemporary zic will usually have already done this for us.
   if (transitions_.empty() || transitions_.front().unix_time >= 0) {
