@@ -568,12 +568,6 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
     }
   }
 
-  // We remember the transitions found during the last BreakTime() and
-  // MakeTime() calls. If the next request is for the same transition we
-  // will avoid re-searching.
-  local_time_hint_ = 0;
-  time_local_hint_ = 0;
-
   transitions_.shrink_to_fit();
   return true;
 }

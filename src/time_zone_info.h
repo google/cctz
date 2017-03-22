@@ -107,6 +107,9 @@ class TimeZoneInfo : public TimeZoneIf {
   bool extended_;            // future_spec_ was used to generate transitions
   cctz::year_t last_year_;   // the final year of the generated transitions
 
+  // We remember the transitions found during the last BreakTime() and
+  // MakeTime() calls. If the next request is for the same transition we
+  // will avoid re-searching.
   mutable std::atomic<std::size_t> local_time_hint_ = {};  // BreakTime() hint
   mutable std::atomic<std::size_t> time_local_hint_ = {};  // MakeTime() hint
 };
