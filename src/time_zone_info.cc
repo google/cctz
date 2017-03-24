@@ -174,35 +174,39 @@ std::int_fast64_t TransOffset(bool leap_year, int jan1_weekday,
   return (days * kSecsPerDay) + pt.time.offset;
 }
 
-inline time_zone::civil_lookup MakeUnique(std::int_fast64_t unix_time) {
+inline time_zone::civil_lookup MakeUnique(const time_point<sys_seconds>& tp) {
   time_zone::civil_lookup cl;
-  cl.pre = cl.trans = cl.post = FromUnixSeconds(unix_time);
   cl.kind = time_zone::civil_lookup::UNIQUE;
+  cl.pre = cl.trans = cl.post = tp;
   return cl;
+}
+
+inline time_zone::civil_lookup MakeUnique(std::int_fast64_t unix_time) {
+  return MakeUnique(FromUnixSeconds(unix_time));
 }
 
 inline time_zone::civil_lookup MakeSkipped(const Transition& tr,
                                            const civil_second& cs) {
   time_zone::civil_lookup cl;
+  cl.kind = time_zone::civil_lookup::SKIPPED;
   cl.pre = FromUnixSeconds(tr.unix_time - 1 + (cs - tr.prev_civil_sec));
   cl.trans = FromUnixSeconds(tr.unix_time);
   cl.post = FromUnixSeconds(tr.unix_time - (tr.civil_sec - cs));
-  cl.kind = time_zone::civil_lookup::SKIPPED;
   return cl;
 }
 
 inline time_zone::civil_lookup MakeRepeated(const Transition& tr,
                                             const civil_second& cs) {
   time_zone::civil_lookup cl;
+  cl.kind = time_zone::civil_lookup::REPEATED;
   cl.pre = FromUnixSeconds(tr.unix_time - 1 - (tr.prev_civil_sec - cs));
   cl.trans = FromUnixSeconds(tr.unix_time);
   cl.post = FromUnixSeconds(tr.unix_time + (cs - tr.civil_sec));
-  cl.kind = time_zone::civil_lookup::REPEATED;
   return cl;
 }
 
-inline civil_second YearShift(const civil_second& cs, cctz::year_t year_shift) {
-  return civil_second(cs.year() + year_shift, cs.month(), cs.day(),
+inline civil_second YearShift(const civil_second& cs, cctz::year_t shift) {
+  return civil_second(cs.year() + shift, cs.month(), cs.day(),
                       cs.hour(), cs.minute(), cs.second());
 }
 
@@ -231,6 +235,9 @@ bool TimeZoneInfo::ResetToBuiltinUTC(std::int_fast32_t seconds) {
   abbreviations_.append(1, '\0');  // add NUL
   future_spec_.clear();  // never needed for a fixed-offset zone
   extended_ = false;
+
+  tt.civil_max = LocalTime(sys_seconds::max().count(), tt).cs;
+  tt.civil_min = LocalTime(sys_seconds::min().count(), tt).cs;
 
   transitions_.shrink_to_fit();
   return true;
@@ -568,6 +575,13 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
     }
   }
 
+  // Compute the maximum/minimum civil times that can be converted to a
+  // time_point<sys_seconds> for each of the zone's transition types.
+  for (auto& tt : transition_types_) {
+    tt.civil_max = LocalTime(sys_seconds::max().count(), tt).cs;
+    tt.civil_min = LocalTime(sys_seconds::min().count(), tt).cs;
+  }
+
   transitions_.shrink_to_fit();
   return true;
 }
@@ -643,13 +657,24 @@ time_zone::absolute_lookup TimeZoneInfo::LocalTime(
   return al;
 }
 
-// MakeTime() translation with a conversion-preserving offset.
-time_zone::civil_lookup TimeZoneInfo::TimeLocal(
-    const civil_second& cs, std::int_fast64_t offset) const {
+// MakeTime() translation with a conversion-preserving +N * 400-year shift.
+time_zone::civil_lookup TimeZoneInfo::TimeLocal(const civil_second& cs,
+                                                cctz::year_t c4_shift) const {
+  assert(last_year_ - 400 < cs.year() && cs.year() <= last_year_);
   time_zone::civil_lookup cl = MakeTime(cs);
-  cl.pre += sys_seconds(offset);
-  cl.trans += sys_seconds(offset);
-  cl.post += sys_seconds(offset);
+  if (c4_shift > sys_seconds::max().count() / kSecsPer400Years) {
+    cl.pre = cl.trans = cl.post = time_point<sys_seconds>::max();
+  } else {
+    const auto offset = sys_seconds(c4_shift * kSecsPer400Years);
+    const auto limit = time_point<sys_seconds>::max() - offset;
+    for (auto* tp : {&cl.pre, &cl.trans, &cl.post}) {
+      if (*tp > limit) {
+        *tp = time_point<sys_seconds>::max();
+      } else {
+        *tp += offset;
+      }
+    }
+  }
   return cl;
 }
 
@@ -700,12 +725,7 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
 
 time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
   const std::size_t timecnt = transitions_.size();
-  if (timecnt == 0) {
-    // Use the default offset.
-    const std::int_fast32_t default_offset =
-        transition_types_[default_transition_type_].utc_offset;
-    return MakeUnique(cs - (civil_second() + default_offset));
-  }
+  assert(timecnt != 0);  // We always add a transition.
 
   // Find the first transition after our target civil time.
   const Transition* tr = nullptr;
@@ -735,9 +755,9 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
   if (tr == begin) {
     if (!(tr->prev_civil_sec < cs)) {
       // Before first transition, so use the default offset.
-      const std::int_fast32_t default_offset =
-          transition_types_[default_transition_type_].utc_offset;
-      return MakeUnique(cs - (civil_second() + default_offset));
+      const TransitionType& tt(transition_types_[default_transition_type_]);
+      if (cs < tt.civil_min) return MakeUnique(time_point<sys_seconds>::min());
+      return MakeUnique(cs - (civil_second() + tt.utc_offset));
     }
     // tr->prev_civil_sec < cs < tr->civil_sec
     return MakeSkipped(*tr, cs);
@@ -749,9 +769,11 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
       // future_spec_, shift back to a supported year using the 400-year
       // cycle of calendaric equivalence and then compensate accordingly.
       if (extended_ && cs.year() > last_year_) {
-        const cctz::year_t shift = (cs.year() - last_year_) / 400 + 1;
-        return TimeLocal(YearShift(cs, shift * -400), shift * kSecsPer400Years);
+        const cctz::year_t shift = (cs.year() - last_year_ - 1) / 400 + 1;
+        return TimeLocal(YearShift(cs, shift * -400), shift);
       }
+      const TransitionType& tt(transition_types_[tr->type_index]);
+      if (cs > tt.civil_max) return MakeUnique(time_point<sys_seconds>::max());
       return MakeUnique(tr->unix_time + (cs - tr->civil_sec));
     }
     // tr->civil_sec <= cs <= tr->prev_civil_sec

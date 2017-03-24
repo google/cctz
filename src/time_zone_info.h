@@ -49,6 +49,8 @@ struct Transition {
 // The characteristics of a particular transition.
 struct TransitionType {
   std::int_least32_t utc_offset;  // the new prevailing UTC offset
+  civil_second civil_max;         // max convertible civil time for offset
+  civil_second civil_min;         // min convertible civil time for offset
   bool is_dst;                    // did we move into daylight-saving time
   std::uint_least8_t abbr_index;  // index of the new abbreviation
 };
@@ -96,7 +98,7 @@ class TimeZoneInfo : public TimeZoneIf {
   time_zone::absolute_lookup LocalTime(std::int_fast64_t unix_time,
                                        const TransitionType& tt) const;
   time_zone::civil_lookup TimeLocal(const civil_second& cs,
-                                    std::int_fast64_t offset) const;
+                                    cctz::year_t c4_shift) const;
 
   std::vector<Transition> transitions_;  // ordered by unix_time and civil_sec
   std::vector<TransitionType> transition_types_;  // distinct transition types

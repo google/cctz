@@ -85,18 +85,20 @@ class time_zone {
 
   // A civil_lookup represents the absolute time(s) (time_point) that
   // correspond to the given civil time (cctz::civil_second) within this
-  // time_zone. Usually the given civil time represents a unique instant in
-  // time, in which case the conversion is unambiguous and correct. However,
-  // within this time zone, the given civil time may be skipped (e.g., during
-  // a positive UTC offset shift), or repeated (e.g., during a negative UTC
-  // offset shift). To account for these possibilities, civil_lookup is richer
-  // than just a single output time_point.
+  // time_zone. Usually the given civil time represents a unique instant
+  // in time, in which case the conversion is unambiguous. However,
+  // within this time zone, the given civil time may be skipped (e.g.,
+  // during a positive UTC offset shift), or repeated (e.g., during a
+  // negative UTC offset shift). To account for these possibilities,
+  // civil_lookup is richer than just a single time_point.
   //
-  // In all cases the civil_lookup::kind enum will indicate the nature of the
-  // given civil-time argument, and the pre, trans, and post, members will
-  // give the absolute time answers using the pre-transition offset, the
-  // transition point itself, and the post-transition offset, respectively
-  // (these are all equal if kind == UNIQUE).
+  // In all cases the civil_lookup::kind enum will indicate the nature
+  // of the given civil-time argument, and the pre, trans, and post
+  // members will give the absolute time answers using the pre-transition
+  // offset, the transition point itself, and the post-transition offset,
+  // respectively (all three times are equal if kind == UNIQUE).  If any
+  // of these three absolute times is outside the representable range of a
+  // time_point<sys_seconds> the field is set to its maximum/minimum value.
   //
   // Example:
   //   cctz::time_zone lax;
@@ -125,12 +127,12 @@ class time_zone {
   struct civil_lookup {
     enum civil_kind {
       UNIQUE,    // the civil time was singular (pre == trans == post)
-      SKIPPED,   // the civil time did not exist
-      REPEATED,  // the civil time was ambiguous
+      SKIPPED,   // the civil time did not exist (pre >= trans > post)
+      REPEATED,  // the civil time was ambiguous (pre < trans <= post)
     } kind;
-    time_point<sys_seconds> pre;    // Uses the pre-transition offset
-    time_point<sys_seconds> trans;  // Instant of civil-offset change
-    time_point<sys_seconds> post;   // Uses the post-transition offset
+    time_point<sys_seconds> pre;    // uses the pre-transition offset
+    time_point<sys_seconds> trans;  // instant of civil-offset change
+    time_point<sys_seconds> post;   // uses the post-transition offset
   };
   civil_lookup lookup(const civil_second& cs) const;
 
