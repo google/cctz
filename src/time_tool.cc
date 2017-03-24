@@ -57,12 +57,12 @@ const char* const kFormats[] = {
   nullptr
 };
 
-bool ParseTimeSpec(const std::string& args, cctz::time_zone zone,
-                   time_point<sys_seconds>* when) {
+bool ParseTimeSpec(const std::string& args, time_point<sys_seconds>* when) {
+  const cctz::time_zone ignored{};
   for (const char* const* fmt = kFormats; *fmt != NULL; ++fmt) {
     const std::string format = std::string(*fmt) + " %Ez";
     time_point<sys_seconds> tp;
-    if (cctz::parse(format, args, zone, &tp)) {
+    if (cctz::parse(format, args, ignored, &tp)) {
       *when = tp;
       return true;
     }
@@ -70,12 +70,12 @@ bool ParseTimeSpec(const std::string& args, cctz::time_zone zone,
   return false;
 }
 
-bool ParseBreakdownSpec(const std::string& args, cctz::civil_second* when) {
-  const cctz::time_zone utc = cctz::utc_time_zone();
+bool ParseBreakdownSpec(const std::string& args, cctz::time_zone zone,
+                        cctz::civil_second* when) {
   for (const char* const* fmt = kFormats; *fmt != NULL; ++fmt) {
     time_point<sys_seconds> tp;
-    if (cctz::parse(*fmt, args, utc, &tp)) {
-      *when = cctz::convert(tp, utc);
+    if (cctz::parse(*fmt, args, zone, &tp)) {
+      *when = cctz::convert(tp, zone);
       return true;
     }
   }
@@ -233,7 +233,7 @@ int main(int argc, char** argv) {
   }
   std::replace(args.begin(), args.end(), ',', ' ');
   std::replace(args.begin(), args.end(), '/', '-');
-  bool have_time = ParseTimeSpec(args, zone, &tp);
+  bool have_time = ParseTimeSpec(args, &tp);
   if (!have_time && !args.empty()) {
     std::string spec = args.substr((args[0] == '@') ? 1 : 0);
     if ((spec.size() > 0 && std::isdigit(spec[0])) ||
@@ -249,7 +249,7 @@ int main(int argc, char** argv) {
     }
   }
   cctz::civil_second when = cctz::convert(tp, zone);
-  bool have_break_down = !have_time && ParseBreakdownSpec(args, &when);
+  bool have_break_down = !have_time && ParseBreakdownSpec(args, zone, &when);
 
   // Show results.
   if (have_break_down) return BreakdownInfo(when, zone);
