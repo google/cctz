@@ -1007,12 +1007,12 @@ TEST(TimeZoneEdgeCase, AfricaMonrovia) {
 
   // Strange offset change -00:44:30 -> +00:00:00 (non-DST)
   //
-  //   73529069 == Sun, 30 Apr 1972 23:59:59 -0044 (LRT)
-  //   73529070 == Mon,  1 May 1972 00:44:30 +0000 (GMT)
-  auto tp = convert(civil_second(1972, 4, 30, 23, 59, 59), tz);
-  ExpectTime(tp, tz, 1972, 4, 30, 23, 59, 59, -44.5 * 60, false, "LRT");
+  //   63593069 == Thu,  6 Jan 1972 23:59:59 -0044 (MMT)
+  //   63593070 == Fri,  7 Jan 1972 00:44:30 +0000 (GMT)
+  auto tp = convert(civil_second(1972, 1, 6, 23, 59, 59), tz);
+  ExpectTime(tp, tz, 1972, 1, 6, 23, 59, 59, -44.5 * 60, false, "MMT");
   tp += std::chrono::seconds(1);
-  ExpectTime(tp, tz, 1972, 5, 1, 0, 44, 30, 0 * 60, false, "GMT");
+  ExpectTime(tp, tz, 1972, 1, 7, 0, 44, 30, 0 * 60, false, "GMT");
 }
 
 TEST(TimeZoneEdgeCase, AmericaJamaica) {
