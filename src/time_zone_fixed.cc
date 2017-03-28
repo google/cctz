@@ -93,8 +93,8 @@ std::string FixedOffsetToName(int seconds) {
   int hours = minutes / 60;
   minutes %= 60;
   char buf[sizeof(kFixedOffsetPrefix) + sizeof("UTC-596523:14:08")];
-  std::snprintf(buf, sizeof(buf), "%sUTC%c%02d:%02d:%02d",
-                kFixedOffsetPrefix, sign, hours, minutes, seconds);
+  snprintf(buf, sizeof(buf), "%sUTC%c%02d:%02d:%02d",
+           kFixedOffsetPrefix, sign, hours, minutes, seconds);
   return buf;
 }
 
