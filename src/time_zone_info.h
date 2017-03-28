@@ -91,7 +91,7 @@ class TimeZoneInfo : public TimeZoneIf {
                         std::uint_fast8_t tt2_index) const;
   void ExtendTransitions(const std::string& name, const Header& hdr);
 
-  bool ResetToBuiltinUTC(std::int_fast32_t seconds);
+  bool ResetToBuiltinUTC(int seconds);
   bool Load(const std::string& name, FILE* fp);
 
   // Helpers for BreakTime() and MakeTime() respectively.

@@ -44,6 +44,7 @@
 #include <iostream>
 #include <limits>
 
+#include "time_zone_fixed.h"
 #include "time_zone_posix.h"
 
 namespace cctz {
@@ -213,7 +214,7 @@ inline civil_second YearShift(const civil_second& cs, cctz::year_t shift) {
 }  // namespace
 
 // What (no leap-seconds) UTC+seconds zoneinfo would look like.
-bool TimeZoneInfo::ResetToBuiltinUTC(std::int_fast32_t seconds) {
+bool TimeZoneInfo::ResetToBuiltinUTC(int seconds) {
   transition_types_.resize(1);
   TransitionType& tt(transition_types_.back());
   tt.utc_offset = static_cast<std::int_least32_t>(seconds);
@@ -231,7 +232,7 @@ bool TimeZoneInfo::ResetToBuiltinUTC(std::int_fast32_t seconds) {
   }
 
   default_transition_type_ = 0;
-  abbreviations_ = "UTC";  // TODO: Handle non-zero offset.
+  abbreviations_ = FixedOffsetToAbbr(seconds);
   abbreviations_.append(1, '\0');  // add NUL
   future_spec_.clear();  // never needed for a fixed-offset zone
   extended_ = false;
@@ -591,7 +592,10 @@ bool TimeZoneInfo::Load(const std::string& name) {
   // zone never fails because the simple, fixed-offset state can be
   // internally generated. Note that this depends on our choice to not
   // accept leap-second encoded ("right") zoneinfo.
-  if (name == "UTC") return ResetToBuiltinUTC(0);
+  int seconds = 0;
+  if (FixedOffsetFromName(name, &seconds)) {
+    return ResetToBuiltinUTC(seconds);
+  }
 
   // Map time-zone name to its machine-specific path.
   std::string path;
@@ -633,8 +637,7 @@ bool TimeZoneInfo::Load(const std::string& name) {
     loaded = Load(name, fp);
     fclose(fp);
   } else {
-    const auto errnum = errno;
-    std::clog << path << ": " << make_error_formatter()(errnum) << "\n";
+    std::clog << path << ": " << make_error_formatter()(errno) << "\n";
   }
   return loaded;
 }

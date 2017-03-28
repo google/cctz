@@ -679,6 +679,21 @@ TEST(TimeZones, LoadZonesConcurrently) {
   }
 }
 
+TEST(TimeZone, NamedTimeZones) {
+  const time_zone utc = utc_time_zone();
+  EXPECT_EQ("UTC", utc.name());
+  const time_zone nyc = LoadZone("America/New_York");
+  EXPECT_EQ("America/New_York", nyc.name());
+  const time_zone syd = LoadZone("Australia/Sydney");
+  EXPECT_EQ("Australia/Sydney", syd.name());
+  const time_zone fixed0 = fixed_time_zone(0);
+  EXPECT_EQ("UTC", fixed0.name());
+  const time_zone fixed_pos = fixed_time_zone((((3 * 60) + 25) * 60) + 45);
+  EXPECT_EQ("Fixed/UTC+03:25:45", fixed_pos.name());
+  const time_zone fixed_neg = fixed_time_zone((((-12 * 60) - 34) * 60) - 56);
+  EXPECT_EQ("Fixed/UTC-12:34:56", fixed_neg.name());
+}
+
 TEST(TimeZone, Failures) {
   time_zone tz;
   EXPECT_FALSE(load_time_zone(":America/Los_Angeles", &tz));
@@ -702,14 +717,42 @@ TEST(TimeZone, Failures) {
 }
 
 TEST(TimeZone, Equality) {
-  time_zone a, b;
+  const time_zone a;
+  const time_zone b;
   EXPECT_EQ(a, b);
   EXPECT_EQ(a.name(), b.name());
 
-  time_zone implicit_utc;
-  time_zone explicit_utc = utc_time_zone();
+  const time_zone implicit_utc;
+  const time_zone explicit_utc = utc_time_zone();
   EXPECT_EQ(implicit_utc, explicit_utc);
   EXPECT_EQ(implicit_utc.name(), explicit_utc.name());
+
+  const time_zone fixed_zero = fixed_time_zone(0);
+  EXPECT_EQ(fixed_zero, LoadZone(fixed_zero.name()));
+  EXPECT_EQ(fixed_zero, explicit_utc);
+
+  const time_zone fixed_utc = LoadZone("Fixed/UTC+00:00:00");
+  EXPECT_EQ(fixed_utc, LoadZone(fixed_utc.name()));
+  EXPECT_EQ(fixed_utc, explicit_utc);
+
+  const time_zone fixed_pos = fixed_time_zone((((3 * 60) + 25) * 60) + 45);
+  EXPECT_EQ(fixed_pos, LoadZone(fixed_pos.name()));
+  EXPECT_NE(fixed_pos, explicit_utc);
+  const time_zone fixed_neg = fixed_time_zone((((-12 * 60) - 34) * 60) - 56);
+  EXPECT_EQ(fixed_neg, LoadZone(fixed_neg.name()));
+  EXPECT_NE(fixed_neg, explicit_utc);
+
+  const time_zone fixed_lim = fixed_time_zone((((24 * 60) + 0) * 60) + 0);
+  EXPECT_EQ(fixed_lim, LoadZone(fixed_lim.name()));
+  EXPECT_NE(fixed_lim, explicit_utc);
+  const time_zone fixed_ovfl = fixed_time_zone((((24 * 60) + 0) * 60) + 1);
+  EXPECT_EQ(fixed_ovfl, LoadZone(fixed_ovfl.name()));
+  EXPECT_EQ(fixed_ovfl, explicit_utc);
+
+  EXPECT_EQ(fixed_time_zone(1), fixed_time_zone(1));
+
+  const time_zone local = local_time_zone();
+  EXPECT_EQ(local, LoadZone(local.name()));
 
   time_zone la = LoadZone("America/Los_Angeles");
   time_zone nyc = LoadZone("America/New_York");
@@ -746,18 +789,26 @@ TEST(BreakTime, TimePointResolution) {
 }
 
 TEST(BreakTime, LocalTimeInUTC) {
+  const time_zone tz = utc_time_zone();
   const auto tp = system_clock::from_time_t(0);
-  ExpectTime(tp, utc_time_zone(), 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
-  EXPECT_EQ(weekday::thursday,
-            get_weekday(civil_day(convert(tp, utc_time_zone()))));
+  ExpectTime(tp, tz, 1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  EXPECT_EQ(weekday::thursday, get_weekday(civil_day(convert(tp, tz))));
 }
 
 TEST(BreakTime, LocalTimePosix) {
   // See IEEE Std 1003.1-1988 B.2.3 General Terms, Epoch.
+  const time_zone tz = utc_time_zone();
   const auto tp = system_clock::from_time_t(536457599);
-  ExpectTime(tp, utc_time_zone(), 1986, 12, 31, 23, 59, 59, 0, false, "UTC");
-  EXPECT_EQ(weekday::wednesday,
-            get_weekday(civil_day(convert(tp, utc_time_zone()))));
+  ExpectTime(tp, tz, 1986, 12, 31, 23, 59, 59, 0, false, "UTC");
+  EXPECT_EQ(weekday::wednesday, get_weekday(civil_day(convert(tp, tz))));
+}
+
+TEST(TimeZoneImpl, LocalTimeInFixed) {
+  const int seconds = (((-8 * 60) - 33) * 60) - 47;
+  const time_zone tz = fixed_time_zone(seconds);
+  const auto tp = system_clock::from_time_t(0);
+  ExpectTime(tp, tz, 1969, 12, 31, 15, 26, 13, seconds, false, "UTC-083347");
+  EXPECT_EQ(weekday::wednesday, get_weekday(civil_day(convert(tp, tz))));
 }
 
 TEST(BreakTime, LocalTimeInNewYork) {
@@ -949,12 +1000,12 @@ TEST(TimeZoneEdgeCase, AsiaKathmandu) {
 
   // A non-DST offset change from +0530 to +0545
   //
-  //   504901799 == Tue, 31 Dec 1985 23:59:59 +0530 (IST)
-  //   504901800 == Wed,  1 Jan 1986 00:15:00 +0545 (NPT)
+  //   504901799 == Tue, 31 Dec 1985 23:59:59 +0530 (+0530)
+  //   504901800 == Wed,  1 Jan 1986 00:15:00 +0545 (+0545)
   auto tp = convert(civil_second(1985, 12, 31, 23, 59, 59), tz);
-  ExpectTime(tp, tz, 1985, 12, 31, 23, 59, 59, 5.5 * 3600, false, "IST");
+  ExpectTime(tp, tz, 1985, 12, 31, 23, 59, 59, 5.5 * 3600, false, "+0530");
   tp += std::chrono::seconds(1);
-  ExpectTime(tp, tz, 1986, 1, 1, 0, 15, 0, 5.75 * 3600, false, "NPT");
+  ExpectTime(tp, tz, 1986, 1, 1, 0, 15, 0, 5.75 * 3600, false, "+0545");
 }
 
 TEST(TimeZoneEdgeCase, PacificChatham) {
@@ -962,20 +1013,19 @@ TEST(TimeZoneEdgeCase, PacificChatham) {
 
   // One-hour DST offset changes, but at atypical values
   //
-  //   1365256799 == Sun,  7 Apr 2013 03:44:59 +1345 (CHADT)
-  //   1365256800 == Sun,  7 Apr 2013 02:45:00 +1245 (CHAST)
+  //   1365256799 == Sun,  7 Apr 2013 03:44:59 +1345 (+1345)
+  //   1365256800 == Sun,  7 Apr 2013 02:45:00 +1245 (+1245)
   auto tp = convert(civil_second(2013, 4, 7, 3, 44, 59), tz);
-  ExpectTime(tp, tz, 2013, 4, 7, 3, 44, 59, 13.75 * 3600, true, "CHADT");
+  ExpectTime(tp, tz, 2013, 4, 7, 3, 44, 59, 13.75 * 3600, true, "+1345");
   tp += std::chrono::seconds(1);
-  ExpectTime(tp, tz, 2013, 4, 7, 2, 45, 0, 12.75 * 3600, false, "CHAST");
+  ExpectTime(tp, tz, 2013, 4, 7, 2, 45, 0, 12.75 * 3600, false, "+1245");
 
-  //   1380376799 == Sun, 29 Sep 2013 02:44:59 +1245 (CHAST)
-  //   1380376800 == Sun, 29 Sep 2013 03:45:00 +1345 (CHADT)
+  //   1380376799 == Sun, 29 Sep 2013 02:44:59 +1245 (+1245)
+  //   1380376800 == Sun, 29 Sep 2013 03:45:00 +1345 (+1345)
   tp = convert(civil_second(2013, 9, 29, 2, 44, 59), tz);
-  ExpectTime(tp, tz, 2013, 9, 29, 2, 44, 59, 12.75 * 3600, false,
-             "CHAST");
+  ExpectTime(tp, tz, 2013, 9, 29, 2, 44, 59, 12.75 * 3600, false, "+1245");
   tp += std::chrono::seconds(1);
-  ExpectTime(tp, tz, 2013, 9, 29, 3, 45, 0, 13.75 * 3600, true, "CHADT");
+  ExpectTime(tp, tz, 2013, 9, 29, 3, 45, 0, 13.75 * 3600, true, "+1345");
 }
 
 TEST(TimeZoneEdgeCase, AustraliaLordHowe) {
@@ -983,19 +1033,19 @@ TEST(TimeZoneEdgeCase, AustraliaLordHowe) {
 
   // Half-hour DST offset changes
   //
-  //   1365260399 == Sun,  7 Apr 2013 01:59:59 +1100 (LHDT)
-  //   1365260400 == Sun,  7 Apr 2013 01:30:00 +1030 (LHST)
+  //   1365260399 == Sun,  7 Apr 2013 01:59:59 +1100 (+11)
+  //   1365260400 == Sun,  7 Apr 2013 01:30:00 +1030 (+1030)
   auto tp = convert(civil_second(2013, 4, 7, 1, 59, 59), tz);
-  ExpectTime(tp, tz, 2013, 4, 7, 1, 59, 59, 11 * 3600, true, "LHDT");
+  ExpectTime(tp, tz, 2013, 4, 7, 1, 59, 59, 11 * 3600, true, "+11");
   tp += std::chrono::seconds(1);
-  ExpectTime(tp, tz, 2013, 4, 7, 1, 30, 0, 10.5 * 3600, false, "LHST");
+  ExpectTime(tp, tz, 2013, 4, 7, 1, 30, 0, 10.5 * 3600, false, "+1030");
 
-  //   1380986999 == Sun,  6 Oct 2013 01:59:59 +1030 (LHST)
-  //   1380987000 == Sun,  6 Oct 2013 02:30:00 +1100 (LHDT)
+  //   1380986999 == Sun,  6 Oct 2013 01:59:59 +1030 (+1030)
+  //   1380987000 == Sun,  6 Oct 2013 02:30:00 +1100 (+11)
   tp = convert(civil_second(2013, 10, 6, 1, 59, 59), tz);
-  ExpectTime(tp, tz, 2013, 10, 6, 1, 59, 59, 10.5 * 3600, false, "LHST");
+  ExpectTime(tp, tz, 2013, 10, 6, 1, 59, 59, 10.5 * 3600, false, "+1030");
   tp += std::chrono::seconds(1);
-  ExpectTime(tp, tz, 2013, 10, 6, 2, 30, 0, 11 * 3600, true, "LHDT");
+  ExpectTime(tp, tz, 2013, 10, 6, 2, 30, 0, 11 * 3600, true, "+11");
 }
 
 TEST(TimeZoneEdgeCase, PacificApia) {
@@ -1007,13 +1057,13 @@ TEST(TimeZoneEdgeCase, PacificApia) {
   //
   // A one-day, non-DST offset change
   //
-  //   1325239199 == Thu, 29 Dec 2011 23:59:59 -1000 (SDT)
-  //   1325239200 == Sat, 31 Dec 2011 00:00:00 +1400 (WSDT)
+  //   1325239199 == Thu, 29 Dec 2011 23:59:59 -1000 (-10)
+  //   1325239200 == Sat, 31 Dec 2011 00:00:00 +1400 (+14)
   auto tp = convert(civil_second(2011, 12, 29, 23, 59, 59), tz);
-  ExpectTime(tp, tz, 2011, 12, 29, 23, 59, 59, -10 * 3600, true, "SDT");
+  ExpectTime(tp, tz, 2011, 12, 29, 23, 59, 59, -10 * 3600, true, "-10");
   EXPECT_EQ(363, get_yearday(civil_day(convert(tp, tz))));
   tp += std::chrono::seconds(1);
-  ExpectTime(tp, tz, 2011, 12, 31, 0, 0, 0, 14 * 3600, true, "WSDT");
+  ExpectTime(tp, tz, 2011, 12, 31, 0, 0, 0, 14 * 3600, true, "+14");
   EXPECT_EQ(365, get_yearday(civil_day(convert(tp, tz))));
 }
 

@@ -30,6 +30,8 @@ cc_library(
 cc_library(
     name = "time_zone",
     srcs = [
+        "src/time_zone_fixed.cc",
+        "src/time_zone_fixed.h",
         "src/time_zone_format.cc",
         "src/time_zone_if.cc",
         "src/time_zone_if.h",

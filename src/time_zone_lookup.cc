@@ -16,6 +16,7 @@
 
 #include <cstdlib>
 
+#include "time_zone_fixed.h"
 #include "time_zone_impl.h"
 
 namespace cctz {
@@ -42,7 +43,13 @@ bool load_time_zone(const std::string& name, time_zone* tz) {
 }
 
 time_zone utc_time_zone() {
-  return time_zone::Impl::UTC();
+  return time_zone::Impl::UTC();  // avoid name lookup
+}
+
+time_zone fixed_time_zone(int seconds) {
+  time_zone tz;
+  load_time_zone(FixedOffsetToName(seconds), &tz);
+  return tz;
 }
 
 time_zone local_time_zone() {
