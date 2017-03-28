@@ -766,19 +766,43 @@ bool parse(const std::string& format, const std::string& input,
     year += 1900;
   }
 
-  const civil_second cs(year, tm.tm_mon + 1, tm.tm_mday,
-                        tm.tm_hour, tm.tm_min, tm.tm_sec);
+  const int month = tm.tm_mon + 1;
+  civil_second cs(year, month, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 
-  // parse() fails if any normalization was done.  That is,
-  // parsing "Sep 31" will not produce the equivalent of "Oct 1".
-  if (cs.year() != year || cs.month() != tm.tm_mon + 1 ||
-      cs.day() != tm.tm_mday || cs.hour() != tm.tm_hour ||
-      cs.minute() != tm.tm_min || cs.second() != tm.tm_sec) {
+  // parse() should not allow normalization. Due to the restricted field ranges
+  // above (see ParseInt()), the only possibility is for days to roll into
+  // months. That is, parsing "Sep 31" should not produce "Oct 1".
+  if (cs.month() != month || cs.day() != tm.tm_mday) {
     if (err != nullptr) *err = "Out-of-range field";
     return false;
   }
 
-  *sec = ptz.lookup(cs).pre - sys_seconds(offset);
+  // Accounts for the offset adjustment before converting to absolute time.
+  if ((offset < 0 && cs > civil_second::max() + offset) ||
+      (offset > 0 && cs < civil_second::min() + offset)) {
+    if (err != nullptr) *err = "Out-of-range field";
+    return false;
+  }
+  cs -= offset;
+
+  const auto tp = ptz.lookup(cs).pre;
+  // Checks for overflow/underflow and returns an error as necessary.
+  if (tp == time_point<sys_seconds>::max()) {
+    const auto al = ptz.lookup(time_point<sys_seconds>::max());
+    if (cs > al.cs) {
+      if (err != nullptr) *err = "Out-of-range field";
+      return false;
+    }
+  }
+  if (tp == time_point<sys_seconds>::min()) {
+    const auto al = ptz.lookup(time_point<sys_seconds>::min());
+    if (cs < al.cs) {
+      if (err != nullptr) *err = "Out-of-range field";
+      return false;
+    }
+  }
+
+  *sec = tp;
   *fs = subseconds;
   return true;
 }
