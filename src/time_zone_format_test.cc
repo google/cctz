@@ -1291,5 +1291,4 @@ TEST(FormatParse, RoundTripDistantPast) {
   EXPECT_EQ(in, out);
 }
 
-
 }  // namespace cctz
