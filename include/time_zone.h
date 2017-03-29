@@ -43,7 +43,7 @@ using sys_seconds = std::chrono::duration<std::int_fast64_t>;
 //
 // Example:
 //   cctz::time_zone utc = cctz::utc_time_zone();
-//   cctz::time_zone pst = cctz::fixed_time_zone(-8 * 60 * 60);
+//   cctz::time_zone pst = cctz::fixed_time_zone(std::chrono::hours(-8));
 //   cctz::time_zone loc = cctz::local_time_zone();
 //   cctz::time_zone lax;
 //   if (!cctz::load_time_zone("America/Los_Angeles", &lax)) { ... }
@@ -158,8 +158,8 @@ time_zone utc_time_zone();
 
 // Returns a time zone that is a fixed offset (seconds east) from UTC.
 // Note: If the absolute value of the offset is greater than 24 hours
-// you'll get UTC (i.e., no offset) instead.
-time_zone fixed_time_zone(int seconds);
+// you'll get UTC (i.e., zero offset) instead.
+time_zone fixed_time_zone(const sys_seconds& offset);
 
 // Returns a time zone representing the local time zone. Falls back to UTC.
 time_zone local_time_zone();

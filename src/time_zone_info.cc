@@ -214,10 +214,10 @@ inline civil_second YearShift(const civil_second& cs, cctz::year_t shift) {
 }  // namespace
 
 // What (no leap-seconds) UTC+seconds zoneinfo would look like.
-bool TimeZoneInfo::ResetToBuiltinUTC(int seconds) {
+bool TimeZoneInfo::ResetToBuiltinUTC(const sys_seconds& offset) {
   transition_types_.resize(1);
   TransitionType& tt(transition_types_.back());
-  tt.utc_offset = static_cast<std::int_least32_t>(seconds);
+  tt.utc_offset = static_cast<std::int_least32_t>(offset.count());
   tt.is_dst = false;
   tt.abbr_index = 0;
 
@@ -232,7 +232,7 @@ bool TimeZoneInfo::ResetToBuiltinUTC(int seconds) {
   }
 
   default_transition_type_ = 0;
-  abbreviations_ = FixedOffsetToAbbr(seconds);
+  abbreviations_ = FixedOffsetToAbbr(offset);
   abbreviations_.append(1, '\0');  // add NUL
   future_spec_.clear();  // never needed for a fixed-offset zone
   extended_ = false;
@@ -592,9 +592,9 @@ bool TimeZoneInfo::Load(const std::string& name) {
   // zone never fails because the simple, fixed-offset state can be
   // internally generated. Note that this depends on our choice to not
   // accept leap-second encoded ("right") zoneinfo.
-  int seconds = 0;
-  if (FixedOffsetFromName(name, &seconds)) {
-    return ResetToBuiltinUTC(seconds);
+  auto offset = sys_seconds::zero();
+  if (FixedOffsetFromName(name, &offset)) {
+    return ResetToBuiltinUTC(offset);
   }
 
   // Map time-zone name to its machine-specific path.

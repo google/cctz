@@ -17,6 +17,8 @@
 
 #include <string>
 
+#include "time_zone.h"
+
 namespace cctz {
 
 // Helper functions for dealing with the names and abbreviations
@@ -31,11 +33,12 @@ namespace cctz {
 // optional pieces are omitted when their values are zero.  (Note that
 // the sign is the opposite of that used in a POSIX TZ specification.)
 //
-// FixedOffsetFromName() fails on syntax errors or when the offset
-// exceeds 24 hours.
-bool FixedOffsetFromName(const std::string& name, int* seconds);
-std::string FixedOffsetToName(int seconds);
-std::string FixedOffsetToAbbr(int seconds);
+// Note: FixedOffsetFromName() fails on syntax errors or when the parsed
+// offset exceeds 24 hours.  FixedOffsetToName() and FixedOffsetToAbbr()
+// both produce "UTC" when the argument offset exceeds 24 hours.
+bool FixedOffsetFromName(const std::string& name, sys_seconds* offset);
+std::string FixedOffsetToName(const sys_seconds& offset);
+std::string FixedOffsetToAbbr(const sys_seconds& offset);
 
 }  // namespace cctz
 

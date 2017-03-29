@@ -769,9 +769,9 @@ bool parse(const std::string& format, const std::string& input,
   const int month = tm.tm_mon + 1;
   civil_second cs(year, month, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 
-  // parse() should not allow normalization. Due to the restricted field ranges
-  // above (see ParseInt()), the only possibility is for days to roll into
-  // months. That is, parsing "Sep 31" should not produce "Oct 1".
+  // parse() should not allow normalization. Due to the restricted field
+  // ranges above (see ParseInt()), the only possibility is for days to roll
+  // into months. That is, parsing "Sep 31" should not produce "Oct 1".
   if (cs.month() != month || cs.day() != tm.tm_mday) {
     if (err != nullptr) *err = "Out-of-range field";
     return false;

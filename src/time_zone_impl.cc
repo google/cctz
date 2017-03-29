@@ -41,8 +41,8 @@ bool time_zone::Impl::LoadTimeZone(const std::string& name, time_zone* tz) {
   const time_zone::Impl* const utc_impl = UTCImpl();
 
   // First check for UTC (which is never a key in time_zone_map).
-  int seconds = 0;
-  if (FixedOffsetFromName(name, &seconds) && seconds == 0) {
+  auto offset = sys_seconds::zero();
+  if (FixedOffsetFromName(name, &offset) && offset == sys_seconds::zero()) {
     *tz = time_zone(utc_impl);
     return true;
   }

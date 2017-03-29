@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "civil_time.h"
+#include "time_zone.h"
 #include "time_zone_if.h"
 #include "tzfile.h"
 
@@ -91,7 +92,7 @@ class TimeZoneInfo : public TimeZoneIf {
                         std::uint_fast8_t tt2_index) const;
   void ExtendTransitions(const std::string& name, const Header& hdr);
 
-  bool ResetToBuiltinUTC(int seconds);
+  bool ResetToBuiltinUTC(const sys_seconds& offset);
   bool Load(const std::string& name, FILE* fp);
 
   // Helpers for BreakTime() and MakeTime() respectively.

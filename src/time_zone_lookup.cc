@@ -46,9 +46,9 @@ time_zone utc_time_zone() {
   return time_zone::Impl::UTC();  // avoid name lookup
 }
 
-time_zone fixed_time_zone(int seconds) {
+time_zone fixed_time_zone(const sys_seconds& offset) {
   time_zone tz;
-  load_time_zone(FixedOffsetToName(seconds), &tz);
+  load_time_zone(FixedOffsetToName(offset), &tz);
   return tz;
 }
 
