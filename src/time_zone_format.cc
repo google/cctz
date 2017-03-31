@@ -266,6 +266,7 @@ const std::int_fast64_t kExp10[kDigits10_64 + 1] = {
 std::string format(const std::string& format, const time_point<sys_seconds>& tp,
                    const detail::femtoseconds& fs, const time_zone& tz) {
   std::string result;
+  result.reserve(format.size());  // A reasonable guess for the result size.
   const time_zone::absolute_lookup al = tz.lookup(tp);
   const std::tm tm = ToTM(al);
 
