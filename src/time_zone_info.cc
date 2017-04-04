@@ -40,9 +40,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <functional>
 #include <iostream>
 #include <limits>
+#include <string>
 
 #include "time_zone_fixed.h"
 #include "time_zone_posix.h"
@@ -51,42 +51,29 @@ namespace cctz {
 
 namespace {
 
-// A function that converts an errnum to an error string.
-using ErrorFormatter = std::function<std::string(int errnum)>;
-
-// Wraps a GNU-specific strerror, e.g.:
-//   char *strerror_r(int errnum, char *buf, size_t buflen);
-template <typename ErrNum>
-ErrorFormatter wrap_strerror(char* (*f)(ErrNum, char*, size_t)) {
-  return [f](int errnum) -> std::string {
-    char buf[64];
-    return f(errnum, buf, sizeof(buf));
-  };
+// GNU strerror_r() adapter.
+template <char* (*strerror_r)(int, char*, std::size_t)>
+char* StrError(int errnum, char* buf, std::size_t buflen) {
+  return strerror_r(errnum, buf, buflen);
 }
 
-// Wraps an XSI-compliant strerror, e.g.:
-//   int strerror_r(int errnum, char *buf, size_t buflen);
-template <typename R, typename ErrNum>
-ErrorFormatter wrap_strerror(R (*f)(ErrNum, char*, size_t)) {
-  return [f](int errnum) -> std::string {
-    char buf[64];
-    f(errnum, buf, sizeof(buf));
-    return buf;
-  };
+// XSI strerror_r() adapter.
+template <int (*strerror_r)(int, char*, std::size_t)>
+char* StrError(int errnum, char* buf, std::size_t buflen) {
+  if (int e = strerror_r(errnum, buf, buflen))
+    strerror_r(e < 0 ? EINVAL : e, buf, buflen);
+  return buf;
 }
 
-// Makes an ErrorFormatter that uses a system-provided function like strerror_r
-// or strerror_s. The correct function is selected using preprocessor defines
-// and/or the overloaded wrap_strerror() functions.
-ErrorFormatter make_error_formatter() {
+// Returns a string describing the error number.
+std::string StrError(int errnum) {
+  char buf[128];
 #if defined(_MSC_VER)
-  return [](int errnum) -> std::string {
-    char buf[64];
-    strerror_s(buf, errnum);
-    return buf;
-  };
+  if (int e = strerror_s(buf, errnum))
+    strerror_s(buf, e);
+  return buf;
 #else
-  return wrap_strerror(&strerror_r);
+  return StrError<strerror_r>(errnum, buf, sizeof buf);
 #endif
 }
 
@@ -637,7 +624,7 @@ bool TimeZoneInfo::Load(const std::string& name) {
     loaded = Load(name, fp);
     fclose(fp);
   } else {
-    std::clog << path << ": " << make_error_formatter()(errno) << "\n";
+    std::clog << path << ": " << StrError(errno) << "\n";
   }
   return loaded;
 }
