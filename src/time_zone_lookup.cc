@@ -15,6 +15,7 @@
 #include "time_zone.h"
 
 #include <cstdlib>
+#include <cstring>
 
 #include "time_zone_fixed.h"
 #include "time_zone_impl.h"
@@ -53,23 +54,42 @@ time_zone fixed_time_zone(const sys_seconds& offset) {
 }
 
 time_zone local_time_zone() {
-#if defined(_MSC_VER)
+  const char* zone = ":localtime";
+
+  // Allow ${TZ} to override to default zone.
   char* tz_env = nullptr;
-  _dupenv_s(&tz_env, nullptr, "TZ");
-  const char* zone = tz_env;
-#else
-  const char* zone = std::getenv("TZ");
-#endif
-  if (zone != nullptr) {
-    if (*zone == ':') ++zone;
-  } else {
-    zone = "localtime";
-  }
-  time_zone tz;
-  load_time_zone(zone, &tz);
 #if defined(_MSC_VER)
+  _dupenv_s(&tz_env, nullptr, "TZ");
+#else
+  tz_env = std::getenv("TZ");
+#endif
+  if (tz_env && *tz_env) zone = tz_env;
+
+  // We only support the "[:]<zone-name>" form.
+  if (*zone == ':') ++zone;
+
+  // Map "localtime" to a system-specific name, but
+  // allow ${LOCALTIME} to override the default name.
+  char* localtime_env = nullptr;
+  if (strcmp(zone, "localtime") == 0) {
+#if defined(_MSC_VER)
+    // System-specific default is just "localtime".
+    _dupenv_s(&localtime_env, nullptr, "LOCALTIME");
+#else
+    zone = "/etc/localtime";  // System-specific default.
+    localtime_env = std::getenv("LOCALTIME");
+#endif
+    if (localtime_env && *localtime_env) zone = localtime_env;
+  }
+
+  const std::string name = zone;
+#if defined(_MSC_VER)
+  free(localtime_env);
   free(tz_env);
 #endif
+
+  time_zone tz;
+  load_time_zone(name, &tz);  // Falls back to UTC.
   return tz;
 }
 

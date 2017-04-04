@@ -584,33 +584,24 @@ bool TimeZoneInfo::Load(const std::string& name) {
     return ResetToBuiltinUTC(offset);
   }
 
-  // Map time-zone name to its machine-specific path.
+  // Map the time-zone name to a path name.
   std::string path;
-  if (name == "localtime") {
+  if (name.empty() || name[0] != '/') {
+    const char* tzdir = "/usr/share/zoneinfo";
+    char* tzdir_env = nullptr;
 #if defined(_MSC_VER)
-    char* localtime = nullptr;
-    _dupenv_s(&localtime, nullptr, "LOCALTIME");
-    path = localtime ? localtime : "/etc/localtime";
-    free(localtime);
+    _dupenv_s(&tzdir_env, nullptr, "TZDIR");
 #else
-    const char* localtime = std::getenv("LOCALTIME");
-    path = localtime ? localtime : "/etc/localtime";
+    tzdir_env = std::getenv("TZDIR");
 #endif
-  } else if (!name.empty() && name[0] == '/') {
-    path = name;
-  } else {
-#if defined(_MSC_VER)
-    char* tzdir = nullptr;
-    _dupenv_s(&tzdir, nullptr, "TZDIR");
-    path = tzdir ? tzdir : "/usr/share/zoneinfo";
-    free(tzdir);
-#else
-    const char* tzdir = std::getenv("TZDIR");
-    path = tzdir ? tzdir : "/usr/share/zoneinfo";
-#endif
+    if (tzdir_env && *tzdir_env) tzdir = tzdir_env;
+    path += tzdir;
     path += '/';
-    path += name;
+#if defined(_MSC_VER)
+    free(tzdir_env);
+#endif
   }
+  path += name;
 
   // Load the time-zone data.
   bool loaded = false;
