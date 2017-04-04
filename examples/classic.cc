@@ -30,9 +30,9 @@ int main() {
 
   std::tm tm_utc;
   gmtime_r(&now, &tm_utc);
-  std::cout << format("UTC: %F %T\n", tm_utc);
+  std::cout << format("UTC: %Y-%m-%d %H:%M:%S\n", tm_utc);
 
   std::tm tm_local;
   localtime_r(&now, &tm_local);
-  std::cout << format("Local: %F %T\n", tm_local);
+  std::cout << format("Local: %Y-%m-%d %H:%M:%S\n", tm_local);
 }

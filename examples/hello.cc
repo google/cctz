@@ -27,7 +27,7 @@ int main() {
   const auto tp1 =
       cctz::convert(cctz::civil_second(1969, 7, 21, 12, 56, 0), syd);
 
-  const std::string s = cctz::format("%F %T %z", tp1, syd);
+  const std::string s = cctz::format("%Y-%m-%d %H:%M:%S %z", tp1, syd);
   std::cout << s << "\n";
 
   cctz::time_zone nyc;

@@ -28,6 +28,6 @@ int main() {
   // First day of month, 6 months from now.
   const auto then = cctz::convert(cctz::civil_month(cs) + 6, lax);
 
-  std::cout << cctz::format("Now: %F %T %z\n", now, lax);
-  std::cout << cctz::format("6mo: %F %T %z\n", then, lax);
+  std::cout << cctz::format("Now: %Y-%m-%d %H:%M:%S %z\n", now, lax);
+  std::cout << cctz::format("6mo: %Y-%m-%d %H:%M:%S %z\n", then, lax);
 }

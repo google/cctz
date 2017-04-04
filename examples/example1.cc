@@ -28,6 +28,6 @@ int main() {
   cctz::time_zone nyc;
   load_time_zone("America/New_York", &nyc);
 
-  std::cout << cctz::format("Talk starts at %T %z (%Z)\n", tp, lax);
-  std::cout << cctz::format("Talk starts at %T %z (%Z)\n", tp, nyc);
+  std::cout << cctz::format("Talk starts at %H:%M:%S %z (%Z)\n", tp, lax);
+  std::cout << cctz::format("Talk starts at %H:%M:%S %z (%Z)\n", tp, nyc);
 }

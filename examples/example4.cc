@@ -29,6 +29,6 @@ int main() {
   load_time_zone("America/Los_Angeles", &lax);
   const auto now = std::chrono::system_clock::now();
   const auto day = FloorDay(now, lax);
-  std::cout << cctz::format("Now: %F %T %z\n", now, lax);
-  std::cout << cctz::format("Day: %F %T %z\n", day, lax);
+  std::cout << cctz::format("Now: %Y-%m-%d %H:%M:%S %z\n", now, lax);
+  std::cout << cctz::format("Day: %Y-%m-%d %H:%M:%S %z\n", day, lax);
 }
