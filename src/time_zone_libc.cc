@@ -64,16 +64,20 @@ OffsetAbbr get_offset_abbr(const std::tm& tm) {
 //
 // Returns an OffsetAbbr using std::tm fields with various spellings.
 //
+#if !defined(tm_gmtoff) && !defined(tm_zone)
 template <typename T>
 OffsetAbbr get_offset_abbr(const T& tm, decltype(&T::tm_gmtoff) = nullptr,
                            decltype(&T::tm_zone) = nullptr) {
   return {tm.tm_gmtoff, tm.tm_zone};
 }
+#endif  // !defined(tm_gmtoff) && !defined(tm_zone)
+#if !defined(__tm_gmtoff) && !defined(__tm_zone)
 template <typename T>
 OffsetAbbr get_offset_abbr(const T& tm, decltype(&T::__tm_gmtoff) = nullptr,
                            decltype(&T::__tm_zone) = nullptr) {
   return {tm.__tm_gmtoff, tm.__tm_zone};
 }
+#endif  // !defined(__tm_gmtoff) && !defined(__tm_zone)
 #endif
 
 }  // namespace
