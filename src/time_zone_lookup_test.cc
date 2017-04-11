@@ -21,6 +21,7 @@
 #include <thread>
 #include <vector>
 
+#include "civil_time.h"
 #include "gtest/gtest.h"
 
 using std::chrono::time_point_cast;

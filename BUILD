@@ -122,10 +122,6 @@ cc_binary(
 cc_binary(
     name = "epoch_shift",
     srcs = ["examples/epoch_shift.cc"],
-    deps = [
-        ":civil_time",
-        ":time_zone",
-    ],
 )
 
 cc_binary(
@@ -140,10 +136,7 @@ cc_binary(
 cc_binary(
     name = "example2",
     srcs = ["examples/example2.cc"],
-    deps = [
-        ":civil_time",
-        ":time_zone",
-    ],
+    deps = [":time_zone"],
 )
 
 cc_binary(

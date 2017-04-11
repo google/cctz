@@ -20,6 +20,7 @@
 #include <sstream>
 #include <string>
 
+#include "civil_time.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -1210,26 +1211,38 @@ TEST(Parse, MaxRange) {
   time_point<sys_seconds> tp;
 
   // tests the upper limit using +00:00 offset
-  EXPECT_TRUE(parse(RFC3339_sec, "292277026596-12-04T15:30:07+00:00", utc, &tp));
+  EXPECT_TRUE(
+      parse(RFC3339_sec, "292277026596-12-04T15:30:07+00:00", utc, &tp));
   EXPECT_EQ(tp, time_point<sys_seconds>::max());
-  EXPECT_FALSE(parse(RFC3339_sec, "292277026596-12-04T15:30:08+00:00", utc, &tp));
+  EXPECT_FALSE(
+      parse(RFC3339_sec, "292277026596-12-04T15:30:08+00:00", utc, &tp));
+
   // tests the upper limit using -01:00 offset
-  EXPECT_TRUE(parse(RFC3339_sec, "292277026596-12-04T14:30:07-01:00", utc, &tp));
+  EXPECT_TRUE(
+      parse(RFC3339_sec, "292277026596-12-04T14:30:07-01:00", utc, &tp));
   EXPECT_EQ(tp, time_point<sys_seconds>::max());
-  EXPECT_FALSE(parse(RFC3339_sec, "292277026596-12-04T15:30:07-01:00", utc, &tp));
+  EXPECT_FALSE(
+      parse(RFC3339_sec, "292277026596-12-04T15:30:07-01:00", utc, &tp));
 
   // tests the lower limit using +00:00 offset
-  EXPECT_TRUE(parse(RFC3339_sec, "-292277022657-01-27T08:29:52+00:00", utc, &tp));
+  EXPECT_TRUE(
+      parse(RFC3339_sec, "-292277022657-01-27T08:29:52+00:00", utc, &tp));
   EXPECT_EQ(tp, time_point<sys_seconds>::min());
-  EXPECT_FALSE(parse(RFC3339_sec, "-292277022657-01-27T08:29:51+00:00", utc, &tp));
+  EXPECT_FALSE(
+      parse(RFC3339_sec, "-292277022657-01-27T08:29:51+00:00", utc, &tp));
+
   // tests the lower limit using +01:00 offset
-  EXPECT_TRUE(parse(RFC3339_sec, "-292277022657-01-27T09:29:52+01:00", utc, &tp));
+  EXPECT_TRUE(
+      parse(RFC3339_sec, "-292277022657-01-27T09:29:52+01:00", utc, &tp));
   EXPECT_EQ(tp, time_point<sys_seconds>::min());
-  EXPECT_FALSE(parse(RFC3339_sec, "-292277022657-01-27T08:29:51+01:00", utc, &tp));
+  EXPECT_FALSE(
+      parse(RFC3339_sec, "-292277022657-01-27T08:29:51+01:00", utc, &tp));
 
   // tests max/min civil-second overflow
-  EXPECT_FALSE(parse(RFC3339_sec, "9223372036854775807-12-31T23:59:59-00:01", utc, &tp));
-  EXPECT_FALSE(parse(RFC3339_sec, "-9223372036854775808-01-01T00:00:00+00:01", utc, &tp));
+  EXPECT_FALSE(parse(RFC3339_sec, "9223372036854775807-12-31T23:59:59-00:01",
+                     utc, &tp));
+  EXPECT_FALSE(parse(RFC3339_sec, "-9223372036854775808-01-01T00:00:00+00:01",
+                     utc, &tp));
 
   // TODO: Add tests that parsing times with fractional seconds overflow
   // appropriately. This can't be done until cctz::parse() properly detects
