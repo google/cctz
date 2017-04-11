@@ -15,7 +15,6 @@
 #include "time_zone.h"
 
 #include <chrono>
-#include <cstdint>
 #include <iomanip>
 #include <sstream>
 #include <string>

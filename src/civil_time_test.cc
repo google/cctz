@@ -16,8 +16,8 @@
 
 #include <iomanip>
 #include <limits>
-#include <string>
 #include <sstream>
+#include <string>
 #include <type_traits>
 
 #include "gtest/gtest.h"
