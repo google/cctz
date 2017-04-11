@@ -63,7 +63,7 @@ time_zone local_time_zone() {
 #else
   tz_env = std::getenv("TZ");
 #endif
-  if (tz_env && *tz_env) zone = tz_env;
+  if (tz_env) zone = tz_env;
 
   // We only support the "[:]<zone-name>" form.
   if (*zone == ':') ++zone;
@@ -79,7 +79,7 @@ time_zone local_time_zone() {
     zone = "/etc/localtime";  // System-specific default.
     localtime_env = std::getenv("LOCALTIME");
 #endif
-    if (localtime_env && *localtime_env) zone = localtime_env;
+    if (localtime_env) zone = localtime_env;
   }
 
   const std::string name = zone;
