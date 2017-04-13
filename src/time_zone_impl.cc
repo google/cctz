@@ -15,7 +15,9 @@
 #include "time_zone_impl.h"
 
 #include <mutex>
+#include <string>
 #include <unordered_map>
+#include <utility>
 
 #include "time_zone_fixed.h"
 

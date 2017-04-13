@@ -16,6 +16,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <string>
 
 #include "time_zone_fixed.h"
 #include "time_zone_impl.h"

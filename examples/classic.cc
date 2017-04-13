@@ -12,11 +12,8 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#include <cstddef>
 #include <ctime>
-#include <iomanip>
 #include <iostream>
-#include <chrono>
 #include <string>
 
 std::string format(const std::string& fmt, const std::tm& tm) {

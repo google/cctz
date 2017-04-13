@@ -15,6 +15,7 @@
 #ifndef CCTZ_TIME_ZONE_IF_H_
 #define CCTZ_TIME_ZONE_IF_H_
 
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <string>

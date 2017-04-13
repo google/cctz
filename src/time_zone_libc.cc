@@ -19,10 +19,12 @@
 #include "time_zone_libc.h"
 
 #include <chrono>
-#include <cstdint>
 #include <ctime>
 #include <tuple>
 #include <utility>
+
+#include "civil_time.h"
+#include "time_zone.h"
 
 namespace cctz {
 
