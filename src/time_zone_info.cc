@@ -34,48 +34,54 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cerrno>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <iostream>
+#include <memory>
 #include <string>
 
 #include "civil_time.h"
 #include "time_zone_fixed.h"
 #include "time_zone_posix.h"
 
-namespace cctz {
+namespace cctz_extension {
 
 namespace {
 
-// GNU strerror_r() adapter.
-template <char* (*strerror_r)(int, char*, std::size_t)>
-char* StrError(int errnum, char* buf, std::size_t buflen) {
-  return strerror_r(errnum, buf, buflen);
+// A default for cctz_extension::zone_info_source_factory, which simply
+// defers to the fallback factory.
+std::unique_ptr<cctz::ZoneInfoSource> DefaultFactory(
+    const std::string& name,
+    const std::function<std::unique_ptr<cctz::ZoneInfoSource>(
+        const std::string& name)>& fallback_factory) {
+  return fallback_factory(name);
 }
 
-// XSI strerror_r() adapter.
-template <int (*strerror_r)(int, char*, std::size_t)>
-char* StrError(int errnum, char* buf, std::size_t buflen) {
-  if (int e = strerror_r(errnum, buf, buflen))
-    strerror_r(e < 0 ? EINVAL : e, buf, buflen);
-  return buf;
-}
+}  // namespace
 
-// Returns a string describing the error number.
-std::string StrError(int errnum) {
-  char buf[128];
+// A "weak" definition for cctz_extension::zone_info_source_factory.
+// The user may override this with their own "strong" definition (see
+// zone_info_source.h).
 #if defined(_MSC_VER)
-  if (int e = strerror_s(buf, errnum))
-    strerror_s(buf, e);
-  return buf;
+extern ZoneInfoSourceFactory zone_info_source_factory;
+const ZoneInfoSourceFactory default_factory = DefaultFactory;
+#pragma comment( \
+    linker,      \
+    "/alternatename:?zone_info_source_factory@cctz_extension@@3Q6A?AV?$unique_ptr@VZoneInfoSource@cctz@@U?$default_delete@VZoneInfoSource@cctz@@@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@3@V?$function@$$A6A?AV?$unique_ptr@VZoneInfoSource@cctz@@U?$default_delete@VZoneInfoSource@cctz@@@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@2@@Z@3@@ZEA=?default_factory@cctz_extension@@3Q6A?AV?$unique_ptr@VZoneInfoSource@cctz@@U?$default_delete@VZoneInfoSource@cctz@@@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@3@V?$function@$$A6A?AV?$unique_ptr@VZoneInfoSource@cctz@@U?$default_delete@VZoneInfoSource@cctz@@@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@2@@Z@3@@ZEA")
 #else
-  return StrError<strerror_r>(errnum, buf, sizeof buf);
+ZoneInfoSourceFactory zone_info_source_factory
+    __attribute__((weak)) = DefaultFactory;
 #endif
-}
+
+}  // namespace cctz_extension
+
+namespace cctz {
+
+namespace {
 
 inline bool IsLeap(cctz::year_t year) {
   return (year % 4) == 0 && ((year % 100) != 0 || (year % 400) == 0);
@@ -392,10 +398,10 @@ void TimeZoneInfo::ExtendTransitions(const std::string& name,
   assert(tr == &transitions_[0] + transitions_.size());
 }
 
-bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
+bool TimeZoneInfo::Load(const std::string& name, ZoneInfoSource* zip) {
   // Read and validate the header.
   tzhead tzh;
-  if (fread(&tzh, 1, sizeof tzh, fp) != sizeof tzh)
+  if (zip->Read(&tzh, sizeof(tzh)) != sizeof(tzh))
     return false;
   if (strncmp(tzh.tzh_magic, TZ_MAGIC, sizeof(tzh.tzh_magic)) != 0)
     return false;
@@ -405,10 +411,10 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   std::size_t time_len = 4;
   if (tzh.tzh_version[0] != '\0') {
     // Skip the 4-byte data.
-    if (fseek(fp, static_cast<long>(hdr.DataLength(time_len)), SEEK_CUR) != 0)
+    if (zip->Skip(hdr.DataLength(time_len)) != 0)
       return false;
     // Read and validate the header for the 8-byte data.
-    if (fread(&tzh, 1, sizeof tzh, fp) != sizeof tzh)
+    if (zip->Read(&tzh, sizeof(tzh)) != sizeof(tzh))
       return false;
     if (strncmp(tzh.tzh_magic, TZ_MAGIC, sizeof(tzh.tzh_magic)) != 0)
       return false;
@@ -435,7 +441,7 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   // Read the data into a local buffer.
   std::size_t len = hdr.DataLength(time_len);
   std::vector<char> tbuf(len);
-  if (fread(tbuf.data(), 1, len, fp) != len)
+  if (zip->Read(tbuf.data(), len) != len)
     return false;
   const char* bp = tbuf.data();
 
@@ -507,9 +513,13 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   if (tzh.tzh_version[0] != '\0') {
     // Snarf up the NL-enclosed future POSIX spec. Note
     // that version '3' files utilize an extended format.
-    if (fgetc(fp) != '\n')
+    auto get_char = [](ZoneInfoSource* zip) -> int {
+      unsigned char ch;  // all non-EOF results are positive
+      return (zip->Read(&ch, 1) == 1) ? ch : EOF;
+    };
+    if (get_char(zip) != '\n')
       return false;
-    for (int c = fgetc(fp); c != '\n'; c = fgetc(fp)) {
+    for (int c = get_char(zip); c != '\n'; c = get_char(zip)) {
       if (c == EOF)
         return false;
       future_spec_.push_back(static_cast<char>(c));
@@ -574,15 +584,31 @@ bool TimeZoneInfo::Load(const std::string& name, FILE* fp) {
   return true;
 }
 
-bool TimeZoneInfo::Load(const std::string& name) {
-  // We can ensure that the loading of UTC or any other fixed-offset
-  // zone never fails because the simple, fixed-offset state can be
-  // internally generated. Note that this depends on our choice to not
-  // accept leap-second encoded ("right") zoneinfo.
-  auto offset = sys_seconds::zero();
-  if (FixedOffsetFromName(name, &offset)) {
-    return ResetToBuiltinUTC(offset);
+namespace {
+
+// A stdio(3)-backed implementation of ZoneInfoSource.
+class FileZoneInfoSource : public ZoneInfoSource {
+ public:
+  static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
+
+  std::size_t Read(void* ptr, std::size_t size) override {
+    return fread(ptr, 1, size, fp_);
   }
+  int Skip(std::size_t offset) override {
+    return fseek(fp_, static_cast<long>(offset), SEEK_CUR);
+  }
+
+ private:
+  explicit FileZoneInfoSource(FILE* fp) : fp_(fp) {}
+  ~FileZoneInfoSource() { fclose(fp_); }
+
+  FILE* const fp_;
+};
+
+std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
+    const std::string& name) {
+  // Use of the "file:" prefix is intended for testing purposes only.
+  if (name.compare(0, 5, "file:") == 0) return Open(name.substr(5));
 
   // Map the time-zone name to a path name.
   std::string path;
@@ -603,21 +629,35 @@ bool TimeZoneInfo::Load(const std::string& name) {
   }
   path += name;
 
-  // Load the time-zone data.
-  bool loaded = false;
+  // Open the zoneinfo file.
 #if defined(_MSC_VER)
   FILE* fp;
   if (fopen_s(&fp, path.c_str(), "rb") != 0) fp = nullptr;
 #else
   FILE* fp = fopen(path.c_str(), "rb");
 #endif
-  if (fp != nullptr) {
-    loaded = Load(name, fp);
-    fclose(fp);
-  } else {
-    std::clog << path << ": " << StrError(errno) << "\n";
+  if (fp == nullptr) return nullptr;
+  return std::unique_ptr<ZoneInfoSource>(new FileZoneInfoSource(fp));
+}
+
+}  // namespace
+
+bool TimeZoneInfo::Load(const std::string& name) {
+  // We can ensure that the loading of UTC or any other fixed-offset
+  // zone never fails because the simple, fixed-offset state can be
+  // internally generated. Note that this depends on our choice to not
+  // accept leap-second encoded ("right") zoneinfo.
+  auto offset = sys_seconds::zero();
+  if (FixedOffsetFromName(name, &offset)) {
+    return ResetToBuiltinUTC(offset);
   }
-  return loaded;
+
+  // Find and use a ZoneInfoSource to load the named zone.
+  auto zip = cctz_extension::zone_info_source_factory(
+      name, [](const std::string& name) {
+        return FileZoneInfoSource::Open(name);  // fallback factory
+      });
+  return zip != nullptr && Load(name, zip.get());
 }
 
 // BreakTime() translation for a particular transition type.

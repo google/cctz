@@ -48,6 +48,7 @@ cc_library(
     ],
     hdrs = [
         "include/time_zone.h",
+        "include/zone_info_source.h",
     ],
     includes = ["include"],
     visibility = ["//visibility:public"],

@@ -16,8 +16,8 @@
 #define CCTZ_TIME_ZONE_INFO_H_
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -25,6 +25,7 @@
 #include "time_zone.h"
 #include "time_zone_if.h"
 #include "tzfile.h"
+#include "zone_info_source.h"
 
 namespace cctz {
 
@@ -93,7 +94,7 @@ class TimeZoneInfo : public TimeZoneIf {
   void ExtendTransitions(const std::string& name, const Header& hdr);
 
   bool ResetToBuiltinUTC(const sys_seconds& offset);
-  bool Load(const std::string& name, FILE* fp);
+  bool Load(const std::string& name, ZoneInfoSource* zip);
 
   // Helpers for BreakTime() and MakeTime() respectively.
   time_zone::absolute_lookup LocalTime(std::int_fast64_t unix_time,
