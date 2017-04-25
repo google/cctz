@@ -34,6 +34,24 @@ template <typename D>
 using time_point = std::chrono::time_point<std::chrono::system_clock, D>;
 using sys_seconds = std::chrono::duration<std::int_fast64_t>;
 
+namespace detail {
+template <typename D>
+inline std::pair<time_point<sys_seconds>, D>
+split_seconds(const time_point<D>& tp) {
+  auto sec = std::chrono::time_point_cast<sys_seconds>(tp);
+  auto sub = tp - sec;
+  if (sub.count() < 0) {
+    sec -= sys_seconds(1);
+    sub += sys_seconds(1);
+  }
+  return {sec, std::chrono::duration_cast<D>(sub)};
+}
+inline std::pair<time_point<sys_seconds>, sys_seconds>
+split_seconds(const time_point<sys_seconds>& tp) {
+  return {tp, sys_seconds(0)};
+}
+}  // namespace detail
+
 // cctz::time_zone is an opaque, small, value-type class representing a
 // geo-political region within which particular rules are used for mapping
 // between absolute and civil times. Time zones are named using the TZ
@@ -82,7 +100,7 @@ class time_zone {
   absolute_lookup lookup(const time_point<sys_seconds>& tp) const;
   template <typename D>
   absolute_lookup lookup(const time_point<D>& tp) const {
-    return lookup(std::chrono::time_point_cast<sys_seconds>(tp));
+    return lookup(detail::split_seconds(tp).first);
   }
 
   // A civil_lookup represents the absolute time(s) (time_point) that
@@ -187,21 +205,6 @@ inline time_point<sys_seconds> convert(const civil_second& cs,
 }
 
 namespace detail {
-template <typename D>
-inline std::pair<time_point<sys_seconds>, D>
-split_seconds(const time_point<D>& tp) {
-  auto sec = std::chrono::time_point_cast<sys_seconds>(tp);
-  auto sub = tp - sec;
-  if (sub.count() < 0) {
-    sec -= sys_seconds(1);
-    sub += sys_seconds(1);
-  }
-  return {sec, std::chrono::duration_cast<D>(sub)};
-}
-inline std::pair<time_point<sys_seconds>, sys_seconds>
-split_seconds(const time_point<sys_seconds>& tp) {
-  return {tp, sys_seconds(0)};
-}
 using femtoseconds = std::chrono::duration<std::int_fast64_t, std::femto>;
 std::string format(const std::string&, const time_point<sys_seconds>&,
                    const femtoseconds&, const time_zone&);

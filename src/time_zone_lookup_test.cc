@@ -805,6 +805,13 @@ TEST(BreakTime, LocalTimeInUTC) {
   EXPECT_EQ(weekday::thursday, get_weekday(civil_day(convert(tp, tz))));
 }
 
+TEST(BreakTime, LocalTimeInUTCUnaligned) {
+  const time_zone tz = utc_time_zone();
+  const auto tp = system_clock::from_time_t(0) - milliseconds(500);
+  ExpectTime(tp, tz, 1969, 12, 31, 23, 59, 59, 0, false, "UTC");
+  EXPECT_EQ(weekday::wednesday, get_weekday(civil_day(convert(tp, tz))));
+}
+
 TEST(BreakTime, LocalTimePosix) {
   // See IEEE Std 1003.1-1988 B.2.3 General Terms, Epoch.
   const time_zone tz = utc_time_zone();
