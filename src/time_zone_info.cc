@@ -42,6 +42,7 @@
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <string>
 
 #include "civil_time.h"
@@ -821,6 +822,72 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
 
   // In between transitions.
   return MakeUnique(tr->unix_time + (cs - tr->civil_sec));
+}
+
+std::string TimeZoneInfo::Description() const {
+  std::ostringstream oss;
+  // TODO: It would nice if the zoneinfo data included the zone name.
+  // TODO: It would nice if the zoneinfo data included the tzdb version.
+  oss << "#trans=" << transitions_.size();
+  oss << " #types=" << transition_types_.size();
+  oss << " spec='" << future_spec_ << "'";
+  return oss.str();
+}
+
+bool TimeZoneInfo::NextTransition(time_point<sys_seconds>* tp) const {
+  if (transitions_.empty()) return false;
+  const Transition* begin = &transitions_[0];
+  const Transition* end = begin + transitions_.size();
+  if (begin->unix_time <= -(1LL << 59)) {
+    // Do not report the BIG_BANG found in recent zoneinfo data as it is
+    // really a sentinel, not a transition.  See third_party/tz/zic.c.
+    ++begin;
+  }
+  std::int_fast64_t unix_time = ToUnixSeconds(*tp);
+  const Transition target = { unix_time };
+  const Transition* tr = std::upper_bound(begin, end, target,
+                                          Transition::ByUnixTime());
+  if (tr != begin) {  // skip no-op transitions
+    for (; tr != end; ++tr) {
+      if (!EquivTransitions(tr[-1].type_index, tr[0].type_index)) break;
+    }
+  }
+  // When tr == end we return false, ignoring future_spec_.
+  if (tr == end) return false;
+  *tp = FromUnixSeconds(tr->unix_time);
+  return true;
+}
+
+bool TimeZoneInfo::PrevTransition(time_point<sys_seconds>* tp) const {
+  if (transitions_.empty()) return false;
+  const Transition* begin = &transitions_[0];
+  const Transition* end = begin + transitions_.size();
+  if (begin->unix_time <= -(1LL << 59)) {
+    // Do not report the BIG_BANG found in recent zoneinfo data as it is
+    // really a sentinel, not a transition.  See third_party/tz/zic.c.
+    ++begin;
+  }
+  std::int_fast64_t unix_time = ToUnixSeconds(*tp);
+  if (FromUnixSeconds(unix_time) != *tp) {
+    if (unix_time == std::numeric_limits<std::int_fast64_t>::max()) {
+      if (end == begin) return false;  // Ignore future_spec_.
+      *tp = FromUnixSeconds((--end)->unix_time);
+      return true;
+    }
+    unix_time += 1;  // ceils
+  }
+  const Transition target = { unix_time };
+  const Transition* tr = std::lower_bound(begin, end, target,
+                                          Transition::ByUnixTime());
+  if (tr != begin) {  // skip no-op transitions
+    for (; tr - 1 != begin; --tr) {
+      if (!EquivTransitions(tr[-2].type_index, tr[-1].type_index)) break;
+    }
+  }
+  // When tr == end we return the "last" transition, ignoring future_spec_.
+  if (tr == begin) return false;
+  *tp = FromUnixSeconds((--tr)->unix_time);
+  return true;
 }
 
 }  // namespace cctz

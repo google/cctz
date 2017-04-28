@@ -171,7 +171,13 @@ cc_binary(
 
 cc_binary(
     name = "time_tool",
-    srcs = ["src/time_tool.cc"],
+    srcs = [
+        "src/time_tool.cc",
+        "src/time_zone_if.h",
+        "src/time_zone_impl.h",
+        "src/time_zone_info.h",
+        "src/tzfile.h",
+    ],
     deps = [
         ":civil_time",
         ":time_zone",

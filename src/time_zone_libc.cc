@@ -136,4 +136,16 @@ time_zone::civil_lookup TimeZoneLibC::MakeTime(const civil_second& cs) const {
   return cl;
 }
 
+std::string TimeZoneLibC::Description() const {
+  return local_ ? "localtime" : "UTC";
+}
+
+bool TimeZoneLibC::NextTransition(time_point<sys_seconds>* tp) const {
+  return false;
+}
+
+bool TimeZoneLibC::PrevTransition(time_point<sys_seconds>* tp) const {
+  return false;
+}
+
 }  // namespace cctz

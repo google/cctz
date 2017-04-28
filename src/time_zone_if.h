@@ -39,19 +39,22 @@ class TimeZoneIf {
   virtual time_zone::civil_lookup MakeTime(
       const civil_second& cs) const = 0;
 
+  virtual std::string Description() const = 0;
+  virtual bool NextTransition(time_point<sys_seconds>* tp) const = 0;
+  virtual bool PrevTransition(time_point<sys_seconds>* tp) const = 0;
+
  protected:
   TimeZoneIf() {}
 };
 
-// Converts tp to a count of seconds since the Unix epoch.
+// Convert between time_point<sys_seconds> and a count of seconds since
+// the Unix epoch.  We assume that the std::chrono::system_clock and the
+// Unix clock are second aligned, but not that they share an epoch.
 inline std::int_fast64_t ToUnixSeconds(const time_point<sys_seconds>& tp) {
   return (tp - std::chrono::time_point_cast<sys_seconds>(
                    std::chrono::system_clock::from_time_t(0)))
       .count();
 }
-
-// Converts a count of seconds since the Unix epoch to a
-// time_point<sys_seconds>.
 inline time_point<sys_seconds> FromUnixSeconds(std::int_fast64_t t) {
   return std::chrono::time_point_cast<sys_seconds>(
              std::chrono::system_clock::from_time_t(0)) +

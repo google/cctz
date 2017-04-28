@@ -54,6 +54,28 @@ class time_zone::Impl {
     return zone_->MakeTime(cs);
   }
 
+  // Returns an implementation-specific description of this time zone.
+  std::string Description() const { return zone_->Description(); }
+
+  // Finds the time of the next/previous offset change in this time zone.
+  //
+  // By definition, NextTransition(&tp) returns false when tp has its
+  // maximum value, and PrevTransition(&tp) returns false when tp has its
+  // mimimum value.  If the zone has no transitions, the result will also
+  // be false no matter what the argument.
+  //
+  // Otherwise, when tp has its mimimum value, NextTransition(&tp) returns
+  // true and sets tp to the first recorded transition.  Chains of calls
+  // to NextTransition()/PrevTransition() will eventually return false,
+  // but it is unspecified exactly when NextTransition(&tp) jumps to false,
+  // or what time is set by PrevTransition(&tp) for a very distant tp.
+  bool NextTransition(time_point<sys_seconds>* tp) const {
+    return zone_->NextTransition(tp);
+  }
+  bool PrevTransition(time_point<sys_seconds>* tp) const {
+    return zone_->PrevTransition(tp);
+  }
+
  private:
   explicit Impl(const std::string& name);
   static const Impl* UTCImpl();
