@@ -224,7 +224,7 @@ const char* const kTimeZoneNames[] = {
   "America/Porto_Acre",
   "America/Porto_Velho",
   "America/Puerto_Rico",
-  // "America/Punta_Arenas",
+  "America/Punta_Arenas",
   "America/Rainy_River",
   "America/Rankin_Inlet",
   "America/Recife",
@@ -663,28 +663,42 @@ time_zone LoadZone(const std::string& name) {
 TEST(TimeZones, LoadZonesConcurrently) {
   std::promise<void> ready_promise;
   std::shared_future<void> ready_future(ready_promise.get_future());
-  auto load_zones = [ready_future](std::promise<void>* started) {
+  auto load_zones = [ready_future](std::promise<void>* started,
+                                   std::set<std::string>* failures) {
     started->set_value();
     ready_future.wait();
-    time_zone tz;
     for (const char* const* np = kTimeZoneNames; *np != nullptr; ++np) {
-      EXPECT_TRUE(load_time_zone(*np, &tz));
-      EXPECT_EQ(*np, tz.name());
+      std::string zone = *np;
+      time_zone tz;
+      if (load_time_zone(zone, &tz)) {
+        EXPECT_EQ(zone, tz.name());
+      } else {
+        failures->insert(zone);
+      }
     }
   };
 
+  const std::size_t n_threads = 256;
   std::vector<std::thread> threads;
-  for (std::size_t i = 0; i != 256; ++i) {
+  std::vector<std::set<std::string>> thread_failures(n_threads);
+  for (std::size_t i = 0; i != n_threads; ++i) {
     std::promise<void> started;
-    threads.emplace_back(load_zones, &started);
+    threads.emplace_back(load_zones, &started, &thread_failures[i]);
     started.get_future().wait();
   }
-
   ready_promise.set_value();
-
   for (auto& thread : threads) {
     thread.join();
   }
+
+  // Allow a small number of failures to account for skew between
+  // the contents of kTimeZoneNames and the zoneinfo data source.
+  const std::size_t max_failures = 3;
+  std::set<std::string> failures;
+  for (const auto& thread_failure : thread_failures) {
+    failures.insert(thread_failure.begin(), thread_failure.end());
+  }
+  EXPECT_LE(failures.size(), max_failures) << testing::PrintToString(failures);
 }
 
 TEST(TimeZone, NamedTimeZones) {
