@@ -57,30 +57,6 @@ cc_library(
 
 ### tests
 
-# Builds the Google Test source that was fetched from another repository.
-cc_library(
-    name = "gtest",
-    srcs = glob(
-        [
-            "google*/src/*.cc",
-        ],
-        exclude = glob([
-            "google*/src/*-all.cc",
-            "googlemock/src/gmock_main.cc",
-        ]),
-    ),
-    hdrs = glob(["*/include/**/*.h"]),
-    includes = [
-        "googlemock/",
-        "googlemock/include",
-        "googletest/",
-        "googletest/include",
-    ],
-    linkopts = ["-pthread"],
-    textual_hdrs = ["googletest/src/gtest-internal-inl.h"],
-    visibility = ["//visibility:public"],
-)
-
 cc_test(
     name = "civil_time_test",
     size = "small",
@@ -109,6 +85,7 @@ cc_test(
     deps = [
         ":civil_time",
         ":time_zone",
+        "@benchmark//:benchmark",
         "@gtest//:gtest",
     ],
 )
