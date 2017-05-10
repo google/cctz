@@ -93,13 +93,14 @@ cc_test(
 
 cc_binary(
     name = "benchmarks",
+    testonly = 1,
     srcs = ["src/benchmarks.cc"],
+    linkstatic = 1,
     deps = [
         ":civil_time",
         ":time_zone",
         "@benchmark//:benchmark",
     ],
-    linkstatic = 1,
 )
 
 ### examples
