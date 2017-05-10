@@ -32,15 +32,12 @@ cc_library(
 new_git_repository(
     name = "benchmark",
     remote = "https://github.com/google/benchmark.git",
-    commit = "4f8bfeae470950ef005327973f15b0044eceaceb",
+    commit = "cb8a0cc10f8b634fd554251ae086da522b58f50e",
     build_file_content =
 """
 cc_library(
     name = "benchmark",
-    srcs = glob([
-        "src/*.cc",
-        "src/*.h",
-    ]),
+    srcs = glob(["src/*.h", "src/*.cc"]),
     hdrs = glob(["include/benchmark/*.h"]),
     includes = [
         "include",

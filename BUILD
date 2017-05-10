@@ -85,9 +85,21 @@ cc_test(
     deps = [
         ":civil_time",
         ":time_zone",
-        "@benchmark//:benchmark",
         "@gtest//:gtest",
     ],
+)
+
+### benchmarks
+
+cc_binary(
+    name = "benchmarks",
+    srcs = ["src/benchmarks.cc"],
+    deps = [
+        ":civil_time",
+        ":time_zone",
+        "@benchmark//:benchmark",
+    ],
+    linkstatic = 1,
 )
 
 ### examples

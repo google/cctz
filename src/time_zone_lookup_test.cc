@@ -21,7 +21,6 @@
 #include <thread>
 #include <vector>
 
-#include "benchmark/benchmark.h"
 #include "civil_time.h"
 #include "gtest/gtest.h"
 
@@ -1251,14 +1250,5 @@ TEST(TimeZoneEdgeCase, UTC5DigitYear) {
   tp += seconds(1);
   ExpectTime(tp, tz, 10000, 1, 1, 0, 0, 0, 0 * 3600, false, "UTC");
 }
-
-void BM_Zone_UTCTimeZone(benchmark::State& state) {
-  time_zone tz;
-  while (state.KeepRunning()) {
-    tz = utc_time_zone();
-    benchmark::DoNotOptimize(tz);
-  }
-}
-BENCHMARK(BM_Zone_UTCTimeZone);
 
 }  // namespace cctz
