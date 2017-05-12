@@ -8,8 +8,7 @@ zones in a simple and correct manner. The libraries in CCTZ are:
 
 * **The Civil-Time Library** &mdash; This is a header-only library that supports
   computing with human-scale time, such as dates (which are represented by the
-  `cctz::civil_day` class). This library is declared in [`include/civil_time.h`]
-(https://github.com/google/cctz/blob/master/include/civil_time.h).
+  `cctz::civil_day` class). This library is declared in [`include/civil_time.h`](https://github.com/google/cctz/blob/master/include/civil_time.h).
 * **The Time-Zone Library** &mdash; This library uses the IANA time zone
   database that is installed on the system to convert between *absolute time*
   and *civil time*. This library is declared in [`include/time_zone.h`](https://github.com/google/cctz/blob/master/include/time_zone.h).
