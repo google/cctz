@@ -94,7 +94,13 @@ cc_test(
 cc_binary(
     name = "benchmarks",
     testonly = 1,
-    srcs = ["src/benchmarks.cc"],
+    srcs = [
+        "src/benchmarks.cc",
+        "src/time_zone_if.h",
+        "src/time_zone_impl.h",
+        "src/time_zone_info.h",
+        "src/tzfile.h",
+    ],
     linkstatic = 1,
     deps = [
         ":civil_time",
