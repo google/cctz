@@ -13,6 +13,24 @@
 
 namespace {
 
+void BM_Difference_Days(benchmark::State& state) {
+  const cctz::civil_day c(2014, 8, 22);
+  const cctz::civil_day epoch(1970, 1, 1);
+  while (state.KeepRunning()) {
+    benchmark::DoNotOptimize(c - epoch);
+  }
+}
+BENCHMARK(BM_Difference_Days);
+
+void BM_Step_Days(benchmark::State& state) {
+  const cctz::civil_day kStart(2014, 8, 22);
+  cctz::civil_day c = kStart;
+  while (state.KeepRunning()) {
+    benchmark::DoNotOptimize(++c);
+  }
+}
+BENCHMARK(BM_Step_Days);
+
 const char RFC3339_full[] = "%Y-%m-%dT%H:%M:%E*S%Ez";
 const char RFC3339_sec[] = "%Y-%m-%dT%H:%M:%S%Ez";
 
