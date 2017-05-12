@@ -38,6 +38,10 @@ class time_zone::Impl {
   // Dereferences the time_zone to obtain its Impl.
   static const time_zone::Impl& get(const time_zone& tz);
 
+  // Clears the map of cached time zones.  Primarily for use in benchmarks
+  // that gauge the performance of loading/parsing the time-zone data.
+  static void ClearTimeZoneMapTestOnly();
+
   // The primary key is the time-zone ID (e.g., "America/New_York").
   const std::string& name() const { return name_; }
 

@@ -90,6 +90,15 @@ const time_zone::Impl& time_zone::Impl::get(const time_zone& tz) {
   return *tz.impl_;
 }
 
+void time_zone::Impl::ClearTimeZoneMapTestOnly() {
+  std::lock_guard<std::mutex> lock(time_zone_mutex);
+  if (time_zone_map != nullptr) {
+    // Existing time_zone::Impl* entries are in the wild, so we simply
+    // leak them.  Future requests will result in reloading the data.
+    time_zone_map->clear();
+  }
+}
+
 time_zone::Impl::Impl(const std::string& name) : name_(name) {}
 
 const time_zone::Impl* time_zone::Impl::UTCImpl() {
