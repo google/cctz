@@ -38,7 +38,7 @@ Next Steps:
   * Civil Time: [`include/civil_time.h`](https://github.com/google/cctz/blob/master/include/civil_time.h)
   * Time Zone: [`include/time_zone.h`](https://github.com/google/cctz/blob/master/include/time_zone.h)
 2.  Look at the examples in https://github.com/google/cctz/tree/master/examples
-3.  Join our mailing list to ask questions and keep informed of changes: 
+3.  Join our mailing list to ask questions and keep informed of changes:
   * https://groups.google.com/forum/#!forum/cctz
 
 # Fundamental Concepts
@@ -89,7 +89,7 @@ deal with these concepts, they must have a library that correctly implements the
 above concepts. CCTZ adds to the existing C++11 `<chrono>` library to fully
 implement the above concepts.
 
-* Absolute time &mdash; This is implemented by the existing C++11 
+* Absolute time &mdash; This is implemented by the existing C++11
   [`<chrono>`](http://en.cppreference.com/w/cpp/chrono)
   library without modification. For example, an absolute point in time is
   represented by a `std::chrono::time_point`.
