@@ -672,19 +672,21 @@ bool TimeZoneInfo::Load(const std::string& name) {
 // BreakTime() translation for a particular transition type.
 time_zone::absolute_lookup TimeZoneInfo::LocalTime(
     std::int_fast64_t unix_time, const TransitionType& tt) const {
-  time_zone::absolute_lookup al;
-
   // A civil time in "+offset" looks like (time+offset) in UTC.
   // Note: We perform two additions in the civil_second domain to
   // sidestep the chance of overflow in (unix_time + tt.utc_offset).
-  al.cs = (civil_second() + unix_time) + tt.utc_offset;
+  return {(civil_second() + unix_time) + tt.utc_offset,
+          tt.utc_offset, tt.is_dst, &abbreviations_[tt.abbr_index]};
+}
 
-  // Handle offset, is_dst, and abbreviation.
-  al.offset = tt.utc_offset;
-  al.is_dst = tt.is_dst;
-  al.abbr = &abbreviations_[tt.abbr_index];
-
-  return al;
+// BreakTime() translation for a particular transition.
+time_zone::absolute_lookup TimeZoneInfo::LocalTime(
+    std::int_fast64_t unix_time, const Transition& tr) const {
+  const TransitionType& tt = transition_types_[tr.type_index];
+  // Note: (unix_time - tr.unix_time) will never overflow as we
+  // have ensured that there is always a "nearby" transition.
+  return {tr.civil_sec + (unix_time - tr.unix_time),
+          tt.utc_offset, tt.is_dst, &abbreviations_[tt.abbr_index]};
 }
 
 // MakeTime() translation with a conversion-preserving +N * 400-year shift.
@@ -712,9 +714,10 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
     const time_point<sys_seconds>& tp) const {
   std::int_fast64_t unix_time = ToUnixSeconds(tp);
   const std::size_t timecnt = transitions_.size();
-  if (timecnt == 0 || unix_time < transitions_[0].unix_time) {
-    const std::uint_fast8_t type_index = default_transition_type_;
-    return LocalTime(unix_time, transition_types_[type_index]);
+  assert(timecnt != 0);  // We always add a transition.
+
+  if (unix_time < transitions_[0].unix_time) {
+    return LocalTime(unix_time, transition_types_[default_transition_type_]);
   }
   if (unix_time >= transitions_[timecnt - 1].unix_time) {
     // After the last transition. If we extended the transitions using
@@ -729,16 +732,14 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
       al.cs = YearShift(al.cs, shift * 400);
       return al;
     }
-    const std::uint_fast8_t type_index = transitions_[timecnt - 1].type_index;
-    return LocalTime(unix_time, transition_types_[type_index]);
+    return LocalTime(unix_time, transitions_[timecnt - 1]);
   }
 
   const std::size_t hint = local_time_hint_.load(std::memory_order_relaxed);
   if (0 < hint && hint < timecnt) {
-    if (unix_time < transitions_[hint].unix_time) {
-      if (!(unix_time < transitions_[hint - 1].unix_time)) {
-        const std::uint_fast8_t type_index = transitions_[hint - 1].type_index;
-        return LocalTime(unix_time, transition_types_[type_index]);
+    if (transitions_[hint - 1].unix_time <= unix_time) {
+      if (unix_time < transitions_[hint].unix_time) {
+        return LocalTime(unix_time, transitions_[hint - 1]);
       }
     }
   }
@@ -749,8 +750,7 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
                                           Transition::ByUnixTime());
   local_time_hint_.store(static_cast<std::size_t>(tr - begin),
                          std::memory_order_relaxed);
-  const std::uint_fast8_t type_index = (--tr)->type_index;
-  return LocalTime(unix_time, transition_types_[type_index]);
+  return LocalTime(unix_time, *--tr);
 }
 
 time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
@@ -763,13 +763,13 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
   const Transition* end = begin + timecnt;
   if (cs < begin->civil_sec) {
     tr = begin;
-  } else if (!(cs < transitions_[timecnt - 1].civil_sec)) {
+  } else if (cs >= transitions_[timecnt - 1].civil_sec) {
     tr = end;
   } else {
     const std::size_t hint = time_local_hint_.load(std::memory_order_relaxed);
     if (0 < hint && hint < timecnt) {
-      if (cs < transitions_[hint].civil_sec) {
-        if (!(cs < transitions_[hint - 1].civil_sec)) {
+      if (transitions_[hint - 1].civil_sec <= cs) {
+        if (cs < transitions_[hint].civil_sec) {
           tr = begin + hint;
         }
       }
@@ -783,7 +783,7 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
   }
 
   if (tr == begin) {
-    if (!(tr->prev_civil_sec < cs)) {
+    if (tr->prev_civil_sec >= cs) {
       // Before first transition, so use the default offset.
       const TransitionType& tt(transition_types_[default_transition_type_]);
       if (cs < tt.civil_min) return MakeUnique(time_point<sys_seconds>::min());
@@ -794,7 +794,7 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
   }
 
   if (tr == end) {
-    if ((--tr)->prev_civil_sec < cs) {
+    if (cs > (--tr)->prev_civil_sec) {
       // After the last transition. If we extended the transitions using
       // future_spec_, shift back to a supported year using the 400-year
       // cycle of calendaric equivalence and then compensate accordingly.
@@ -815,7 +815,7 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
     return MakeSkipped(*tr, cs);
   }
 
-  if (!((--tr)->prev_civil_sec < cs)) {
+  if (cs <= (--tr)->prev_civil_sec) {
     // tr->civil_sec <= cs <= tr->prev_civil_sec
     return MakeRepeated(*tr, cs);
   }
