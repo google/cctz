@@ -34,6 +34,9 @@ BENCHMARK(BM_Step_Days);
 const char RFC3339_full[] = "%Y-%m-%dT%H:%M:%E*S%Ez";
 const char RFC3339_sec[] = "%Y-%m-%dT%H:%M:%S%Ez";
 
+const char RFC1123_full[] = "%a, %d %b %Y %H:%M:%S %z";
+const char RFC1123_no_wday[] = "%d %b %Y %H:%M:%S %z";
+
 // A list of known time-zone names.
 // TODO: Refactor with src/time_zone_lookup_test.cc.
 const char* const kTimeZoneNames[] = {
@@ -915,8 +918,19 @@ void BM_Time_FromDateTimeDay0_Libc(benchmark::State& state) {
 }
 BENCHMARK(BM_Time_FromDateTimeDay0_Libc);
 
-void BM_Format_FormatTime3339(benchmark::State& state) {
-  const std::string fmt = RFC3339_full;
+const char* const kFormats[] = {
+    RFC1123_full,         // 0
+    RFC1123_no_wday,      // 1
+    RFC3339_full,         // 2
+    RFC3339_sec,          // 3
+    "%Y-%m-%dT%H:%M:%S",  // 4
+    "%Y-%m-%d",           // 5
+};
+const int kNumFormats = sizeof(kFormats) / sizeof(kFormats[0]);
+
+void BM_Format_FormatTime(benchmark::State& state) {
+  const std::string fmt = kFormats[state.range(0)];
+  state.SetLabel(fmt);
   const cctz::time_zone tz = TestTimeZone();
   const std::chrono::system_clock::time_point tp =
       cctz::convert(cctz::civil_second(1977, 6, 28, 9, 8, 7), tz) +
@@ -925,44 +939,21 @@ void BM_Format_FormatTime3339(benchmark::State& state) {
     benchmark::DoNotOptimize(cctz::format(fmt, tp, tz));
   }
 }
-BENCHMARK(BM_Format_FormatTime3339);
+BENCHMARK(BM_Format_FormatTime)->DenseRange(0, kNumFormats - 1);
 
-void BM_Format_ParseTime3339(benchmark::State& state) {
-  const std::string fmt = RFC3339_full;
+void BM_Format_ParseTime(benchmark::State& state) {
+  const std::string fmt = kFormats[state.range(0)];
+  state.SetLabel(fmt);
   const cctz::time_zone tz = TestTimeZone();
-  const std::string when = "1977-06-28T09:08:07.000000001-07:00";
-  std::chrono::system_clock::time_point tp;
+  std::chrono::system_clock::time_point tp =
+      cctz::convert(cctz::civil_second(1977, 6, 28, 9, 8, 7), tz) +
+      std::chrono::nanoseconds(1);
+  const std::string when = cctz::format(fmt, tp, tz);
   while (state.KeepRunning()) {
     benchmark::DoNotOptimize(cctz::parse(fmt, when, tz, &tp));
   }
 }
-BENCHMARK(BM_Format_ParseTime3339);
-
-void BM_Format_RoundTrip3339(benchmark::State& state) {
-  const std::string fmt = RFC3339_full;
-  const cctz::time_zone tz = TestTimeZone();
-  const std::chrono::system_clock::time_point itp =
-      std::chrono::system_clock::now();
-  std::chrono::system_clock::time_point otp = itp;
-  while (state.KeepRunning()) {
-    benchmark::DoNotOptimize(
-        cctz::parse(fmt, cctz::format(fmt, itp, tz), tz, &otp));
-  }
-}
-BENCHMARK(BM_Format_RoundTrip3339);
-
-void BM_Format_RoundTrip3339Sec(benchmark::State& state) {
-  const std::string fmt = RFC3339_sec;  // no subseconds
-  const cctz::time_zone tz = TestTimeZone();
-  const std::chrono::system_clock::time_point itp =
-      std::chrono::system_clock::now();
-  std::chrono::system_clock::time_point otp = itp;
-  while (state.KeepRunning()) {
-    benchmark::DoNotOptimize(
-        cctz::parse(fmt, cctz::format(fmt, itp, tz), tz, &otp));
-  }
-}
-BENCHMARK(BM_Format_RoundTrip3339Sec);
+BENCHMARK(BM_Format_ParseTime)->DenseRange(0, kNumFormats - 1);
 
 }  // namespace
 
