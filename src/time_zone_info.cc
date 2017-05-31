@@ -223,9 +223,25 @@ bool TimeZoneInfo::ResetToBuiltinUTC(const sys_seconds& offset) {
   tt.is_dst = false;
   tt.abbr_index = 0;
 
+  // We temporarily add some redundant, contemporary (2012 through 2021)
+  // transitions for performance reasons.  See TimeZoneInfo::LocalTime().
+  // TODO: Fix the performance issue and remove the extra transitions.
   transitions_.clear();
-  transitions_.reserve(2);
-  for (const std::int_fast64_t unix_time : {-(1LL << 59), 2147483647LL}) {
+  transitions_.reserve(12);
+  for (const std::int_fast64_t unix_time : {
+           -(1LL << 59),  // BIG_BANG
+           1325376000LL,  // 2012-01-01T00:00:00+00:00
+           1356998400LL,  // 2013-01-01T00:00:00+00:00
+           1388534400LL,  // 2014-01-01T00:00:00+00:00
+           1420070400LL,  // 2015-01-01T00:00:00+00:00
+           1451606400LL,  // 2016-01-01T00:00:00+00:00
+           1483228800LL,  // 2017-01-01T00:00:00+00:00
+           1514764800LL,  // 2018-01-01T00:00:00+00:00
+           1546300800LL,  // 2019-01-01T00:00:00+00:00
+           1577836800LL,  // 2020-01-01T00:00:00+00:00
+           1609459200LL,  // 2021-01-01T00:00:00+00:00
+           2147483647LL,  // 2^31 - 1
+       }) {
     Transition& tr(*transitions_.emplace(transitions_.end()));
     tr.unix_time = unix_time;
     tr.type_index = 0;
@@ -685,7 +701,7 @@ time_zone::absolute_lookup TimeZoneInfo::LocalTime(
   const TransitionType& tt = transition_types_[tr.type_index];
   // Note: (unix_time - tr.unix_time) will never overflow as we
   // have ensured that there is always a "nearby" transition.
-  return {tr.civil_sec + (unix_time - tr.unix_time),
+  return {tr.civil_sec + (unix_time - tr.unix_time),  // TODO: Optimize.
           tt.utc_offset, tt.is_dst, &abbreviations_[tt.abbr_index]};
 }
 
