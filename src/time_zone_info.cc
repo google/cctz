@@ -69,7 +69,8 @@ std::unique_ptr<cctz::ZoneInfoSource> DefaultFactory(
 // zone_info_source.h).
 #if defined(_MSC_VER)
 extern ZoneInfoSourceFactory zone_info_source_factory;
-extern ZoneInfoSourceFactory default_factory = DefaultFactory;
+extern ZoneInfoSourceFactory default_factory;
+ZoneInfoSourceFactory default_factory = DefaultFactory;
 #if defined(_M_IX86)
 #pragma comment( \
     linker,      \
