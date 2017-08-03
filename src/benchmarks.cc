@@ -794,7 +794,11 @@ void BM_Time_ToDateTime_Libc(benchmark::State& state) {
   while (state.KeepRunning()) {
     std::swap(t, t2);
     t += 1;
+#if defined(_WIN32) || defined(_WIN64)
+    benchmark::DoNotOptimize(localtime_s(&tm, &t));
+#else
     benchmark::DoNotOptimize(localtime_r(&t, &tm));
+#endif
   }
 }
 BENCHMARK(BM_Time_ToDateTime_Libc);
@@ -815,7 +819,11 @@ void BM_Time_ToDateTimeUTC_Libc(benchmark::State& state) {
   struct tm tm;
   while (state.KeepRunning()) {
     t += 1;
+#if defined(_WIN32) || defined(_WIN64)
+    benchmark::DoNotOptimize(gmtime_s(&tm, &t));
+#else
     benchmark::DoNotOptimize(gmtime_r(&t, &tm));
+#endif
   }
 }
 BENCHMARK(BM_Time_ToDateTimeUTC_Libc);
@@ -934,7 +942,7 @@ void BM_Format_FormatTime(benchmark::State& state) {
   const cctz::time_zone tz = TestTimeZone();
   const std::chrono::system_clock::time_point tp =
       cctz::convert(cctz::civil_second(1977, 6, 28, 9, 8, 7), tz) +
-      std::chrono::nanoseconds(1);
+      std::chrono::microseconds(1);
   while (state.KeepRunning()) {
     benchmark::DoNotOptimize(cctz::format(fmt, tp, tz));
   }
@@ -947,7 +955,7 @@ void BM_Format_ParseTime(benchmark::State& state) {
   const cctz::time_zone tz = TestTimeZone();
   std::chrono::system_clock::time_point tp =
       cctz::convert(cctz::civil_second(1977, 6, 28, 9, 8, 7), tz) +
-      std::chrono::nanoseconds(1);
+      std::chrono::microseconds(1);
   const std::string when = cctz::format(fmt, tp, tz);
   while (state.KeepRunning()) {
     benchmark::DoNotOptimize(cctz::parse(fmt, when, tz, &tp));
