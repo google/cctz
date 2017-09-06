@@ -53,7 +53,7 @@ CCTZ = cctz
 CCTZ_LIB = lib$(CCTZ).a
 CCTZ_SHARED_LIB = lib$(CCTZ).so
 
-CCTZ_HDRS = $(SRC)/include/cctz/*.h
+CCTZ_HDRS = $(SRC)include/cctz/*.h
 
 CCTZ_OBJS =			\
 	civil_time_detail.o	\
