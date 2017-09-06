@@ -12,7 +12,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#include "time_zone.h"
+#include "cctz/time_zone.h"
 
 #include <chrono>
 #include <cstddef>
@@ -21,7 +21,7 @@
 #include <thread>
 #include <vector>
 
-#include "civil_time.h"
+#include "cctz/civil_time.h"
 #include "gtest/gtest.h"
 
 using std::chrono::time_point_cast;

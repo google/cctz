@@ -18,7 +18,7 @@
 # endif
 #endif
 
-#include "time_zone.h"
+#include "cctz/time_zone.h"
 
 #include <cctype>
 #include <chrono>
@@ -34,7 +34,7 @@
 #include <sstream>
 #endif
 
-#include "civil_time.h"
+#include "cctz/civil_time.h"
 #include "time_zone_if.h"
 
 namespace cctz {
