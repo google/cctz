@@ -21,11 +21,11 @@
 #include <string>
 #include <vector>
 
-#include "civil_time.h"
-#include "time_zone.h"
+#include "cctz/civil_time.h"
+#include "cctz/time_zone.h"
+#include "cctz/zone_info_source.h"
 #include "time_zone_if.h"
 #include "tzfile.h"
-#include "zone_info_source.h"
 
 namespace cctz {
 

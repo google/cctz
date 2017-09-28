@@ -15,7 +15,7 @@
 #ifndef CCTZ_CIVIL_TIME_H_
 #define CCTZ_CIVIL_TIME_H_
 
-#include "civil_time_detail.h"
+#include "cctz/civil_time_detail.h"
 
 namespace cctz {
 

@@ -20,10 +20,10 @@ cc_library(
     name = "civil_time",
     srcs = ["src/civil_time_detail.cc"],
     hdrs = [
-        "include/civil_time.h",
+        "include/cctz/civil_time.h",
     ],
     includes = ["include"],
-    textual_hdrs = ["include/civil_time_detail.h"],
+    textual_hdrs = ["include/cctz/civil_time_detail.h"],
     visibility = ["//visibility:public"],
 )
 
@@ -47,8 +47,8 @@ cc_library(
         "src/tzfile.h",
     ],
     hdrs = [
-        "include/time_zone.h",
-        "include/zone_info_source.h",
+        "include/cctz/time_zone.h",
+        "include/cctz/zone_info_source.h",
     ],
     includes = ["include"],
     visibility = ["//visibility:public"],

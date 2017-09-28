@@ -28,7 +28,7 @@ namespace {
 const char kFixedOffsetPrefix[] = "Fixed/";
 
 int Parse02d(const char* p) {
-  const char kDigits[] = "0123456789";
+  static const char kDigits[] = "0123456789";
   if (const char* ap = std::strchr(kDigits, *p)) {
     int v = static_cast<int>(ap - kDigits);
     if (const char* bp = std::strchr(kDigits, *++p)) {

@@ -40,7 +40,7 @@ DESTDIR ?=
 ## TEST_FLAGS = ...
 ## TEST_LIBS = ...
 
-VPATH = $(SRC)include:$(SRC)src:$(SRC)examples
+VPATH = $(SRC)src:$(SRC)examples
 CXXFLAGS += -g -Wall -I$(SRC)include -std=$(STD) \
             $(TEST_FLAGS) -fPIC -MMD
 ARFLAGS = rcs
@@ -53,10 +53,7 @@ CCTZ = cctz
 CCTZ_LIB = lib$(CCTZ).a
 CCTZ_SHARED_LIB = lib$(CCTZ).so
 
-CCTZ_HDRS =			\
-	civil_time.h		\
-	civil_time_detail.h	\
-	time_zone.h
+CCTZ_HDRS = $(SRC)include/cctz/*.h
 
 CCTZ_OBJS =			\
 	civil_time_detail.o	\
@@ -87,8 +84,8 @@ $(CCTZ_SHARED_LIB): $(CCTZ_OBJS)
 install: install_hdrs install_lib
 
 install_hdrs: $(CCTZ_HDRS)
-	$(INSTALL) -d $(DESTDIR)$(PREFIX)/include
-	$(INSTALL) -m 644 -p $? $(DESTDIR)$(PREFIX)/include
+	$(INSTALL) -d $(DESTDIR)$(PREFIX)/include/cctz
+	$(INSTALL) -m 644 -p $? $(DESTDIR)$(PREFIX)/include/cctz
 
 install_lib: $(CCTZ_LIB)
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib
