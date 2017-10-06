@@ -72,7 +72,7 @@ split_seconds(const time_point<sys_seconds>& tp) {
 // - http://en.wikipedia.org/wiki/Zoneinfo
 class time_zone {
  public:
-  time_zone() = default;  // Equivalent to UTC
+  time_zone() : time_zone(nullptr) {}  // Equivalent to UTC
   time_zone(const time_zone&) = default;
   time_zone& operator=(const time_zone&) = default;
 
@@ -160,7 +160,7 @@ class time_zone {
 
  private:
   explicit time_zone(const Impl* impl) : impl_(impl) {}
-  const Impl* impl_ = nullptr;
+  const Impl* impl_;
 };
 
 // Relational operators.
