@@ -910,13 +910,10 @@ TEST(MakeTime, Normalization) {
 
 // NOTE: Run this with --copt=-ftrapv to detect overflow problems.
 TEST(MakeTime, SysSecondsLimits) {
-  // Note: There are currently no time zones with extended transitions
-  // that occur near time_point<sys_seconds>::max() or civil_second::max(),
-  // so any civil-time conversion around those times will always be unique.
   const char RFC3339[] =  "%Y-%m-%dT%H:%M:%S%Ez";
   const time_zone utc = utc_time_zone();
-  const time_zone apia = LoadZone("Pacific/Apia");
-  const time_zone dawson = LoadZone("America/Dawson");
+  const time_zone east = fixed_time_zone(hours(14));
+  const time_zone west = fixed_time_zone(-hours(14));
   time_point<sys_seconds> tp;
 
   // Approach the maximal time_point<sys_seconds> value from below.
@@ -931,21 +928,21 @@ TEST(MakeTime, SysSecondsLimits) {
   EXPECT_EQ(time_point<sys_seconds>::max(), tp);
 
   // Checks that we can also get the maximal value for a far-east zone.
-  tp = convert(civil_second(292277026596, 12, 5, 5, 30, 7), apia);
-  EXPECT_EQ("292277026596-12-05T05:30:07+14:00", format(RFC3339, tp, apia));
+  tp = convert(civil_second(292277026596, 12, 5, 5, 30, 7), east);
+  EXPECT_EQ("292277026596-12-05T05:30:07+14:00", format(RFC3339, tp, east));
   EXPECT_EQ(time_point<sys_seconds>::max(), tp);
-  tp = convert(civil_second(292277026596, 12, 5, 5, 30, 8), apia);
+  tp = convert(civil_second(292277026596, 12, 5, 5, 30, 8), east);
   EXPECT_EQ(time_point<sys_seconds>::max(), tp);
-  tp = convert(civil_second::max(), apia);
+  tp = convert(civil_second::max(), east);
   EXPECT_EQ(time_point<sys_seconds>::max(), tp);
 
   // Checks that we can also get the maximal value for a far-west zone.
-  tp = convert(civil_second(292277026596, 12, 4, 7, 30, 7), dawson);
-  EXPECT_EQ("292277026596-12-04T07:30:07-08:00", format(RFC3339, tp, dawson));
+  tp = convert(civil_second(292277026596, 12, 4, 1, 30, 7), west);
+  EXPECT_EQ("292277026596-12-04T01:30:07-14:00", format(RFC3339, tp, west));
   EXPECT_EQ(time_point<sys_seconds>::max(), tp);
-  tp = convert(civil_second(292277026596, 12, 4, 7, 30, 8), dawson);
+  tp = convert(civil_second(292277026596, 12, 4, 7, 30, 8), west);
   EXPECT_EQ(time_point<sys_seconds>::max(), tp);
-  tp = convert(civil_second::max(), dawson);
+  tp = convert(civil_second::max(), west);
   EXPECT_EQ(time_point<sys_seconds>::max(), tp);
 
   // Approach the minimal time_point<sys_seconds> value from above.
@@ -960,21 +957,21 @@ TEST(MakeTime, SysSecondsLimits) {
   EXPECT_EQ(time_point<sys_seconds>::min(), tp);
 
   // Checks that we can also get the minimal value for a far-east zone.
-  tp = convert(civil_second(-292277022657, 1, 27, 21, 2, 56), apia);
-  EXPECT_EQ("-292277022657-01-27T21:02:56+12:33", format(RFC3339, tp, apia));
+  tp = convert(civil_second(-292277022657, 1, 27, 22, 29, 52), east);
+  EXPECT_EQ("-292277022657-01-27T22:29:52+14:00", format(RFC3339, tp, east));
   EXPECT_EQ(time_point<sys_seconds>::min(), tp);
-  tp = convert(civil_second(-292277022657, 1, 27, 21, 2, 55), apia);
+  tp = convert(civil_second(-292277022657, 1, 27, 22, 29, 51), east);
   EXPECT_EQ(time_point<sys_seconds>::min(), tp);
-  tp = convert(civil_second::min(), apia);
+  tp = convert(civil_second::min(), east);
   EXPECT_EQ(time_point<sys_seconds>::min(), tp);
 
   // Checks that we can also get the minimal value for a far-west zone.
-  tp = convert(civil_second(-292277022657, 1, 26, 23, 12, 12), dawson);
-  EXPECT_EQ("-292277022657-01-26T23:12:12-09:17", format(RFC3339, tp, dawson));
+  tp = convert(civil_second(-292277022657, 1, 26, 18, 29, 52), west);
+  EXPECT_EQ("-292277022657-01-26T18:29:52-14:00", format(RFC3339, tp, west));
   EXPECT_EQ(time_point<sys_seconds>::min(), tp);
-  tp = convert(civil_second(-292277022657, 1, 26, 23, 12, 11), dawson);
+  tp = convert(civil_second(-292277022657, 1, 26, 18, 29, 51), west);
   EXPECT_EQ(time_point<sys_seconds>::min(), tp);
-  tp = convert(civil_second::min(), dawson);
+  tp = convert(civil_second::min(), west);
   EXPECT_EQ(time_point<sys_seconds>::min(), tp);
 }
 
