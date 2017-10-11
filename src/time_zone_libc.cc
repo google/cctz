@@ -13,7 +13,7 @@
 //   limitations under the License.
 
 #if defined(_WIN32) || defined(_WIN64)
-#define _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS 1
 #endif
 
 #include "time_zone_libc.h"
