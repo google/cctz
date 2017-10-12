@@ -102,7 +102,9 @@ cc_binary(
         "src/tzfile.h",
     ],
     linkstatic = 1,
-    manual = 1,
+    tags = [
+        "manual",
+    ],
     deps = [
         ":civil_time",
         ":time_zone",
