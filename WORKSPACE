@@ -11,6 +11,12 @@ new_git_repository(
     commit = "cb8a0cc10f8b634fd554251ae086da522b58f50e",
     build_file_content =
 """
+config_setting(
+    name = "windows",
+    values = {
+        "crosstool_top": "//crosstools/windows",
+    },
+)
 cc_library(
     name = "benchmark",
     srcs = glob(["src/*.h", "src/*.cc"]),
@@ -22,6 +28,10 @@ cc_library(
     copts = [
         "-DHAVE_STD_REGEX"
     ],
+    linkopts = select({
+      ":windows": ["-Wl,shlwapi.lib"],
+      "//conditions:default": []
+    }),
 )
 """
 )
