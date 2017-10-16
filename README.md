@@ -24,12 +24,34 @@ us if you're interested in contributing.
 CCTZ is best built and tested using the [Bazel](http://bazel.io) build system
 and the [Google Test](https://github.com/google/googletest) framework. (There
 is also a simple [`Makefile`](https://github.com/google/cctz/blob/master/Makefile)
+and a [`CMakeLists.txt`](https://github.com/google/cctz/blob/master/CMakeLists.txt)
 that should work if you're unable to use Bazel.)
 
 1.  Download/install [Bazel](https://docs.bazel.build/versions/master/install.html)
 2.  Get the cctz source: `git clone https://github.com/google/cctz.git` then `cd
     cctz`
 3.  Build cctz and run the tests: `bazel test :all`
+
+With CMake:
+1.  Make sure you have CMake >= 2.8.12 installed.
+2.  Get the cctz source: `git clone https://github.com/google/cctz.git`
+    then `cd cctz`.
+3.  Build cctz so that is can be used by shared libraries
+    and run the tests (use `-DBUILD_TESTING=OFF` to skip the tests):
+
+        mkdir mybuild
+        cd mybuild
+        cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON ..
+        cmake --build . --config Release
+        ctest
+        cmake --build . --config Release --target install
+4.  Use in your CMake-based project with:
+
+    ```cmake
+    find_package(cctz REQUIRED)
+    add_executable(mytarget file.cc)
+    target_link_libraries(mytarget cctz::cctz)
+    ```
 
 Note: When using CCTZ in your own project, you might find it easiest to compile
 the sources using your existing build system.
