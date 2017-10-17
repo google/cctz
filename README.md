@@ -26,7 +26,7 @@ and the [Google Test](https://github.com/google/googletest) framework. (There
 is also a simple [`Makefile`](https://github.com/google/cctz/blob/master/Makefile)
 that should work if you're unable to use Bazel.)
 
-1.  Download/install Bazel http://bazel.io/docs/install.html
+1.  Download/install [Bazel](https://docs.bazel.build/versions/master/install.html)
 2.  Get the cctz source: `git clone https://github.com/google/cctz.git` then `cd
     cctz`
 3.  Build cctz and run the tests: `bazel test :all`
@@ -146,7 +146,7 @@ Hello 2016-02-29 <- leap day is a Monday
 This example shows how to use all three libraries (`<chrono>`, civil time, and
 time zone) together. In this example, we know that viewers in New York watched
 Neil Armstrong first walk on the moon on July 20, 1969 at 10:56 PM. But we'd
-like to see what time it was for our friend watching in Sydney Australia.
+like to see what time it was for our friend watching in Sydney, Australia.
 
 ```
 #include <iostream>
