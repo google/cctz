@@ -48,7 +48,7 @@ char* strptime(const char* s, const char* fmt, std::tm* tm) {
   std::istringstream input(s);
   input >> std::get_time(tm, fmt);
   if (input.fail()) return nullptr;
-  return const_cast<char*>(s) + input.tellg();
+  return const_cast<char*>(s) + (input.eof() ? strlen(s) : input.tellg());
 }
 #endif
 
@@ -319,7 +319,7 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
     if (cur == end || (cur - percent) % 2 == 0) continue;
 
     // Simple specifiers that we handle ourselves.
-    if (strchr("YmdeHMSzZs", *cur)) {
+    if (strchr("YmdeHMSzZs%", *cur)) {
       if (cur - 1 != pending) {
         FormatTM(&result, std::string(pending, cur - 1), tm);
       }
@@ -362,6 +362,9 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
         case 's':
           bp = Format64(ep, 0, ToUnixSeconds(tp));
           result.append(bp, static_cast<std::size_t>(ep - bp));
+          break;
+        case '%':
+          result.push_back('%');
           break;
       }
       pending = ++cur;
@@ -596,6 +599,7 @@ bool parse(const std::string& format, const std::string& input,
         if (data != nullptr) tm.tm_mon -= 1;
         continue;
       case 'd':
+      case 'e':
         data = ParseInt(data, 2, 1, 31, &tm.tm_mday);
         continue;
       case 'H':
@@ -632,6 +636,9 @@ bool parse(const std::string& format, const std::string& input,
                         std::numeric_limits<std::int_fast64_t>::max(),
                         &percent_s);
         if (data != nullptr) saw_percent_s = true;
+        continue;
+      case '%':
+        data = (*data == '%' ? data + 1 : nullptr);
         continue;
       case 'E':
         if (*fmt == 'z') {

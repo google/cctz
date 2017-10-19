@@ -841,8 +841,12 @@ TEST(Parse, LocaleSpecific) {
 
   tp = reset;
   EXPECT_TRUE(parse("%x", "02/03/04", tz, &tp));
-  EXPECT_EQ(2, convert(tp, tz).month());
-  EXPECT_EQ(3, convert(tp, tz).day());
+  if (convert(tp, tz).month() == 2) {
+    EXPECT_EQ(3, convert(tp, tz).day());
+  } else {
+    EXPECT_EQ(2, convert(tp, tz).day());
+    EXPECT_EQ(3, convert(tp, tz).month());
+  }
   EXPECT_EQ(2004, convert(tp, tz).year());
 
   tp = reset;
