@@ -10,29 +10,33 @@ new_http_archive(
     name = "com_google_benchmark",
     urls = ["https://github.com/google/benchmark/archive/master.zip"],
     strip_prefix = "benchmark-master",
-     build_file_content =
+    build_file_content =
 """
 config_setting(
     name = "windows",
     values = {
-	"cpu": "x64_windows",
-    }
+        "cpu": "x64_windows",
+    },
 )
+
 cc_library(
     name = "benchmark",
-    srcs = glob(["src/*.h", "src/*.cc"]),
+    srcs = glob([
+        "src/*.h",
+        "src/*.cc",
+    ]),
     hdrs = glob(["include/benchmark/*.h"]),
+    copts = [
+        "-DHAVE_STD_REGEX",
+    ],
     includes = [
         "include",
     ],
-    visibility = ["//visibility:public"],
-    copts = [
-        "-DHAVE_STD_REGEX"
-    ],
     linkopts = select({
-      ":windows": [ "-defaultlib:shlwapi.lib"],
-      "//conditions:default": []
+        ":windows": ["-defaultlib:shlwapi.lib"],
+        "//conditions:default": [],
     }),
+    visibility = ["//visibility:public"],
 )
 """
 )
