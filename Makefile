@@ -64,7 +64,8 @@ CCTZ_OBJS =			\
 	time_zone_info.o	\
 	time_zone_libc.o	\
 	time_zone_lookup.o	\
-	time_zone_posix.o
+	time_zone_posix.o       \
+	zone_info_source.o
 
 TOOLS = time_tool
 EXAMPLES = classic epoch_shift hello example1 example2 example3 example4

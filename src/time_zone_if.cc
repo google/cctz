@@ -31,4 +31,7 @@ std::unique_ptr<TimeZoneIf> TimeZoneIf::Load(const std::string& name) {
   return std::unique_ptr<TimeZoneIf>(tz.release());
 }
 
+// Defined out-of-line to avoid emitting a weak vtable in all TUs.
+TimeZoneIf::~TimeZoneIf() {}
+
 }  // namespace cctz

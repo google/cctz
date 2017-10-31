@@ -49,46 +49,6 @@
 #include "time_zone_fixed.h"
 #include "time_zone_posix.h"
 
-namespace cctz_extension {
-
-namespace {
-
-// A default for cctz_extension::zone_info_source_factory, which simply
-// defers to the fallback factory.
-std::unique_ptr<cctz::ZoneInfoSource> DefaultFactory(
-    const std::string& name,
-    const std::function<std::unique_ptr<cctz::ZoneInfoSource>(
-        const std::string& name)>& fallback_factory) {
-  return fallback_factory(name);
-}
-
-}  // namespace
-
-// A "weak" definition for cctz_extension::zone_info_source_factory.
-// The user may override this with their own "strong" definition (see
-// zone_info_source.h).
-#if defined(_MSC_VER)
-extern ZoneInfoSourceFactory zone_info_source_factory;
-extern ZoneInfoSourceFactory default_factory;
-ZoneInfoSourceFactory default_factory = DefaultFactory;
-#if defined(_M_IX86)
-#pragma comment( \
-    linker,      \
-    "/alternatename:?zone_info_source_factory@cctz_extension@@3P6A?AV?$unique_ptr@VZoneInfoSource@cctz@@U?$default_delete@VZoneInfoSource@cctz@@@std@@@std@@ABV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@3@ABV?$function@$$A6A?AV?$unique_ptr@VZoneInfoSource@cctz@@U?$default_delete@VZoneInfoSource@cctz@@@std@@@std@@ABV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@2@@Z@3@@ZA=?default_factory@cctz_extension@@3P6A?AV?$unique_ptr@VZoneInfoSource@cctz@@U?$default_delete@VZoneInfoSource@cctz@@@std@@@std@@ABV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@3@ABV?$function@$$A6A?AV?$unique_ptr@VZoneInfoSource@cctz@@U?$default_delete@VZoneInfoSource@cctz@@@std@@@std@@ABV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@2@@Z@3@@ZA")
-#elif defined(_M_IA_64) || defined(_M_AMD64)
-#pragma comment( \
-    linker,      \
-    "/alternatename:?zone_info_source_factory@cctz_extension@@3P6A?AV?$unique_ptr@VZoneInfoSource@cctz@@U?$default_delete@VZoneInfoSource@cctz@@@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@3@AEBV?$function@$$A6A?AV?$unique_ptr@VZoneInfoSource@cctz@@U?$default_delete@VZoneInfoSource@cctz@@@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@2@@Z@3@@ZEA=?default_factory@cctz_extension@@3P6A?AV?$unique_ptr@VZoneInfoSource@cctz@@U?$default_delete@VZoneInfoSource@cctz@@@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@3@AEBV?$function@$$A6A?AV?$unique_ptr@VZoneInfoSource@cctz@@U?$default_delete@VZoneInfoSource@cctz@@@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@2@@Z@3@@ZEA")
-#else
-#error Unsupported MSVC platform
-#endif  // _MSC_VER
-#else
-ZoneInfoSourceFactory zone_info_source_factory
-    __attribute__((weak)) = DefaultFactory;
-#endif
-
-}  // namespace cctz_extension
-
 namespace cctz {
 
 namespace {
@@ -582,7 +542,7 @@ bool TimeZoneInfo::Load(const std::string& name, ZoneInfoSource* zip) {
   // Extend the transitions using the future specification.
   ExtendTransitions(name, hdr);
 
-  // Compute the local civil time for each transition and the preceeding
+  // Compute the local civil time for each transition and the preceding
   // second. These will be used for reverse conversions in MakeTime().
   const TransitionType* ttp = &transition_types_[default_transition_type_];
   for (std::size_t i = 0; i != transitions_.size(); ++i) {
