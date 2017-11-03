@@ -31,29 +31,6 @@ if (CMAKE_VERSION VERSION_LESS "3.1")
   endif ()
 endif()
 
-# Setup the flag to enable colored diagnostics if any.
-#
-# For now this option is enforced only for Ninja builds,
-# where compiler output is redirected to pipes.
-#
-# Clang has '-fcolor-diagnostics' for a long time now.
-# Since GCC 4.9, a similar flag has been added '-fdiagnostics-color'
-# (somehow they managed to use another syntax than Clang's one...).
-# Recent version of Clang will support both
-# as they added support for GCC's -fdiagnostics-color.
-if (${CMAKE_GENERATOR} MATCHES "Ninja")
-  # Clang
-  check_cxx_compiler_flag("-fcolor-diagnostics" HAS_FCOLOR_DIAGNOSTICS_FLAG)
-  if (HAS_FCOLOR_DIAGNOSTICS_FLAG)
-    add_compile_options(-fcolor-diagnostics)
-  else() # GCC (and Clang for compatibility with GCC)
-    check_cxx_compiler_flag("-fdiagnostics-color" HAS_DIAGNOSTICS_FCOLOR_FLAG)
-    if (HAS_DIAGNOSTICS_FCOLOR_FLAG)
-      add_compile_options(-fdiagnostics-color)
-    endif()
-  endif()
-endif()
-
 add_library(cctz
   src/civil_time_detail.cc
   src/time_zone_fixed.cc
