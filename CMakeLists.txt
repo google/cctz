@@ -53,24 +53,7 @@ add_library(cctz
 cctz_target_set_cxx_standard(cctz)
 add_library(cctz::cctz ALIAS cctz)
 
-target_include_directories(cctz PUBLIC
-  PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>)
-
-set(CMAKE_CONFIG_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
-
-install(DIRECTORY include/cctz DESTINATION include)
-install(TARGETS cctz
-        EXPORT ${PROJECT_NAME}-targets
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(EXPORT ${PROJECT_NAME}-targets
-        NAMESPACE cctz::
-        DESTINATION ${CMAKE_CONFIG_INSTALL_DIR})
-install(FILES cmake/${PROJECT_NAME}-config.cmake
-        DESTINATION ${CMAKE_CONFIG_INSTALL_DIR})
+target_include_directories(cctz PUBLIC PUBLIC include)
 
 # not (yet) supported on Windows because of getopt.h
 if (NOT MSVC)

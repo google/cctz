@@ -44,11 +44,10 @@ With CMake:
         cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON ..
         cmake --build . --config Release
         ctest
-        cmake --build . --config Release --target install
 4.  Use in your CMake-based project with:
 
     ```cmake
-    find_package(cctz REQUIRED)
+    add_subdirectory(cctz)
     add_executable(mytarget file.cc)
     target_link_libraries(mytarget cctz::cctz)
     ```
