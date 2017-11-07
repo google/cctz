@@ -17,7 +17,7 @@ find_library(GMOCK_MAIN_LIBRARY gmock_main)
 find_package(GTest)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(GMOCK DEFAULT_MSG
+find_package_handle_standard_args(GMock DEFAULT_MSG
   GTEST_FOUND
   GMOCK_INCLUDE_DIR GMOCK_LIBRARY GMOCK_MAIN_LIBRARY)
 mark_as_advanced(GMOCK_INCLUDE_DIR GMOCK_LIBRARY GMOCK_MAIN_LIBRARY)

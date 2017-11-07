@@ -7,15 +7,10 @@ set(CMAKE_MODULE_PATH
   ${PROJECT_SOURCE_DIR}/cmake/modules
   ${CMAKE_MODULE_PATH})
 
-include(CheckCXXCompilerFlag)
+include(CheckCXXSymbolExists)
 include(CTest)
-include(GNUInstallDirs)
 
 option(BUILD_EXAMPLES "Whether or not to build examples" ON)
-
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-  add_compile_options(-Wall)
-endif()
 
 function(cctz_target_set_cxx_standard target)
   set(cctz_cxx_standard 11)
@@ -53,13 +48,20 @@ add_library(cctz
 cctz_target_set_cxx_standard(cctz)
 add_library(cctz::cctz ALIAS cctz)
 
-target_include_directories(cctz PUBLIC PUBLIC include)
+target_include_directories(cctz PUBLIC include)
 
-# not (yet) supported on Windows because of getopt.h
-if (NOT MSVC)
+# the getopt_long function used by time_tool is not available on all platforms,
+# for example this is not available by default on Windows
+if (NOT DEFINED HAVE_GETOPT_LONG)
+  set(show_time_tool_msg 1)
+endif()
+check_cxx_symbol_exists(getopt_long getopt.h HAVE_GETOPT_LONG)
+if (HAVE_GETOPT_LONG)
   add_executable(time_tool src/time_tool.cc)
   cctz_target_set_cxx_standard(time_tool)
   target_link_libraries(time_tool cctz::cctz)
+elseif(show_time_tool_msg)
+    message(STATUS "Disable time_tool as getopt_long is not available")
 endif()
 
 if (BUILD_EXAMPLES)
