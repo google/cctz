@@ -12,17 +12,19 @@ include(CTest)
 
 option(BUILD_EXAMPLES "Whether or not to build examples" ON)
 
+# Starting from CMake >= 3.1, if a specific standard is required,
+# it can be set from the command line with:
+#     cmake -DCMAKE_CXX_STANDARD=[11|14|17]
 function(cctz_target_set_cxx_standard target)
-  set(cctz_cxx_standard 11)
-  # CXX_STANDARD target property is only supported since CMake >= 3.1
+  set(cxx_standard 11)
   if (CMAKE_VERSION VERSION_LESS "3.1")
     if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-      target_compile_options(${target} PRIVATE -std=c++${cctz_cxx_standard})
-    else()
-      # if a specific standard is required, this can be set from the command line:
-      #     cmake -DCMAKE_CXX_STANDARD=[11|14|17]
-      set_property(TARGET ${target} PROPERTY CXX_STANDARD ${cctz_cxx_standard})
+      target_compile_options(${target} PRIVATE -std=c++${cxx_standard})
     endif()
+  elseif (CMAKE_VERSION VERSION_LESS "3.8")
+    set_property(TARGET ${target} PROPERTY CXX_STANDARD ${cxx_standard})
+  else()
+    target_compile_features(${target} PUBLIC cxx_std_${cxx_standard})
   endif()
 endfunction()
 
