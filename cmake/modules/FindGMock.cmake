@@ -18,8 +18,10 @@ find_package(GTest)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(GMock DEFAULT_MSG
+  GMOCK_LIBRARY GMOCK_MAIN_LIBRARY
+  GMOCK_INCLUDE_DIR
   GTEST_FOUND
-  GMOCK_INCLUDE_DIR GMOCK_LIBRARY GMOCK_MAIN_LIBRARY)
+)
 mark_as_advanced(GMOCK_INCLUDE_DIR GMOCK_LIBRARY GMOCK_MAIN_LIBRARY)
 
 if (GMOCK_FOUND AND NOT TARGET GMock::GMock)
