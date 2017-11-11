@@ -10,7 +10,11 @@ set(CMAKE_MODULE_PATH
 include(CheckCXXSymbolExists)
 include(CTest)
 
-option(BUILD_EXAMPLES "Whether or not to build examples" ON)
+option(CCTZ_BUILD_EXAMPLES "Whether or not to build examples" ON)
+
+# CMake does not seem to provide a means of disabling testing for a subproject,
+# so providing an option similar to BUILD_TESTING specific to the project.
+option(CCTZ_BUILD_TESTING "Whether or not to build tests" ON)
 
 # Starting from CMake >= 3.1, if a specific standard is required,
 # it can be set from the command line with:
@@ -66,11 +70,11 @@ elseif(show_time_tool_msg)
     message(STATUS "Disable time_tool as getopt_long is not available")
 endif()
 
-if (BUILD_EXAMPLES)
+if (CCTZ_BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif()
 
-if (BUILD_TESTING)
+if (CCTZ_BUILD_TESTING AND BUILD_TESTING)
   find_package(benchmark REQUIRED)
   find_package(GMock REQUIRED)
   find_package(GTest REQUIRED)
