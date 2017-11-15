@@ -32,7 +32,7 @@ class TimeZoneIf {
   // A factory function for TimeZoneIf implementations.
   static std::unique_ptr<TimeZoneIf> Load(const std::string& name);
 
-  virtual ~TimeZoneIf() {}
+  virtual ~TimeZoneIf();
 
   virtual time_zone::absolute_lookup BreakTime(
       const time_point<sys_seconds>& tp) const = 0;

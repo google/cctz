@@ -45,6 +45,7 @@ cc_library(
         "src/time_zone_posix.cc",
         "src/time_zone_posix.h",
         "src/tzfile.h",
+        "src/zone_info_source.cc",
     ],
     hdrs = [
         "include/cctz/time_zone.h",
