@@ -18,20 +18,24 @@
 # endif
 #endif
 
-#include "time_zone.h"
-#include "time_zone_if.h"
+#include "cctz/time_zone.h"
 
 #include <cctype>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <ctime>
 #include <limits>
+#include <string>
 #include <vector>
 #if !HAS_STRPTIME
 #include <iomanip>
 #include <sstream>
 #endif
+
+#include "cctz/civil_time.h"
+#include "time_zone_if.h"
 
 namespace cctz {
 namespace detail {
@@ -44,7 +48,8 @@ char* strptime(const char* s, const char* fmt, std::tm* tm) {
   std::istringstream input(s);
   input >> std::get_time(tm, fmt);
   if (input.fail()) return nullptr;
-  return const_cast<char*>(s) + input.tellg();
+  return const_cast<char*>(s) +
+         (input.eof() ? strlen(s) : static_cast<std::size_t>(input.tellg()));
 }
 #endif
 
@@ -266,6 +271,7 @@ const std::int_fast64_t kExp10[kDigits10_64 + 1] = {
 std::string format(const std::string& format, const time_point<sys_seconds>& tp,
                    const detail::femtoseconds& fs, const time_zone& tz) {
   std::string result;
+  result.reserve(format.size());  // A reasonable guess for the result size.
   const time_zone::absolute_lookup al = tz.lookup(tp);
   const std::tm tm = ToTM(al);
 
@@ -314,7 +320,7 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
     if (cur == end || (cur - percent) % 2 == 0) continue;
 
     // Simple specifiers that we handle ourselves.
-    if (strchr("YmdeHMSzZs", *cur)) {
+    if (strchr("YmdeHMSzZs%", *cur)) {
       if (cur - 1 != pending) {
         FormatTM(&result, std::string(pending, cur - 1), tm);
       }
@@ -357,6 +363,9 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
         case 's':
           bp = Format64(ep, 0, ToUnixSeconds(tp));
           result.append(bp, static_cast<std::size_t>(ep - bp));
+          break;
+        case '%':
+          result.push_back('%');
           break;
       }
       pending = ++cur;
@@ -591,6 +600,7 @@ bool parse(const std::string& format, const std::string& input,
         if (data != nullptr) tm.tm_mon -= 1;
         continue;
       case 'd':
+      case 'e':
         data = ParseInt(data, 2, 1, 31, &tm.tm_mday);
         continue;
       case 'H':
@@ -627,6 +637,9 @@ bool parse(const std::string& format, const std::string& input,
                         std::numeric_limits<std::int_fast64_t>::max(),
                         &percent_s);
         if (data != nullptr) saw_percent_s = true;
+        continue;
+      case '%':
+        data = (*data == '%' ? data + 1 : nullptr);
         continue;
       case 'E':
         if (*fmt == 'z') {
@@ -769,9 +782,9 @@ bool parse(const std::string& format, const std::string& input,
   const int month = tm.tm_mon + 1;
   civil_second cs(year, month, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 
-  // parse() should not allow normalization. Due to the restricted field ranges
-  // above (see ParseInt()), the only possibility is for days to roll into
-  // months. That is, parsing "Sep 31" should not produce "Oct 1".
+  // parse() should not allow normalization. Due to the restricted field
+  // ranges above (see ParseInt()), the only possibility is for days to roll
+  // into months. That is, parsing "Sep 31" should not produce "Oct 1".
   if (cs.month() != month || cs.day() != tm.tm_mday) {
     if (err != nullptr) *err = "Out-of-range field";
     return false;

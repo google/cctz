@@ -12,11 +12,12 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
+#include <chrono>
 #include <iostream>
 #include <string>
 
-#include "civil_time.h"
-#include "time_zone.h"
+#include "cctz/civil_time.h"
+#include "cctz/time_zone.h"
 
 int main() {
   cctz::time_zone lax;
@@ -28,6 +29,6 @@ int main() {
   // First day of month, 6 months from now.
   const auto then = cctz::convert(cctz::civil_month(cs) + 6, lax);
 
-  std::cout << cctz::format("Now: %F %T %z\n", now, lax);
-  std::cout << cctz::format("6mo: %F %T %z\n", then, lax);
+  std::cout << cctz::format("Now: %Y-%m-%d %H:%M:%S %z\n", now, lax);
+  std::cout << cctz::format("6mo: %Y-%m-%d %H:%M:%S %z\n", then, lax);
 }

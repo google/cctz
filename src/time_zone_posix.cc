@@ -14,6 +14,7 @@
 
 #include "time_zone_posix.h"
 
+#include <cstddef>
 #include <cstring>
 #include <limits>
 #include <string>

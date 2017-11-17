@@ -12,11 +12,8 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#include <cstddef>
 #include <ctime>
-#include <iomanip>
 #include <iostream>
-#include <chrono>
 #include <string>
 
 std::string format(const std::string& fmt, const std::tm& tm) {
@@ -29,10 +26,18 @@ int main() {
   const std::time_t now = std::time(nullptr);
 
   std::tm tm_utc;
+#if defined(_WIN32) || defined(_WIN64)
+  gmtime_s(&tm_utc, &now);
+#else
   gmtime_r(&now, &tm_utc);
-  std::cout << format("UTC: %F %T\n", tm_utc);
+#endif
+  std::cout << format("UTC: %Y-%m-%d %H:%M:%S\n", tm_utc);
 
   std::tm tm_local;
+#if defined(_WIN32) || defined(_WIN64)
+  localtime_s(&tm_local, &now);
+#else
   localtime_r(&now, &tm_local);
-  std::cout << format("Local: %F %T\n", tm_local);
+#endif
+  std::cout << format("Local: %Y-%m-%d %H:%M:%S\n", tm_local);
 }

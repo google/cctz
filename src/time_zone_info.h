@@ -16,12 +16,14 @@
 #define CCTZ_TIME_ZONE_INFO_H_
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <string>
 #include <vector>
 
-#include "civil_time.h"
+#include "cctz/civil_time.h"
+#include "cctz/time_zone.h"
+#include "cctz/zone_info_source.h"
 #include "time_zone_if.h"
 #include "tzfile.h"
 
@@ -70,6 +72,9 @@ class TimeZoneInfo : public TimeZoneIf {
       const time_point<sys_seconds>& tp) const override;
   time_zone::civil_lookup MakeTime(
       const civil_second& cs) const override;
+  std::string Description() const override;
+  bool NextTransition(time_point<sys_seconds>* tp) const override;
+  bool PrevTransition(time_point<sys_seconds>* tp) const override;
 
  private:
   struct Header {  // counts of:
@@ -91,12 +96,14 @@ class TimeZoneInfo : public TimeZoneIf {
                         std::uint_fast8_t tt2_index) const;
   void ExtendTransitions(const std::string& name, const Header& hdr);
 
-  bool ResetToBuiltinUTC(int seconds);
-  bool Load(const std::string& name, FILE* fp);
+  bool ResetToBuiltinUTC(const sys_seconds& offset);
+  bool Load(const std::string& name, ZoneInfoSource* zip);
 
-  // Helpers for BreakTime() and MakeTime() respectively.
+  // Helpers for BreakTime() and MakeTime().
   time_zone::absolute_lookup LocalTime(std::int_fast64_t unix_time,
                                        const TransitionType& tt) const;
+  time_zone::absolute_lookup LocalTime(std::int_fast64_t unix_time,
+                                       const Transition& tr) const;
   time_zone::civil_lookup TimeLocal(const civil_second& cs,
                                     cctz::year_t c4_shift) const;
 

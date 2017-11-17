@@ -15,8 +15,8 @@
 #include <iostream>
 #include <string>
 
-#include "civil_time.h"
-#include "time_zone.h"
+#include "cctz/civil_time.h"
+#include "cctz/time_zone.h"
 
 int main() {
   cctz::time_zone lax;
@@ -28,6 +28,6 @@ int main() {
   cctz::time_zone nyc;
   load_time_zone("America/New_York", &nyc);
 
-  std::cout << cctz::format("Talk starts at %T %z (%Z)\n", tp, lax);
-  std::cout << cctz::format("Talk starts at %T %z (%Z)\n", tp, nyc);
+  std::cout << cctz::format("Talk starts at %H:%M:%S %z (%Z)\n", tp, lax);
+  std::cout << cctz::format("Talk starts at %H:%M:%S %z (%Z)\n", tp, nyc);
 }

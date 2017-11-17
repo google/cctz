@@ -13,16 +13,18 @@
 //   limitations under the License.
 
 #if defined(_WIN32) || defined(_WIN64)
-#define _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS 1
 #endif
 
 #include "time_zone_libc.h"
 
 #include <chrono>
-#include <cstdint>
 #include <ctime>
 #include <tuple>
 #include <utility>
+
+#include "cctz/civil_time.h"
+#include "cctz/time_zone.h"
 
 namespace cctz {
 
@@ -64,16 +66,20 @@ OffsetAbbr get_offset_abbr(const std::tm& tm) {
 //
 // Returns an OffsetAbbr using std::tm fields with various spellings.
 //
+#if !defined(tm_gmtoff) && !defined(tm_zone)
 template <typename T>
 OffsetAbbr get_offset_abbr(const T& tm, decltype(&T::tm_gmtoff) = nullptr,
                            decltype(&T::tm_zone) = nullptr) {
   return {tm.tm_gmtoff, tm.tm_zone};
 }
+#endif  // !defined(tm_gmtoff) && !defined(tm_zone)
+#if !defined(__tm_gmtoff) && !defined(__tm_zone)
 template <typename T>
 OffsetAbbr get_offset_abbr(const T& tm, decltype(&T::__tm_gmtoff) = nullptr,
                            decltype(&T::__tm_zone) = nullptr) {
   return {tm.__tm_gmtoff, tm.__tm_zone};
 }
+#endif  // !defined(__tm_gmtoff) && !defined(__tm_zone)
 #endif
 
 }  // namespace
@@ -128,6 +134,18 @@ time_zone::civil_lookup TimeZoneLibC::MakeTime(const civil_second& cs) const {
   cl.kind = time_zone::civil_lookup::UNIQUE;
   cl.pre = cl.trans = cl.post = FromUnixSeconds(t);
   return cl;
+}
+
+std::string TimeZoneLibC::Description() const {
+  return local_ ? "localtime" : "UTC";
+}
+
+bool TimeZoneLibC::NextTransition(time_point<sys_seconds>* tp) const {
+  return false;
+}
+
+bool TimeZoneLibC::PrevTransition(time_point<sys_seconds>* tp) const {
+  return false;
 }
 
 }  // namespace cctz

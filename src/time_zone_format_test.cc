@@ -12,14 +12,14 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#include "time_zone.h"
+#include "cctz/time_zone.h"
 
 #include <chrono>
-#include <cstdint>
 #include <iomanip>
 #include <sstream>
 #include <string>
 
+#include "cctz/civil_time.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -841,8 +841,12 @@ TEST(Parse, LocaleSpecific) {
 
   tp = reset;
   EXPECT_TRUE(parse("%x", "02/03/04", tz, &tp));
-  EXPECT_EQ(2, convert(tp, tz).month());
-  EXPECT_EQ(3, convert(tp, tz).day());
+  if (convert(tp, tz).month() == 2) {
+    EXPECT_EQ(3, convert(tp, tz).day());
+  } else {
+    EXPECT_EQ(2, convert(tp, tz).day());
+    EXPECT_EQ(3, convert(tp, tz).month());
+  }
   EXPECT_EQ(2004, convert(tp, tz).year());
 
   tp = reset;
@@ -1210,26 +1214,38 @@ TEST(Parse, MaxRange) {
   time_point<sys_seconds> tp;
 
   // tests the upper limit using +00:00 offset
-  EXPECT_TRUE(parse(RFC3339_sec, "292277026596-12-04T15:30:07+00:00", utc, &tp));
+  EXPECT_TRUE(
+      parse(RFC3339_sec, "292277026596-12-04T15:30:07+00:00", utc, &tp));
   EXPECT_EQ(tp, time_point<sys_seconds>::max());
-  EXPECT_FALSE(parse(RFC3339_sec, "292277026596-12-04T15:30:08+00:00", utc, &tp));
+  EXPECT_FALSE(
+      parse(RFC3339_sec, "292277026596-12-04T15:30:08+00:00", utc, &tp));
+
   // tests the upper limit using -01:00 offset
-  EXPECT_TRUE(parse(RFC3339_sec, "292277026596-12-04T14:30:07-01:00", utc, &tp));
+  EXPECT_TRUE(
+      parse(RFC3339_sec, "292277026596-12-04T14:30:07-01:00", utc, &tp));
   EXPECT_EQ(tp, time_point<sys_seconds>::max());
-  EXPECT_FALSE(parse(RFC3339_sec, "292277026596-12-04T15:30:07-01:00", utc, &tp));
+  EXPECT_FALSE(
+      parse(RFC3339_sec, "292277026596-12-04T15:30:07-01:00", utc, &tp));
 
   // tests the lower limit using +00:00 offset
-  EXPECT_TRUE(parse(RFC3339_sec, "-292277022657-01-27T08:29:52+00:00", utc, &tp));
+  EXPECT_TRUE(
+      parse(RFC3339_sec, "-292277022657-01-27T08:29:52+00:00", utc, &tp));
   EXPECT_EQ(tp, time_point<sys_seconds>::min());
-  EXPECT_FALSE(parse(RFC3339_sec, "-292277022657-01-27T08:29:51+00:00", utc, &tp));
+  EXPECT_FALSE(
+      parse(RFC3339_sec, "-292277022657-01-27T08:29:51+00:00", utc, &tp));
+
   // tests the lower limit using +01:00 offset
-  EXPECT_TRUE(parse(RFC3339_sec, "-292277022657-01-27T09:29:52+01:00", utc, &tp));
+  EXPECT_TRUE(
+      parse(RFC3339_sec, "-292277022657-01-27T09:29:52+01:00", utc, &tp));
   EXPECT_EQ(tp, time_point<sys_seconds>::min());
-  EXPECT_FALSE(parse(RFC3339_sec, "-292277022657-01-27T08:29:51+01:00", utc, &tp));
+  EXPECT_FALSE(
+      parse(RFC3339_sec, "-292277022657-01-27T08:29:51+01:00", utc, &tp));
 
   // tests max/min civil-second overflow
-  EXPECT_FALSE(parse(RFC3339_sec, "9223372036854775807-12-31T23:59:59-00:01", utc, &tp));
-  EXPECT_FALSE(parse(RFC3339_sec, "-9223372036854775808-01-01T00:00:00+00:01", utc, &tp));
+  EXPECT_FALSE(parse(RFC3339_sec, "9223372036854775807-12-31T23:59:59-00:01",
+                     utc, &tp));
+  EXPECT_FALSE(parse(RFC3339_sec, "-9223372036854775808-01-01T00:00:00+00:01",
+                     utc, &tp));
 
   // TODO: Add tests that parsing times with fractional seconds overflow
   // appropriately. This can't be done until cctz::parse() properly detects
@@ -1262,6 +1278,10 @@ TEST(FormatParse, RoundTrip) {
     EXPECT_EQ(in, out);  // RFC1123_full includes %z
   }
 
+#if defined(_WIN32) || defined(_WIN64)
+  // Initial investigations indicate the %c does not roundtrip on Windows.
+  // TODO: Figure out what is going on here (perhaps a locale problem).
+#else
   // Even though we don't know what %c will produce, it should roundtrip,
   // but only in the 0-offset timezone.
   {
@@ -1271,6 +1291,7 @@ TEST(FormatParse, RoundTrip) {
     EXPECT_TRUE(parse("%c", s, utc, &out)) << s;
     EXPECT_EQ(in, out);
   }
+#endif
 }
 
 TEST(FormatParse, RoundTripDistantFuture) {

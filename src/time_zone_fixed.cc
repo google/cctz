@@ -15,6 +15,7 @@
 #include "time_zone_fixed.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -27,7 +28,7 @@ namespace {
 const char kFixedOffsetPrefix[] = "Fixed/";
 
 int Parse02d(const char* p) {
-  const char kDigits[] = "0123456789";
+  static const char kDigits[] = "0123456789";
   if (const char* ap = std::strchr(kDigits, *p)) {
     int v = static_cast<int>(ap - kDigits);
     if (const char* bp = std::strchr(kDigits, *++p)) {
@@ -39,9 +40,9 @@ int Parse02d(const char* p) {
 
 }  // namespace
 
-bool FixedOffsetFromName(const std::string& name, int* seconds) {
+bool FixedOffsetFromName(const std::string& name, sys_seconds* offset) {
   if (name.compare(0, std::string::npos, "UTC", 3) == 0) {
-    *seconds = 0;
+    *offset = sys_seconds::zero();
     return true;
   }
 
@@ -67,18 +68,20 @@ bool FixedOffsetFromName(const std::string& name, int* seconds) {
   if (secs == -1) return false;
 
   secs += ((hours * 60) + mins) * 60;
-  if (secs > 24 * 60 * 60) {
-    // We don't support fixed-offset zones more than 24 hours away from
-    // UTC in order to avoid problems in rendering such offsets using
-    // %z, and also to limit the total number of zones.
-    return false;
-  }
-  *seconds = secs * (np[0] == '-' ? -1 : 1);  // "-" means west
+  if (secs > 24 * 60 * 60) return false;  // outside supported offset range
+  *offset = sys_seconds(secs * (np[0] == '-' ? -1 : 1));  // "-" means west
   return true;
 }
 
-std::string FixedOffsetToName(int seconds) {
-  if (seconds == 0) return "UTC";
+std::string FixedOffsetToName(const sys_seconds& offset) {
+  if (offset == sys_seconds::zero()) return "UTC";
+  if (offset < std::chrono::hours(-24) || offset > std::chrono::hours(24)) {
+    // We don't support fixed-offset zones more than 24 hours
+    // away from UTC to avoid complications in rendering such
+    // offsets and to (somewhat) limit the total number of zones.
+    return "UTC";
+  }
+  int seconds = static_cast<int>(offset.count());
   const char sign = (seconds < 0 ? '-' : '+');
   int minutes = seconds / 60;
   seconds %= 60;
@@ -92,14 +95,14 @@ std::string FixedOffsetToName(int seconds) {
   }
   int hours = minutes / 60;
   minutes %= 60;
-  char buf[sizeof(kFixedOffsetPrefix) + sizeof("UTC-596523:14:08")];
+  char buf[sizeof(kFixedOffsetPrefix) + sizeof("UTC-24:00:00")];
   snprintf(buf, sizeof(buf), "%sUTC%c%02d:%02d:%02d",
            kFixedOffsetPrefix, sign, hours, minutes, seconds);
   return buf;
 }
 
-std::string FixedOffsetToAbbr(int seconds) {
-  std::string abbr = FixedOffsetToName(seconds);
+std::string FixedOffsetToAbbr(const sys_seconds& offset) {
+  std::string abbr = FixedOffsetToName(offset);
   const std::size_t prefix_len = sizeof(kFixedOffsetPrefix) - 1;
   const char* const ep = kFixedOffsetPrefix + prefix_len;
   if (abbr.size() >= prefix_len) {

@@ -15,7 +15,9 @@
 #include "time_zone_impl.h"
 
 #include <mutex>
+#include <string>
 #include <unordered_map>
+#include <utility>
 
 #include "time_zone_fixed.h"
 
@@ -41,8 +43,8 @@ bool time_zone::Impl::LoadTimeZone(const std::string& name, time_zone* tz) {
   const time_zone::Impl* const utc_impl = UTCImpl();
 
   // First check for UTC (which is never a key in time_zone_map).
-  int seconds = 0;
-  if (FixedOffsetFromName(name, &seconds) && seconds == 0) {
+  auto offset = sys_seconds::zero();
+  if (FixedOffsetFromName(name, &offset) && offset == sys_seconds::zero()) {
     *tz = time_zone(utc_impl);
     return true;
   }
@@ -86,6 +88,15 @@ const time_zone::Impl& time_zone::Impl::get(const time_zone& tz) {
     return *UTCImpl();
   }
   return *tz.impl_;
+}
+
+void time_zone::Impl::ClearTimeZoneMapTestOnly() {
+  std::lock_guard<std::mutex> lock(time_zone_mutex);
+  if (time_zone_map != nullptr) {
+    // Existing time_zone::Impl* entries are in the wild, so we simply
+    // leak them.  Future requests will result in reloading the data.
+    time_zone_map->clear();
+  }
 }
 
 time_zone::Impl::Impl(const std::string& name) : name_(name) {}
