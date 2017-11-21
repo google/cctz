@@ -678,7 +678,7 @@ TEST(TimeZones, LoadZonesConcurrently) {
     }
   };
 
-  const std::size_t n_threads = 256;
+  const std::size_t n_threads = 128;
   std::vector<std::thread> threads;
   std::vector<std::set<std::string>> thread_failures(n_threads);
   for (std::size_t i = 0; i != n_threads; ++i) {
