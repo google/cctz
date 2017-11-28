@@ -9,8 +9,38 @@ set(CMAKE_MODULE_PATH
 
 include(CheckCXXSymbolExists)
 include(CTest)
+include(FeatureSummary)
 
 option(BUILD_EXAMPLES "Whether or not to build examples" ON)
+
+if (BUILD_TESTING)
+  find_package(benchmark)
+  set_package_properties(benchmark PROPERTIES
+    TYPE REQUIRED
+    DESCRIPTION "a microbenchmark support library"
+    URL "https://github.com/google/benchmark"
+  )
+
+  find_package(GMock)
+  set_package_properties(GMock PROPERTIES
+    TYPE REQUIRED
+    DESCRIPTION "the Google C++ mocking framework"
+    URL "https://github.com/google/googletest"
+  )
+
+  find_package(GTest)
+  set_package_properties(GTest PROPERTIES
+    TYPE REQUIRED
+    DESCRIPTION "the Google C++ test framework"
+    URL "https://github.com/google/googletest"
+  )
+
+  find_package(Threads)
+  set_package_properties(Threads PROPERTIES
+    TYPE REQUIRED
+    DESCRIPTION "the system thread library"
+  )
+endif()
 
 # Starting from CMake >= 3.1, if a specific standard is required,
 # it can be set from the command line with:
@@ -71,11 +101,6 @@ if (BUILD_EXAMPLES)
 endif()
 
 if (BUILD_TESTING)
-  find_package(benchmark REQUIRED)
-  find_package(GMock REQUIRED)
-  find_package(GTest REQUIRED)
-  find_package(Threads REQUIRED)
-
   add_executable(civil_time_test src/civil_time_test.cc)
   cctz_target_set_cxx_standard(civil_time_test)
   target_include_directories(civil_time_test PRIVATE ${GTEST_INCLUDE_DIRS})
@@ -119,3 +144,5 @@ if (BUILD_TESTING)
   cctz_target_set_cxx_standard(benchmarks)
   target_link_libraries(benchmarks cctz::cctz benchmark::benchmark)
 endif()
+
+feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
