@@ -14,7 +14,6 @@
 
 // A command-line tool for exercising the CCTZ library.
 
-#include <getopt.h>
 #include <algorithm>
 #include <cctype>
 #include <chrono>
@@ -276,11 +275,12 @@ bool ParseYearRange(bool zdump, const std::string& args,
 }
 
 int main(int argc, char** argv) {
-  const std::string prog = argv[0] ? Basename(argv[0]) : "time_tool";
+  const char* argv0 = (argc > 0) ? (argc--, *argv++) : (argc = 0, "time_tool");
+  const std::string prog = Basename(argv0);
 
   // Escape arguments that look like negative offsets so that they
   // don't look like flags.
-  for (int i = 1; i < argc; ++i) {
+  for (int i = 0; i < argc; ++i) {
     if (strcmp(argv[i], "--") == 0) break;
     if (LooksLikeNegOffset(argv[i])) {
       char* buf = new char[strlen(argv[i] + 2)];
@@ -294,40 +294,81 @@ int main(int argc, char** argv) {
   cctz::time_zone zone = cctz::local_time_zone();
   bool zone_dump = (prog == "zone_dump");
   bool zdump = false;  // Use zdump(8) format.
-  for (;;) {
-    static option opts[] = {
-        {"tz", required_argument, nullptr, 'z'},
-        {"zdump", no_argument, nullptr, 'D'},
-        {"zone_dump", no_argument, nullptr, 'd'},
-        {nullptr, 0, nullptr, 0},
-    };
-    int c = getopt_long(argc, argv, "z:Dd", opts, nullptr);
-    if (c == -1) break;
-    switch (c) {
-      case 'z':
-        if (!cctz::load_time_zone(optarg, &zone)) {
-          std::cerr << optarg << ": Unrecognized time zone\n";
+  int optind = 0;
+  int opterr = 0;
+  for (; optind < argc && opterr == 0; ++optind) {
+    const char* opt = argv[optind];
+    if (*opt++ != '-') break;
+    if (*opt != '-') {  // short options
+      while (char c = *opt++) {
+        if (c == 'z') {
+          if (*opt != '\0') {
+            if (!cctz::load_time_zone(opt, &zone)) {
+              std::cerr << opt << ": Unrecognized time zone\n";
+              return 1;
+            }
+            break;
+          }
+          if (optind + 1 == argc) {
+            std::cerr << argv0 << ": option requires an argument -- 'z'\n";
+            ++opterr;
+            break;
+          }
+          if (!cctz::load_time_zone(argv[++optind], &zone)) {
+            std::cerr << argv[optind] << ": Unrecognized time zone\n";
+            return 1;
+          }
+        } else if (c == 'D') {
+          zdump = true;
+        } else if (c == 'd') {
+          zone_dump = true;
+        } else {
+          std::cerr << argv0 << ": invalid option -- '" << c << "'\n";
+          ++opterr;
+          break;
+        }
+      }
+    } else {  // long options
+      if (*++opt == '\0') {  // "--"
+        ++optind;
+        break;
+      }
+      if (strcmp(opt, "tz") == 0) {
+        if (optind + 1 == argc) {
+          std::cerr << argv0 << ": option '--tz' requires an argument\n";
+          ++opterr;
+        } else {
+          if (!cctz::load_time_zone(argv[++optind], &zone)) {
+            std::cerr << argv[optind] << ": Unrecognized time zone\n";
+            return 1;
+          }
+        }
+      } else if (strncmp(opt, "tz=", 3) == 0) {
+        if (!cctz::load_time_zone(opt + 3, &zone)) {
+          std::cerr << (opt + 3) << ": Unrecognized time zone\n";
           return 1;
         }
-        break;
-      case 'D':
+      } else if (strcmp(opt, "zdump") == 0) {
         zdump = true;
-        break;
-      case 'd':
+      } else if (strcmp(opt, "zone_dump") == 0) {
         zone_dump = true;
-        break;
-      default:
-        std::cerr << "Usage: " << prog << " [--tz=<zone>]";
-        if (prog == "zone_dump") {
-          std::cerr << " [[<lo-year>,]<hi-year>|<time-spec>]\n";
-          std::cerr << "  Default years are last year and next year,"
-                    << " respectively.\n";
-        } else {
-          std::cerr << " [<time-spec>]\n";
-        }
-        std::cerr << "  Default <time-spec> is 'now'.\n";
-        return 1;
+      } else {
+        std::cerr << argv0 << ": unrecognized option '--" << opt << "'\n";
+        ++opterr;
+      }
     }
+  }
+  if (opterr != 0) {
+    std::cerr << "Usage: " << prog << " [--tz=<zone>]";
+    if (prog == "zone_dump") {
+      std::cerr << " [[<lo-year>,]<hi-year>|<time-spec>]\n";
+      std::cerr << "  Default years are last year and next year,"
+                << " respectively.\n";
+    } else {
+      std::cerr << " [<time-spec>]\n";
+    }
+    std::cerr << "  Default <time-spec> is 'now'.\n";
+    return 1;
   }
 
   // Determine the time point.

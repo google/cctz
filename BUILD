@@ -175,7 +175,6 @@ cc_binary(
         "src/time_zone_info.h",
         "src/tzfile.h",
     ],
-    tags = ["manual"],
     deps = [
         ":civil_time",
         ":time_zone",
