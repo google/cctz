@@ -967,4 +967,4 @@ BENCHMARK(BM_Format_ParseTime)->DenseRange(0, kNumFormats - 1);
 
 }  // namespace
 
-BENCHMARK_MAIN()
+BENCHMARK_MAIN();
