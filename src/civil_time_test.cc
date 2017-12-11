@@ -758,7 +758,7 @@ TEST(CivilTime, ArithmeticLimits) {
   EXPECT_EQ("0", Format(year));
 }
 
-TEST(CivilTime, Difference) {
+TEST(CivilTime, ArithmeticDifference) {
   civil_second second(2015, 1, 2, 3, 4, 5);
   EXPECT_EQ(0, second - second);
   EXPECT_EQ(10, (second + 10) - second);
