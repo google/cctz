@@ -30,17 +30,17 @@ that should work if you're unable to use Bazel.)
 
 1.  Download/install
     [Bazel](https://docs.bazel.build/versions/master/install.html)
-2.  Get the cctz source: `git clone https://github.com/google/cctz.git`
-    then `cd cctz`
+2.  Get the cctz source: `git clone https://github.com/google/cctz.git` then `cd
+    cctz`
 3.  Build cctz and run the tests: `bazel test :all`
 
 With CMake:
 
 1.  Make sure you have CMake >= 2.8.12 installed.
-2.  Get the cctz source: `git clone https://github.com/google/cctz.git`
-    then `cd cctz`.
-3.  Build cctz so that is can be used by shared libraries
-    and run the tests (use `-DBUILD_TESTING=OFF` to skip the tests):
+2.  Get the cctz source: `git clone https://github.com/google/cctz.git` then `cd
+    cctz`.
+3.  Build cctz so that is can be used by shared libraries and run the tests (use
+    `-DBUILD_TESTING=OFF` to skip the tests):
 
         mkdir mybuild
         cd mybuild
