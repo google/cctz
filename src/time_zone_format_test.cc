@@ -765,9 +765,14 @@ TEST(Parse, PosixConversions) {
 #if defined(__linux__)
   // SU/C99/TZ extensions
 
+  // Because we handle each (non-internal) specifier in a separate call
+  // to strptime(), there is no way to group %C and %y together.  So we
+  // just skip the %C/%y case.
+#if 0
   tp = reset;
-  EXPECT_TRUE(parse("%C", "20", tz, &tp));
-  EXPECT_EQ(2000, convert(tp, tz).year());
+  EXPECT_TRUE(parse("%C %y", "20 04", tz, &tp));
+  EXPECT_EQ(2004, convert(tp, tz).year());
+#endif
 
   tp = reset;
   EXPECT_TRUE(parse("%D", "02/03/04", tz, &tp));
@@ -879,10 +884,6 @@ TEST(Parse, LocaleSpecific) {
   // Modified conversion specifiers %E_
 
   tp = reset;
-  EXPECT_TRUE(parse("%EC", "20", tz, &tp));
-  EXPECT_EQ(2000, convert(tp, tz).year());
-
-  tp = reset;
   EXPECT_TRUE(parse("%Ex", "02/03/04", tz, &tp));
   EXPECT_EQ(2, convert(tp, tz).month());
   EXPECT_EQ(3, convert(tp, tz).day());
@@ -894,16 +895,11 @@ TEST(Parse, LocaleSpecific) {
   EXPECT_EQ(44, convert(tp, tz).minute());
   EXPECT_EQ(55, convert(tp, tz).second());
 
-// %Ey, the year offset from %EC, doesn't really make sense alone as there
-// is no way to represent it in tm_year (%EC is not simply the century).
-// Yet, because we handle each (non-internal) specifier in a separate call
-// to strptime(), there is no way to group %EC and %Ey either.  So we just
-// skip the %Ey case.
-#if 0
-  tp = reset;
-  EXPECT_TRUE(parse("%Ey", "04", tz, &tp));
-  EXPECT_EQ(2004, convert(tp, tz).year());
-#endif
+  // %Ey, the year offset from %EC, doesn't really make sense alone as there
+  // is no way to represent it in tm_year (%EC is not simply the century).
+  // Yet, because we handle each (non-internal) specifier in a separate call
+  // to strptime(), there is no way to group %EC and %Ey either.  So we just
+  // skip the %EC and %Ey cases.
 
   tp = reset;
   EXPECT_TRUE(parse("%EY", "2004", tz, &tp));
