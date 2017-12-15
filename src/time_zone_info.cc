@@ -572,23 +572,43 @@ bool TimeZoneInfo::Load(const std::string& name, ZoneInfoSource* zip) {
 
 namespace {
 
+// fopen(3) adaptor.
+inline FILE* FOpen(const char *path, const char *mode) {
+#if defined(_MSC_VER)
+  FILE* fp;
+  if (fopen_s(&fp, path, mode) != 0) fp = nullptr;
+  return fp;
+#else
+  return fopen(path, mode);  // TODO: Enable the close-on-exec flag.
+#endif
+}
+
 // A stdio(3)-backed implementation of ZoneInfoSource.
 class FileZoneInfoSource : public ZoneInfoSource {
  public:
   static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
 
   std::size_t Read(void* ptr, std::size_t size) override {
-    return fread(ptr, 1, size, fp_);
+    size = std::min(size, len_);
+    std::size_t nread = fread(ptr, 1, size, fp_.get());
+    len_ -= nread;
+    return nread;
   }
   int Skip(std::size_t offset) override {
-    return fseek(fp_, static_cast<long>(offset), SEEK_CUR);
+    offset = std::min(offset, len_);
+    int rc = fseek(fp_.get(), static_cast<long>(offset), SEEK_CUR);
+    if (rc == 0) len_ -= offset;
+    return rc;
   }
 
- private:
-  explicit FileZoneInfoSource(FILE* fp) : fp_(fp) {}
-  ~FileZoneInfoSource() { fclose(fp_); }
+ protected:
+  explicit FileZoneInfoSource(
+      FILE* fp, std::size_t len = std::numeric_limits<std::size_t>::max())
+      : fp_(fp, fclose), len_(len) {}
 
-  FILE* const fp_;
+ private:
+  std::unique_ptr<FILE, int(*)(FILE*)> fp_;
+  std::size_t len_;
 };
 
 std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
@@ -616,15 +636,70 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
   path += name;
 
   // Open the zoneinfo file.
-#if defined(_MSC_VER)
-  FILE* fp;
-  if (fopen_s(&fp, path.c_str(), "rb") != 0) fp = nullptr;
-#else
-  FILE* fp = fopen(path.c_str(), "rb");
-#endif
+  FILE* fp = FOpen(path.c_str(), "rb");
   if (fp == nullptr) return nullptr;
-  return std::unique_ptr<ZoneInfoSource>(new FileZoneInfoSource(fp));
+  std::size_t length = 0;
+  if (fseek(fp, 0, SEEK_END) == 0) {
+    long pos = ftell(fp);
+    if (pos >= 0) {
+      length = static_cast<std::size_t>(pos);
+    }
+    rewind(fp);
+  }
+  return std::unique_ptr<ZoneInfoSource>(new FileZoneInfoSource(fp, length));
 }
+
+#if defined(__BIONIC__)
+class BionicZoneInfoSource : public FileZoneInfoSource {
+ public:
+  static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
+
+ private:
+  explicit BionicZoneInfoSource(FILE* fp, std::size_t len)
+      : FileZoneInfoSource(fp, len) {}
+};
+
+std::unique_ptr<ZoneInfoSource> BionicZoneInfoSource::Open(
+    const std::string& name) {
+  // Use of the "file:" prefix is intended for testing purposes only.
+  if (name.compare(0, 5, "file:") == 0) return Open(name.substr(5));
+
+  // See Bionic libc/tzcode/bionic.cpp for additional information.
+  for (const char* tzdata : {"/data/misc/zoneinfo/current/tzdata",
+                             "/system/usr/share/zoneinfo/tzdata"}) {
+    std::unique_ptr<FILE, int (*)(FILE*)> fp(FOpen(tzdata, "rb"), fclose);
+    if (fp.get() == nullptr) continue;
+
+    char hbuf[24];  // covers header.zonetab_offset too
+    if (fread(hbuf, 1, sizeof(hbuf), fp.get()) != sizeof(hbuf)) continue;
+    if (strncmp(hbuf, "tzdata", 6) != 0) continue;
+    const std::int_fast32_t index_offset = Decode32(hbuf + 12);
+    const std::int_fast32_t data_offset = Decode32(hbuf + 16);
+    if (index_offset < 0 || data_offset < index_offset) continue;
+    if (fseek(fp.get(), static_cast<long>(index_offset), SEEK_SET) != 0)
+      continue;
+
+    char ebuf[52];  // covers entry.unused too
+    const std::size_t index_size =
+        static_cast<std::size_t>(data_offset - index_offset);
+    const std::size_t zonecnt = index_size / sizeof(ebuf);
+    if (zonecnt * sizeof(ebuf) != index_size) continue;
+    for (std::size_t i = 0; i != zonecnt; ++i) {
+      if (fread(ebuf, 1, sizeof(ebuf), fp.get()) != sizeof(ebuf)) break;
+      const std::int_fast32_t start = data_offset + Decode32(ebuf + 40);
+      const std::int_fast32_t length = Decode32(ebuf + 44);
+      if (start < 0 || length < 0) break;
+      ebuf[40] = '\0';  // ensure zone name is NUL terminated
+      if (strcmp(name.c_str(), ebuf) == 0) {
+        if (fseek(fp.get(), static_cast<long>(start), SEEK_SET) != 0) break;
+        return std::unique_ptr<ZoneInfoSource>(new BionicZoneInfoSource(
+            fp.release(), static_cast<std::size_t>(length)));
+      }
+    }
+  }
+  return nullptr;
+}
+#endif
 
 }  // namespace
 
@@ -640,8 +715,12 @@ bool TimeZoneInfo::Load(const std::string& name) {
 
   // Find and use a ZoneInfoSource to load the named zone.
   auto zip = cctz_extension::zone_info_source_factory(
-      name, [](const std::string& name) {
-        return FileZoneInfoSource::Open(name);  // fallback factory
+      name, [](const std::string& name) -> std::unique_ptr<ZoneInfoSource> {
+        if (auto zip = FileZoneInfoSource::Open(name)) return zip;
+#if defined(__BIONIC__)
+        if (auto zip = BionicZoneInfoSource::Open(name)) return zip;
+#endif
+        return nullptr;
       });
   return zip != nullptr && Load(name, zip.get());
 }

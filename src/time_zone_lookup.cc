@@ -14,6 +14,9 @@
 
 #include "cctz/time_zone.h"
 
+#if defined(__BIONIC__)
+#include <sys/system_properties.h>
+#endif
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -63,6 +66,12 @@ time_zone local_time_zone() {
   _dupenv_s(&tz_env, nullptr, "TZ");
 #else
   tz_env = std::getenv("TZ");
+#endif
+#if defined(__BIONIC__)
+  char sysprop[PROP_VALUE_MAX];
+  if (tz_env == nullptr)
+    if (__system_property_get("persist.sys.timezone", sysprop) > 0)
+      tz_env = sysprop;
 #endif
   if (tz_env) zone = tz_env;
 
