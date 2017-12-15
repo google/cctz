@@ -573,7 +573,7 @@ bool TimeZoneInfo::Load(const std::string& name, ZoneInfoSource* zip) {
 namespace {
 
 // fopen(3) adaptor.
-inline FILE* FOpen(const char *path, const char *mode) {
+inline FILE* FOpen(const char* path, const char* mode) {
 #if defined(_MSC_VER)
   FILE* fp;
   if (fopen_s(&fp, path, mode) != 0) fp = nullptr;
