@@ -649,22 +649,22 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
   return std::unique_ptr<ZoneInfoSource>(new FileZoneInfoSource(fp, length));
 }
 
-#if defined(__BIONIC__)
-class BionicZoneInfoSource : public FileZoneInfoSource {
+#if defined(__ANDROID__)
+class AndroidZoneInfoSource : public FileZoneInfoSource {
  public:
   static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
 
  private:
-  explicit BionicZoneInfoSource(FILE* fp, std::size_t len)
+  explicit AndroidZoneInfoSource(FILE* fp, std::size_t len)
       : FileZoneInfoSource(fp, len) {}
 };
 
-std::unique_ptr<ZoneInfoSource> BionicZoneInfoSource::Open(
+std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
     const std::string& name) {
   // Use of the "file:" prefix is intended for testing purposes only.
   if (name.compare(0, 5, "file:") == 0) return Open(name.substr(5));
 
-  // See Bionic libc/tzcode/bionic.cpp for additional information.
+  // See Android's libc/tzcode/bionic.cpp for additional information.
   for (const char* tzdata : {"/data/misc/zoneinfo/current/tzdata",
                              "/system/usr/share/zoneinfo/tzdata"}) {
     std::unique_ptr<FILE, int (*)(FILE*)> fp(FOpen(tzdata, "rb"), fclose);
@@ -692,7 +692,7 @@ std::unique_ptr<ZoneInfoSource> BionicZoneInfoSource::Open(
       ebuf[40] = '\0';  // ensure zone name is NUL terminated
       if (strcmp(name.c_str(), ebuf) == 0) {
         if (fseek(fp.get(), static_cast<long>(start), SEEK_SET) != 0) break;
-        return std::unique_ptr<ZoneInfoSource>(new BionicZoneInfoSource(
+        return std::unique_ptr<ZoneInfoSource>(new AndroidZoneInfoSource(
             fp.release(), static_cast<std::size_t>(length)));
       }
     }
@@ -717,8 +717,8 @@ bool TimeZoneInfo::Load(const std::string& name) {
   auto zip = cctz_extension::zone_info_source_factory(
       name, [](const std::string& name) -> std::unique_ptr<ZoneInfoSource> {
         if (auto zip = FileZoneInfoSource::Open(name)) return zip;
-#if defined(__BIONIC__)
-        if (auto zip = BionicZoneInfoSource::Open(name)) return zip;
+#if defined(__ANDROID__)
+        if (auto zip = AndroidZoneInfoSource::Open(name)) return zip;
 #endif
         return nullptr;
       });
