@@ -337,15 +337,18 @@ void TimeZoneInfo::ExtendTransitions(const std::string& name,
   extended_ = true;
 
   // The future specification should match the last two transitions,
-  // and those transitions should have different is_dst flags.
+  // and those transitions should have different is_dst flags.  Note
+  // that nothing says the UTC offset used by the is_dst transition
+  // must be greater than that used by the !is_dst transition.  (See
+  // Europe/Dublin, for example.)
   const Transition* tr0 = &transitions_[hdr.timecnt - 1];
   const Transition* tr1 = &transitions_[hdr.timecnt - 2];
   const TransitionType* tt0 = &transition_types_[tr0->type_index];
   const TransitionType* tt1 = &transition_types_[tr1->type_index];
-  const TransitionType& spring(tt0->is_dst ? *tt0 : *tt1);
-  const TransitionType& autumn(tt0->is_dst ? *tt1 : *tt0);
-  CheckTransition(name, spring, posix.dst_offset, true, posix.dst_abbr);
-  CheckTransition(name, autumn, posix.std_offset, false, posix.std_abbr);
+  const TransitionType& dst(tt0->is_dst ? *tt0 : *tt1);
+  const TransitionType& std(tt0->is_dst ? *tt1 : *tt0);
+  CheckTransition(name, dst, posix.dst_offset, true, posix.dst_abbr);
+  CheckTransition(name, std, posix.std_offset, false, posix.std_abbr);
 
   // Add the transitions to tr1 and back to tr0 for each extra year.
   last_year_ = LocalTime(tr0->unix_time, *tt0).cs.year();
