@@ -1,3 +1,5 @@
+workspace(name = "com_googlesource_code_cctz")
+
 # GoogleTest/GoogleMock framework. Used by most unit-tests.
 http_archive(
     name = "com_google_googletest",
