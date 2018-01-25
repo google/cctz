@@ -8,6 +8,7 @@ already be found in the default ${TZDIR} location, /usr/share/zoneinfo.
 New versions can be generated using the following shell script.
 
   #!/bin/sh -
+  set -e
   DESTDIR=$(mktemp -d)
   trap "rm -fr ${DESTDIR}" 0 2 15
   (
@@ -20,8 +21,9 @@ New versions can be generated using the following shell script.
                 LOCALTIME=Factory \
                 TZDATA_TEXT= \
                 ZONETABLES=zone1970.tab
-    rm zoneinfo/posixrules
-    tar --create --dereference --hard-dereference --file zoneinfo.tar zoneinfo
+    tar --create --dereference --hard-dereference --file zoneinfo.tar \
+        --exclude=zoneinfo/posixrules zoneinfo \
+        --directory=tz version
   )
   tar --extract --directory testdata --file ${DESTDIR}/zoneinfo.tar
   exit 0
