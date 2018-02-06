@@ -36,7 +36,7 @@ cc_library(
     ],
     linkopts = select({
         ":windows": ["-defaultlib:shlwapi.lib"],
-        "//conditions:default": [],
+        "//conditions:default": ["-pthread"],
     }),
     visibility = ["//visibility:public"],
 )
