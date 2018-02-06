@@ -1143,17 +1143,22 @@ TEST(TimeZoneEdgeCase, AmericaJamaica) {
 
   // Before the first transition.
   auto tp = convert(civil_second(1889, 12, 31, 0, 0, 0), tz);
-  ExpectTime(tp, tz, 1889, 12, 31, 0, 0, 0, -18431, false,
+#if AMERICA_JAMAICA_PRE_1913_OFFSET_FIX
+  // Commit 907241e: Fix off-by-1 error for Jamaica and T&C before 1913.
+  // Until that commit has made its way into a full release we avoid the
+  // expectations on the -18430 offset below.  TODO: Uncomment these.
+  ExpectTime(tp, tz, 1889, 12, 31, 0, 0, 0, -18430, false,
              tz.lookup(tp).abbr);
 
   // Over the first (abbreviation-change only) transition.
   //   -2524503170 == Tue, 31 Dec 1889 23:59:59 -0507 (LMT)
   //   -2524503169 == Wed,  1 Jan 1890 00:00:00 -0507 (KMT)
   tp = convert(civil_second(1889, 12, 31, 23, 59, 59), tz);
-  ExpectTime(tp, tz, 1889, 12, 31, 23, 59, 59, -18431, false,
+  ExpectTime(tp, tz, 1889, 12, 31, 23, 59, 59, -18430, false,
              tz.lookup(tp).abbr);
   tp += seconds(1);
-  ExpectTime(tp, tz, 1890, 1, 1, 0, 0, 0, -18431, false, "KMT");
+  ExpectTime(tp, tz, 1890, 1, 1, 0, 0, 0, -18430, false, "KMT");
+#endif
 
   // Over the last (DST) transition.
   //     436341599 == Sun, 30 Oct 1983 01:59:59 -0400 (EDT)

@@ -21,10 +21,13 @@ New versions can be generated using the following shell script.
                 LOCALTIME=Factory \
                 TZDATA_TEXT= \
                 ZONETABLES=zone1970.tab
+    tar --create --dereference --hard-dereference --file tzfile.tar \
+        --directory=tz tzfile.h
     tar --create --dereference --hard-dereference --file zoneinfo.tar \
         --exclude=zoneinfo/posixrules zoneinfo \
         --directory=tz version
   )
+  tar --extract --directory src --file ${DESTDIR}/tzfile.tar
   tar --extract --directory testdata --file ${DESTDIR}/zoneinfo.tar
   exit 0
 
