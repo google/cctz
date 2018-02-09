@@ -41,6 +41,8 @@ if (BUILD_TESTING)
   )
 endif()
 
+install (DIRECTORY include/cctz DESTINATION include)
+
 # Starting from CMake >= 3.1, if a specific standard is required,
 # it can be set from the command line with:
 #     cmake -DCMAKE_CXX_STANDARD=[11|14|17]
@@ -80,6 +82,8 @@ cctz_target_set_cxx_standard(cctz)
 add_library(cctz::cctz ALIAS cctz)
 
 target_include_directories(cctz PUBLIC include)
+
+install (TARGETS cctz DESTINATION lib)
 
 add_executable(time_tool src/time_tool.cc)
 cctz_target_set_cxx_standard(time_tool)
