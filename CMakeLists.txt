@@ -10,6 +10,7 @@ set(CMAKE_MODULE_PATH
 include(CTest)
 include(FeatureSummary)
 
+option(BUILD_TOOLS "Whether or not to build tools" ON)
 option(BUILD_EXAMPLES "Whether or not to build examples" ON)
 
 if (BUILD_TESTING)
@@ -81,9 +82,11 @@ add_library(cctz::cctz ALIAS cctz)
 
 target_include_directories(cctz PUBLIC include)
 
-add_executable(time_tool src/time_tool.cc)
-cctz_target_set_cxx_standard(time_tool)
-target_link_libraries(time_tool cctz::cctz)
+if (BUILD_TOOLS)
+  add_executable(time_tool src/time_tool.cc)
+  cctz_target_set_cxx_standard(time_tool)
+  target_link_libraries(time_tool cctz::cctz)
+endif()
 
 if (BUILD_EXAMPLES)
   add_subdirectory(examples)
