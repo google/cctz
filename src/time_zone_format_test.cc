@@ -442,6 +442,26 @@ TEST(Format, ExtendedOffset) {
   TestFormatSpecifier(tp, tz, "%Ez", "-00:44");
 }
 
+TEST(Format, ExtendedSecondOffset) {
+  const time_zone utc = utc_time_zone();
+  time_point<seconds> tp;
+  time_zone tz;
+
+  EXPECT_TRUE(load_time_zone("America/New_York", &tz));
+  tp = convert(civil_second(1883, 11, 18, 16, 59, 59), utc);
+  TestFormatSpecifier(tp, tz, "%E*z", "-04:56:02");
+  TestFormatSpecifier(tp, tz, "%Ez", "-04:56");
+  tp += seconds(1);
+  TestFormatSpecifier(tp, tz, "%E*z", "-05:00:00");
+
+  EXPECT_TRUE(load_time_zone("Europe/Moscow", &tz));
+  tp = convert(civil_second(1919, 6, 30, 23, 59, 59), utc);
+  TestFormatSpecifier(tp, tz, "%E*z", "+04:31:19");
+  TestFormatSpecifier(tp, tz, "%Ez", "+04:31");
+  tp += seconds(1);
+  TestFormatSpecifier(tp, tz, "%E*z", "+04:00:00");
+}
+
 TEST(Format, ExtendedYears) {
   const time_zone utc = utc_time_zone();
   const char e4y_fmt[] = "%E4Y%m%d";  // no separators
@@ -1159,6 +1179,74 @@ TEST(Parse, ExtendedOffset) {
   EXPECT_TRUE(parse("%Ez", "+12", utc, &tp));
   EXPECT_EQ(convert(civil_second(1969, 12, 31, 12, 0, 0), utc), tp);
   EXPECT_FALSE(parse("%Ez", "-1", utc, &tp));
+}
+
+TEST(Parse, ExtendedSecondOffset) {
+  const time_zone utc = utc_time_zone();
+  time_point<sys_seconds> tp;
+
+  // %Ez against +-HH:MM:SS.
+  EXPECT_TRUE(parse("%Ez", "+00:00:00", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 0, 0, 0), utc), tp);
+  EXPECT_TRUE(parse("%Ez", "-12:34:56", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 12, 34, 56), utc), tp);
+  EXPECT_TRUE(parse("%Ez", "+12:34:56", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1969, 12, 31, 11, 25, 4), utc), tp);
+  EXPECT_FALSE(parse("%Ez", "-12:34:5", utc, &tp));
+
+  // %Ez against +-HHMMSS.
+  EXPECT_TRUE(parse("%Ez", "+000000", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 0, 0, 0), utc), tp);
+  EXPECT_TRUE(parse("%Ez", "-123456", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 12, 34, 56), utc), tp);
+  EXPECT_TRUE(parse("%Ez", "+123456", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1969, 12, 31, 11, 25, 4), utc), tp);
+  EXPECT_FALSE(parse("%Ez", "-12345", utc, &tp));
+
+  // %E*z against +-HH:MM:SS.
+  EXPECT_TRUE(parse("%E*z", "+00:00:00", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 0, 0, 0), utc), tp);
+  EXPECT_TRUE(parse("%E*z", "-12:34:56", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 12, 34, 56), utc), tp);
+  EXPECT_TRUE(parse("%E*z", "+12:34:56", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1969, 12, 31, 11, 25, 4), utc), tp);
+  EXPECT_FALSE(parse("%E*z", "-12:34:5", utc, &tp));
+
+  // %E*z against +-HHMMSS.
+  EXPECT_TRUE(parse("%E*z", "+000000", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 0, 0, 0), utc), tp);
+  EXPECT_TRUE(parse("%E*z", "-123456", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 12, 34, 56), utc), tp);
+  EXPECT_TRUE(parse("%E*z", "+123456", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1969, 12, 31, 11, 25, 4), utc), tp);
+  EXPECT_FALSE(parse("%E*z", "-12345", utc, &tp));
+
+  // %E*z against +-HH:MM.
+  EXPECT_TRUE(parse("%E*z", "+00:00", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 0, 0, 0), utc), tp);
+  EXPECT_TRUE(parse("%E*z", "-12:34", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 12, 34, 0), utc), tp);
+  EXPECT_TRUE(parse("%E*z", "+12:34", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1969, 12, 31, 11, 26, 0), utc), tp);
+  EXPECT_FALSE(parse("%E*z", "-12:3", utc, &tp));
+
+  // %E*z against +-HHMM.
+  EXPECT_TRUE(parse("%E*z", "+0000", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 0, 0, 0), utc), tp);
+  EXPECT_TRUE(parse("%E*z", "-1234", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 12, 34, 0), utc), tp);
+  EXPECT_TRUE(parse("%E*z", "+1234", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1969, 12, 31, 11, 26, 0), utc), tp);
+  EXPECT_FALSE(parse("%E*z", "-123", utc, &tp));
+
+  // %E*z against +-HH.
+  EXPECT_TRUE(parse("%E*z", "+00", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 0, 0, 0), utc), tp);
+  EXPECT_TRUE(parse("%E*z", "-12", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1970, 1, 1, 12, 0, 0), utc), tp);
+  EXPECT_TRUE(parse("%E*z", "+12", utc, &tp));
+  EXPECT_EQ(convert(civil_second(1969, 12, 31, 12, 0, 0), utc), tp);
+  EXPECT_FALSE(parse("%E*z", "-1", utc, &tp));
 }
 
 TEST(Parse, ExtendedYears) {

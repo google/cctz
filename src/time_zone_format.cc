@@ -138,12 +138,18 @@ char* Format02d(char* ep, int v) {
 }
 
 // Formats a UTC offset, like +00:00.
-char* FormatOffset(char* ep, int minutes, char sep) {
+char* FormatOffset(char* ep, int offset, const char* mode) {
   char sign = '+';
-  if (minutes < 0) {
-    minutes = -minutes;
+  if (offset < 0) {
+    offset = -offset;  // bounded by 24h so no overflow
     sign = '-';
   }
+  char sep = mode[0];
+  if (sep != '\0' && mode[1] == '*') {
+    ep = Format02d(ep, offset % 60);
+    *--ep = sep;
+  }
+  int minutes = offset / 60;
   ep = Format02d(ep, minutes % 60);
   if (sep != '\0') *--ep = sep;
   ep = Format02d(ep, minutes / 60);
@@ -155,7 +161,7 @@ char* FormatOffset(char* ep, int minutes, char sep) {
 void FormatTM(std::string* out, const std::string& fmt, const std::tm& tm) {
   // strftime(3) returns the number of characters placed in the output
   // array (which may be 0 characters).  It also returns 0 to indicate
-  // an error, like the array wasn't large enough.  To accomodate this,
+  // an error, like the array wasn't large enough.  To accommodate this,
   // the following code grows the buffer size from 2x the format string
   // length up to 32x.
   for (std::size_t i = 2; i != 32; i *= 2) {
@@ -252,7 +258,8 @@ const std::int_fast64_t kExp10[kDigits10_64 + 1] = {
 // Uses strftime(3) to format the given Time.  The following extended format
 // specifiers are also supported:
 //
-//   - %Ez  - RFC3339-compatible numeric timezone (+hh:mm or -hh:mm)
+//   - %Ez  - RFC3339-compatible numeric UTC offset (+hh:mm or -hh:mm)
+//   - %E*z - Full-resolution numeric UTC offset (+hh:mm:ss or -hh:mm:ss)
 //   - %E#S - Seconds with # digits of fractional precision
 //   - %E*S - Seconds with full fractional precision (a literal '*')
 //   - %E4Y - Four-character years (-999 ... -001, 0000, 0001 ... 9999)
@@ -354,7 +361,7 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
           result.append(bp, static_cast<std::size_t>(ep - bp));
           break;
         case 'z':
-          bp = FormatOffset(ep, al.offset / 60, '\0');
+          bp = FormatOffset(ep, al.offset, "");
           result.append(bp, static_cast<std::size_t>(ep - bp));
           break;
         case 'Z':
@@ -381,9 +388,17 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
       if (cur - 2 != pending) {
         FormatTM(&result, std::string(pending, cur - 2), tm);
       }
-      bp = FormatOffset(ep, al.offset / 60, ':');
+      bp = FormatOffset(ep, al.offset, ":");
       result.append(bp, static_cast<std::size_t>(ep - bp));
       pending = ++cur;
+    } else if (*cur == '*' && cur + 1 != end && *(cur + 1) == 'z') {
+      // Formats %E*z.
+      if (cur - 2 != pending) {
+        FormatTM(&result, std::string(pending, cur - 2), tm);
+      }
+      bp = FormatOffset(ep, al.offset, ":*");
+      result.append(bp, static_cast<std::size_t>(ep - bp));
+      pending = cur += 2;
     } else if (*cur == '*' && cur + 1 != end &&
                (*(cur + 1) == 'S' || *(cur + 1) == 'f')) {
       // Formats %E*S or %E*F.
@@ -446,23 +461,32 @@ std::string format(const std::string& format, const time_point<sys_seconds>& tp,
 
 namespace {
 
-const char* ParseOffset(const char* dp, char sep, int* offset) {
+const char* ParseOffset(const char* dp, const char* mode, int* offset) {
   if (dp != nullptr) {
-    const char sign = *dp++;
-    if (sign == '+' || sign == '-') {
+    const char first = *dp++;
+    if (first == '+' || first == '-') {
+      char sep = mode[0];
       int hours = 0;
+      int minutes = 0;
+      int seconds = 0;
       const char* ap = ParseInt(dp, 2, 0, 23, &hours);
       if (ap != nullptr && ap - dp == 2) {
         dp = ap;
         if (sep != '\0' && *ap == sep) ++ap;
-        int minutes = 0;
         const char* bp = ParseInt(ap, 2, 0, 59, &minutes);
-        if (bp != nullptr && bp - ap == 2) dp = bp;
-        *offset = (hours * 60 + minutes) * 60;
-        if (sign == '-') *offset = -*offset;
+        if (bp != nullptr && bp - ap == 2) {
+          dp = bp;
+          if (sep != '\0' && *bp == sep) ++bp;
+          const char* cp = ParseInt(bp, 2, 0, 59, &seconds);
+          if (cp != nullptr && cp - bp == 2) dp = cp;
+        }
+        *offset = ((hours * 60 + minutes) * 60) + seconds;
+        if (first == '-') *offset = -*offset;
       } else {
         dp = nullptr;
       }
+    } else if (first == 'Z') {  // Zulu
+      *offset = 0;
     } else {
       dp = nullptr;
     }
@@ -516,7 +540,8 @@ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
 
 // Uses strptime(3) to parse the given input.  Supports the same extended
 // format specifiers as format(), although %E#S and %E*S are treated
-// identically (and similarly for %E#f and %E*f).
+// identically (and similarly for %E#f and %E*f).  %Ez and %E*z also accept
+// the same inputs.
 //
 // The standard specifiers from RFC3339_* (%Y, %m, %d, %H, %M, and %S) are
 // handled internally so that we can normally avoid strptime() altogether
@@ -625,7 +650,7 @@ bool parse(const std::string& format, const std::string& input,
         twelve_hour = false;
         break;
       case 'z':
-        data = ParseOffset(data, '\0', &offset);
+        data = ParseOffset(data, "", &offset);
         if (data != nullptr) saw_offset = true;
         continue;
       case 'Z':  // ignored; zone abbreviations are ambiguous
@@ -642,15 +667,10 @@ bool parse(const std::string& format, const std::string& input,
         data = (*data == '%' ? data + 1 : nullptr);
         continue;
       case 'E':
-        if (*fmt == 'z') {
-          if (data != nullptr && *data == 'Z') {  // Zulu
-            offset = 0;
-            data += 1;
-          } else {
-            data = ParseOffset(data, ':', &offset);
-          }
+        if (*fmt == 'z' || (*fmt == '*' && *(fmt + 1) == 'z')) {
+          data = ParseOffset(data, ":", &offset);
           if (data != nullptr) saw_offset = true;
-          fmt += 1;
+          fmt += (*fmt == 'z') ? 1 : 2;
           continue;
         }
         if (*fmt == '*' && *(fmt + 1) == 'S') {
@@ -757,8 +777,8 @@ bool parse(const std::string& format, const std::string& input,
     return true;
   }
 
-  // If we saw %z or %Ez then we want to interpret the parsed fields in
-  // UTC and then shift by that offset.  Otherwise we want to interpret
+  // If we saw %z, %Ez, or %E*z then we want to interpret the parsed fields
+  // in UTC and then shift by that offset.  Otherwise we want to interpret
   // the fields directly in the passed time_zone.
   time_zone ptz = saw_offset ? utc_time_zone() : tz;
 

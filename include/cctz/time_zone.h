@@ -216,7 +216,8 @@ bool parse(const std::string&, const std::string&, const time_zone&,
 // the provided format string. Uses strftime()-like formatting options,
 // with the following extensions:
 //
-//   - %Ez  - RFC3339-compatible numeric time zone (+hh:mm or -hh:mm)
+//   - %Ez  - RFC3339-compatible numeric UTC offset (+hh:mm or -hh:mm)
+//   - %E*z - Full-resolution numeric UTC offset (+hh:mm:ss or -hh:mm:ss)
 //   - %E#S - Seconds with # digits of fractional precision
 //   - %E*S - Seconds with full fractional precision (a literal '*')
 //   - %E#f - Fractional seconds with # digits of precision
@@ -230,8 +231,8 @@ bool parse(const std::string&, const std::string&, const time_zone&,
 // year. A year outside of [-999:9999] when formatted with %E4Y will produce
 // more than four characters, just like %Y.
 //
-// Tip: Format strings should include the UTC offset (e.g., %z or %Ez) so that
-// the resultng string uniquely identifies an absolute time.
+// Tip: Format strings should include the UTC offset (e.g., %z, %Ez, or %E*z)
+// so that the resulting string uniquely identifies an absolute time.
 //
 // Example:
 //   cctz::time_zone lax;
@@ -250,7 +251,8 @@ inline std::string format(const std::string& fmt, const time_point<D>& tp,
 // Parses an input string according to the provided format string and
 // returns the corresponding time_point. Uses strftime()-like formatting
 // options, with the same extensions as cctz::format(), but with the
-// exceptions that %E#S is interpreted as %E*S, and %E#f as %E*f.
+// exceptions that %E#S is interpreted as %E*S, and %E#f as %E*f.  %Ez
+// and %E*z also accept the same inputs.
 //
 // %Y consumes as many numeric characters as it can, so the matching data
 // should always be terminated with a non-numeric. %E4Y always consumes
@@ -264,7 +266,8 @@ inline std::string format(const std::string& fmt, const time_point<D>& tp,
 // that represents "1970-01-01 15:45:00.0 +0000".
 //
 // Note that parse() returns time instants, so it makes most sense to parse
-// fully-specified date/time strings that include a UTC offset (%z or %Ez).
+// fully-specified date/time strings that include a UTC offset (%z, %Ez, or
+// %E*z).
 //
 // Note also that parse() only heeds the fields year, month, day, hour,
 // minute, (fractional) second, and UTC offset. Other fields, like weekday (%a
