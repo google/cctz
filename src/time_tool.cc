@@ -61,7 +61,7 @@ const char* const kFormats[] = {
 bool ParseTimeSpec(const std::string& args, time_point<sys_seconds>* when) {
   const cctz::time_zone ignored{};
   for (const char* const* fmt = kFormats; *fmt != NULL; ++fmt) {
-    const std::string format = std::string(*fmt) + " %Ez";
+    const std::string format = std::string(*fmt) + " %E*z";
     time_point<sys_seconds> tp;
     if (cctz::parse(format, args, ignored, &tp)) {
       *when = tp;
@@ -71,12 +71,12 @@ bool ParseTimeSpec(const std::string& args, time_point<sys_seconds>* when) {
   return false;
 }
 
-bool ParseBreakdownSpec(const std::string& args, cctz::time_zone zone,
-                        cctz::civil_second* when) {
+bool ParseCivilSpec(const std::string& args, cctz::civil_second* when) {
+  const cctz::time_zone utc = cctz::utc_time_zone();
   for (const char* const* fmt = kFormats; *fmt != NULL; ++fmt) {
     time_point<sys_seconds> tp;
-    if (cctz::parse(*fmt, args, zone, &tp)) {
-      *when = cctz::convert(tp, zone);
+    if (cctz::parse(*fmt, args, utc, &tp)) {
+      *when = cctz::convert(tp, utc);
       return true;
     }
   }
@@ -84,7 +84,7 @@ bool ParseBreakdownSpec(const std::string& args, cctz::time_zone zone,
 }
 
 // The FormatTime() specifier for output.
-const char* const kFormat = "%Y-%m-%d %H:%M:%S %Ez (%Z)";
+const char* const kFormat = "%Y-%m-%d %H:%M:%S %E*z (%Z)";
 
 const char* WeekDayName(cctz::weekday wd) {
   switch (wd) {
@@ -134,7 +134,7 @@ void InstantInfo(const std::string& label, time_point<sys_seconds> when,
 }
 
 // Report everything we know about a cctz::civil_second (YMDHMS).
-int BreakdownInfo(const cctz::civil_second& cs, cctz::time_zone zone) {
+int CivilInfo(const cctz::civil_second& cs, cctz::time_zone zone) {
   const cctz::time_zone::Impl& impl = cctz::time_zone::Impl::get(zone);
   std::cout << "tz: " << zone.name() << " [" << impl.Description() << "]\n";
   cctz::time_zone::civil_lookup cl = zone.lookup(cs);
@@ -395,13 +395,13 @@ int main(int argc, char** argv) {
     }
   }
   cctz::civil_second when = cctz::convert(tp, zone);
-  bool have_break_down = !have_time && ParseBreakdownSpec(args, zone, &when);
+  bool have_civil = !have_time && ParseCivilSpec(args, &when);
 
   if (zone_dump || zdump) {
     cctz::year_t lo_year = (zdump ? -292277026596 : when.year());
     cctz::year_t hi_year = (zdump ? 292277026596 : when.year() + 1);
     if (!args.empty() && !ParseYearRange(zdump, args, &lo_year, &hi_year)) {
-      if (!have_time && !have_break_down) {
+      if (!have_time && !have_civil) {
         std::cerr << args << ": Malformed year range\n";
         return 1;
       }
@@ -409,7 +409,7 @@ int main(int argc, char** argv) {
     return ZoneDump(zdump, zone, lo_year, hi_year);
   }
 
-  if (have_break_down) return BreakdownInfo(when, zone);
+  if (have_civil) return CivilInfo(when, zone);
   if (have_time || args.empty()) return TimeInfo(tp, zone);
 
   std::cerr << args << ": Malformed time spec\n";
