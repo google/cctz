@@ -105,7 +105,7 @@ class TimeZoneInfo : public TimeZoneIf {
   time_zone::absolute_lookup LocalTime(std::int_fast64_t unix_time,
                                        const Transition& tr) const;
   time_zone::civil_lookup TimeLocal(const civil_second& cs,
-                                    cctz::year_t c4_shift) const;
+                                    year_t c4_shift) const;
 
   std::vector<Transition> transitions_;  // ordered by unix_time and civil_sec
   std::vector<TransitionType> transition_types_;  // distinct transition types
@@ -114,7 +114,7 @@ class TimeZoneInfo : public TimeZoneIf {
 
   std::string future_spec_;  // for after the last zic transition
   bool extended_;            // future_spec_ was used to generate transitions
-  cctz::year_t last_year_;   // the final year of the generated transitions
+  year_t last_year_;         // the final year of the generated transitions
 
   // We remember the transitions found during the last BreakTime() and
   // MakeTime() calls. If the next request is for the same transition we

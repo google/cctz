@@ -53,7 +53,7 @@ namespace cctz {
 
 namespace {
 
-inline bool IsLeap(cctz::year_t year) {
+inline bool IsLeap(year_t year) {
   return (year % 4) == 0 && ((year % 100) != 0 || (year % 400) == 0);
 }
 
@@ -169,7 +169,7 @@ inline time_zone::civil_lookup MakeRepeated(const Transition& tr,
   return cl;
 }
 
-inline civil_second YearShift(const civil_second& cs, cctz::year_t shift) {
+inline civil_second YearShift(const civil_second& cs, year_t shift) {
   return civil_second(cs.year() + shift, cs.month(), cs.day(),
                       cs.hour(), cs.minute(), cs.second());
 }
@@ -372,7 +372,7 @@ void TimeZoneInfo::ExtendTransitions(const std::string& name,
   }
   const PosixTransition& pt1(tt0->is_dst ? posix.dst_end : posix.dst_start);
   const PosixTransition& pt0(tt0->is_dst ? posix.dst_start : posix.dst_end);
-  for (const cctz::year_t limit = last_year_ + 400; last_year_ < limit;) {
+  for (const year_t limit = last_year_ + 400; last_year_ < limit;) {
     last_year_ += 1;  // an additional year of generated transitions
     jan1_time += kSecsPerYear[leap_year];
     jan1_weekday = (jan1_weekday + kDaysPerYear[leap_year]) % 7;
@@ -750,7 +750,7 @@ time_zone::absolute_lookup TimeZoneInfo::LocalTime(
 
 // MakeTime() translation with a conversion-preserving +N * 400-year shift.
 time_zone::civil_lookup TimeZoneInfo::TimeLocal(const civil_second& cs,
-                                                cctz::year_t c4_shift) const {
+                                                year_t c4_shift) const {
   assert(last_year_ - 400 < cs.year() && cs.year() <= last_year_);
   time_zone::civil_lookup cl = MakeTime(cs);
   if (c4_shift > sys_seconds::max().count() / kSecsPer400Years) {
@@ -785,7 +785,7 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
     if (extended_) {
       const std::int_fast64_t diff =
           unix_time - transitions_[timecnt - 1].unix_time;
-      const cctz::year_t shift = diff / kSecsPer400Years + 1;
+      const year_t shift = diff / kSecsPer400Years + 1;
       const auto d = sys_seconds(shift * kSecsPer400Years);
       time_zone::absolute_lookup al = BreakTime(tp - d);
       al.cs = YearShift(al.cs, shift * 400);
@@ -858,7 +858,7 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
       // future_spec_, shift back to a supported year using the 400-year
       // cycle of calendaric equivalence and then compensate accordingly.
       if (extended_ && cs.year() > last_year_) {
-        const cctz::year_t shift = (cs.year() - last_year_ - 1) / 400 + 1;
+        const year_t shift = (cs.year() - last_year_ - 1) / 400 + 1;
         return TimeLocal(YearShift(cs, shift * -400), shift);
       }
       const TransitionType& tt(transition_types_[tr->type_index]);
