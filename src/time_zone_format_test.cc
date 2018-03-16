@@ -449,8 +449,13 @@ TEST(Format, ExtendedSecondOffset) {
 
   EXPECT_TRUE(load_time_zone("America/New_York", &tz));
   tp = convert(civil_second(1883, 11, 18, 16, 59, 59), utc);
-  TestFormatSpecifier(tp, tz, "%E*z", "-04:56:02");
-  TestFormatSpecifier(tp, tz, "%Ez", "-04:56");
+  if (tz.lookup(tp).offset == -5 * 60 * 60) {
+    // We're likely dealing with zoneinfo that doesn't support really old
+    // timestamps, so America/New_York never looks to be on local mean time.
+  } else {
+    TestFormatSpecifier(tp, tz, "%E*z", "-04:56:02");
+    TestFormatSpecifier(tp, tz, "%Ez", "-04:56");
+  }
   tp += seconds(1);
   TestFormatSpecifier(tp, tz, "%E*z", "-05:00:00");
 
