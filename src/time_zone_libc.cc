@@ -54,7 +54,8 @@ OffsetAbbr get_offset_abbr(const std::tm& tm) {
   const char* abbr = tzname[is_dst];
   return {off, abbr};
 }
-#elif defined(__native_client__) || defined(__myriad2__) || defined(__asmjs__)
+#elif defined(__native_client__) || defined(__myriad2__) || \
+    defined(__EMSCRIPTEN__)
 // Uses the globals: 'timezone' and 'tzname'.
 OffsetAbbr get_offset_abbr(const std::tm& tm) {
   const bool is_dst = tm.tm_isdst > 0;
