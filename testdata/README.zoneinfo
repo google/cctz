@@ -16,6 +16,7 @@ New versions can be generated using the following shell script.
     git clone https://github.com/eggert/tz.git
     make --directory=tz \
         install DESTDIR=${DESTDIR} \
+                DATAFORM=vanguard \
                 TZDIR=/zoneinfo \
                 REDO=posix_only \
                 LOCALTIME=Factory \
