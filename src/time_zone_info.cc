@@ -899,7 +899,7 @@ bool TimeZoneInfo::NextTransition(time_point<sys_seconds>* tp) const {
   const Transition* end = begin + transitions_.size();
   if (begin->unix_time <= -(1LL << 59)) {
     // Do not report the BIG_BANG found in recent zoneinfo data as it is
-    // really a sentinel, not a transition.  See third_party/tz/zic.c.
+    // really a sentinel, not a transition.  See tz/zic.c.
     ++begin;
   }
   std::int_fast64_t unix_time = ToUnixSeconds(*tp);
@@ -923,7 +923,7 @@ bool TimeZoneInfo::PrevTransition(time_point<sys_seconds>* tp) const {
   const Transition* end = begin + transitions_.size();
   if (begin->unix_time <= -(1LL << 59)) {
     // Do not report the BIG_BANG found in recent zoneinfo data as it is
-    // really a sentinel, not a transition.  See third_party/tz/zic.c.
+    // really a sentinel, not a transition.  See tz/zic.c.
     ++begin;
   }
   std::int_fast64_t unix_time = ToUnixSeconds(*tp);
