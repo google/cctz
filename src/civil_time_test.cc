@@ -35,7 +35,8 @@ std::string Format(const T& t) {
 
 }  // namespace
 
-#if __clang__ && __cpp_constexpr >= 201304
+#if (defined(__cpp_constexpr) && __cpp_constexpr >= 201304) || \
+    (defined(_MSC_VER) && _MSC_VER >= 1900)
 // Construction constexpr tests
 
 TEST(CivilTime, Normal) {
@@ -317,7 +318,7 @@ TEST(CivilTime, YearDay) {
   constexpr int yd = get_yearday(cd);
   static_assert(yd == 28, "YearDay");
 }
-#endif  // __clang__ && __cpp_constexpr >= 201304
+#endif  // __cpp_constexpr >= 201304
 
 // The remaining tests do not use constexpr.
 
