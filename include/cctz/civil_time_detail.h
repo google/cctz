@@ -22,7 +22,7 @@
 
 // Disable constexpr support unless we are in C++14 mode.
 #if (defined(__cpp_constexpr) && __cpp_constexpr >= 201304) || \
-    (defined(_MSC_VER) && _MSC_VER >= 1900)
+    (defined(_MSC_VER) && _MSC_VER >= 1910)
 #define CONSTEXPR_D constexpr  // data
 #define CONSTEXPR_F constexpr  // function
 #define CONSTEXPR_M constexpr  // member
