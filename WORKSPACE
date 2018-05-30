@@ -9,7 +9,7 @@ http_archive(
 
 # Google Benchmark library.
 http_archive(
-    name = "com_google_benchmark",
+    name = "com_github_google_benchmark",
     urls = ["https://github.com/google/benchmark/archive/master.zip"],
     strip_prefix = "benchmark-master",
 )
