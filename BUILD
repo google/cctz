@@ -106,7 +106,7 @@ cc_binary(
     deps = [
         ":civil_time",
         ":time_zone",
-        "@com_google_benchmark//:benchmark",
+        "@com_github_google_benchmark//:benchmark",
     ],
 )
 
