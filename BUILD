@@ -92,9 +92,8 @@ cc_test(
 
 ### benchmarks
 
-cc_binary(
-    name = "benchmarks",
-    testonly = 1,
+cc_test(
+    name = "cctz_benchmark",
     srcs = [
         "src/benchmarks.cc",
         "src/time_zone_if.h",
@@ -103,10 +102,11 @@ cc_binary(
         "src/tzfile.h",
     ],
     linkstatic = 1,
+    tags = ["benchmark"],
     deps = [
         ":civil_time",
         ":time_zone",
-        "@com_github_google_benchmark//:benchmark",
+        "@com_github_google_benchmark//:benchmark_main",
     ],
 )
 
