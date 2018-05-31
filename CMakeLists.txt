@@ -132,9 +132,9 @@ if (BUILD_TESTING)
       ENVIRONMENT "TZDIR=${CMAKE_CURRENT_SOURCE_DIR}/testdata/zoneinfo"
     )
 
-  add_executable(benchmarks src/benchmarks.cc)
-  cctz_target_set_cxx_standard(benchmarks)
-  target_link_libraries(benchmarks cctz::cctz benchmark::benchmark)
+  add_executable(cctz_benchmark src/cctz_benchmark.cc)
+  cctz_target_set_cxx_standard(cctz_benchmark)
+  target_link_libraries(cctz_benchmark cctz::cctz benchmark::benchmark_main)
 endif()
 
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
