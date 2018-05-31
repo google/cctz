@@ -95,7 +95,7 @@ cc_test(
 cc_test(
     name = "cctz_benchmark",
     srcs = [
-        "src/benchmarks.cc",
+        "src/cctz_benchmark.cc",
         "src/time_zone_if.h",
         "src/time_zone_impl.h",
         "src/time_zone_info.h",
