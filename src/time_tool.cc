@@ -32,7 +32,7 @@
 // Pulls in the aliases from cctz for brevity.
 template <typename D>
 using time_point = cctz::time_point<D>;
-using sys_seconds = cctz::sys_seconds;
+using seconds = cctz::seconds;
 
 // parse() specifiers for command-line time arguments.
 const char* const kFormats[] = {
@@ -58,11 +58,11 @@ const char* const kFormats[] = {
   nullptr
 };
 
-bool ParseTimeSpec(const std::string& args, time_point<sys_seconds>* when) {
+bool ParseTimeSpec(const std::string& args, time_point<seconds>* when) {
   const cctz::time_zone ignored{};
   for (const char* const* fmt = kFormats; *fmt != NULL; ++fmt) {
     const std::string format = std::string(*fmt) + " %E*z";
-    time_point<sys_seconds> tp;
+    time_point<seconds> tp;
     if (cctz::parse(format, args, ignored, &tp)) {
       *when = tp;
       return true;
@@ -74,7 +74,7 @@ bool ParseTimeSpec(const std::string& args, time_point<sys_seconds>* when) {
 bool ParseCivilSpec(const std::string& args, cctz::civil_second* when) {
   const cctz::time_zone utc = cctz::utc_time_zone();
   for (const char* const* fmt = kFormats; *fmt != NULL; ++fmt) {
-    time_point<sys_seconds> tp;
+    time_point<seconds> tp;
     if (cctz::parse(*fmt, args, utc, &tp)) {
       *when = cctz::convert(tp, utc);
       return true;
@@ -99,8 +99,7 @@ const char* WeekDayName(cctz::weekday wd) {
   return "XXX";
 }
 
-std::string FormatTimeInZone(time_point<sys_seconds> when,
-                             cctz::time_zone zone) {
+std::string FormatTimeInZone(time_point<seconds> when, cctz::time_zone zone) {
   std::ostringstream oss;
   oss << std::setw(33) << std::left << cctz::format(kFormat, when, zone);
   cctz::time_zone::absolute_lookup al = zone.lookup(when);
@@ -113,7 +112,7 @@ std::string FormatTimeInZone(time_point<sys_seconds> when,
   return oss.str();
 }
 
-void InstantInfo(const std::string& label, time_point<sys_seconds> when,
+void InstantInfo(const std::string& label, time_point<seconds> when,
                  cctz::time_zone zone) {
   const cctz::time_zone utc = cctz::utc_time_zone();  // might == zone
   const std::string time_label = "time_t";
@@ -147,7 +146,7 @@ int CivilInfo(const cctz::civil_second& cs, cctz::time_zone zone) {
     case cctz::time_zone::civil_lookup::SKIPPED: {
       std::cout << "kind: SKIPPED\n";
       InstantInfo("post", cl.post, zone);  // might == trans-1
-      InstantInfo("trans-1", cl.trans - std::chrono::seconds(1), zone);
+      InstantInfo("trans-1", cl.trans - seconds(1), zone);
       InstantInfo("trans", cl.trans, zone);
       InstantInfo("pre", cl.pre, zone);  // might == trans
       break;
@@ -155,7 +154,7 @@ int CivilInfo(const cctz::civil_second& cs, cctz::time_zone zone) {
     case cctz::time_zone::civil_lookup::REPEATED: {
       std::cout << "kind: REPEATED\n";
       InstantInfo("pre", cl.pre, zone);  // might == trans-1
-      InstantInfo("trans-1", cl.trans - std::chrono::seconds(1), zone);
+      InstantInfo("trans-1", cl.trans - seconds(1), zone);
       InstantInfo("trans", cl.trans, zone);
       InstantInfo("post", cl.post, zone);  // might == trans
       break;
@@ -164,8 +163,8 @@ int CivilInfo(const cctz::civil_second& cs, cctz::time_zone zone) {
   return 0;
 }
 
-// Report everything we know about a time_point<sys_seconds>.
-int TimeInfo(time_point<sys_seconds> when, cctz::time_zone zone) {
+// Report everything we know about a time_point<seconds>.
+int TimeInfo(time_point<seconds> when, cctz::time_zone zone) {
   const cctz::time_zone::Impl& impl = cctz::time_zone::Impl::get(zone);
   std::cout << "tz: " << zone.name() << " [" << impl.Description() << "]\n";
   std::cout << "kind: UNIQUE\n";
@@ -180,10 +179,10 @@ int ZoneDump(bool zdump, cctz::time_zone zone,
   const cctz::time_zone::Impl& impl = cctz::time_zone::Impl::get(zone);
   if (zdump) {
     std::cout << zone.name() << "  "
-              << std::numeric_limits<cctz::sys_seconds::rep>::min()
+              << std::numeric_limits<seconds::rep>::min()
               << " = NULL\n";
     std::cout << zone.name() << "  "
-              << std::numeric_limits<cctz::sys_seconds::rep>::min() + 86400
+              << std::numeric_limits<seconds::rep>::min() + 86400
               << " = NULL\n";
   } else {
     std::cout << zone.name() << " [" << impl.Description() << "]\n";
@@ -194,7 +193,7 @@ int ZoneDump(bool zdump, cctz::time_zone zone,
     if (convert(trans, zone).year() >= hi_year) break;
     if (!zdump) std::cout << "\n";
     for (int count_down = 1; count_down >= 0; --count_down) {
-      auto tp = trans - std::chrono::seconds(count_down);
+      auto tp = trans - seconds(count_down);
       if (zdump) {
         std::cout << zone.name() << "  " << cctz::format("%c UT", tp, utc)
                   << " = " << cctz::format("%c %Z", tp, zone);
@@ -217,10 +216,10 @@ int ZoneDump(bool zdump, cctz::time_zone zone,
 
   if (zdump) {
     std::cout << zone.name() << "  "
-              << std::numeric_limits<cctz::sys_seconds::rep>::max() - 86400
+              << std::numeric_limits<seconds::rep>::max() - 86400
               << " = NULL\n";
     std::cout << zone.name() << "  "
-              << std::numeric_limits<cctz::sys_seconds::rep>::max()
+              << std::numeric_limits<seconds::rep>::max()
               << " = NULL\n";
   }
   return 0;
@@ -372,8 +371,8 @@ int main(int argc, char** argv) {
   }
 
   // Determine the time point.
-  time_point<sys_seconds> tp = std::chrono::time_point_cast<sys_seconds>(
-      std::chrono::system_clock::now());
+  time_point<seconds> tp =
+      std::chrono::time_point_cast<seconds>(std::chrono::system_clock::now());
   std::string args;
   for (int i = optind; i < argc; ++i) {
     if (i != optind) args += " ";

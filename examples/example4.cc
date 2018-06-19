@@ -20,8 +20,8 @@
 #include "cctz/time_zone.h"
 
 template <typename D>
-cctz::time_point<cctz::sys_seconds> FloorDay(cctz::time_point<D> tp,
-                                             cctz::time_zone tz) {
+cctz::time_point<cctz::seconds> FloorDay(cctz::time_point<D> tp,
+                                         cctz::time_zone tz) {
   return cctz::convert(cctz::civil_day(cctz::convert(tp, tz)), tz);
 }
 
