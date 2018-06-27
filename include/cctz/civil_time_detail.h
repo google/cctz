@@ -401,20 +401,16 @@ class civil_time {
   }
 
   // Binary arithmetic operators.
-  inline friend CONSTEXPR_M civil_time operator+(civil_time a,
-                                                 diff_t n) noexcept {
+  friend CONSTEXPR_M civil_time operator+(civil_time a, diff_t n) noexcept {
     return a += n;
   }
-  inline friend CONSTEXPR_M civil_time operator+(diff_t n,
-                                                 civil_time a) noexcept {
+  friend CONSTEXPR_M civil_time operator+(diff_t n, civil_time a) noexcept {
     return a += n;
   }
-  inline friend CONSTEXPR_M civil_time operator-(civil_time a,
-                                                 diff_t n) noexcept {
+  friend CONSTEXPR_M civil_time operator-(civil_time a, diff_t n) noexcept {
     return a -= n;
   }
-  inline friend CONSTEXPR_M diff_t operator-(const civil_time& lhs,
-                                             const civil_time& rhs) noexcept {
+  friend CONSTEXPR_M diff_t operator-(civil_time lhs, civil_time rhs) noexcept {
     return difference(T{}, lhs.f_, rhs.f_);
   }
 
