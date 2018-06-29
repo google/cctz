@@ -1026,8 +1026,14 @@ TEST(NextTransition, AmericaNewYork) {
 
   tp = time_point<cctz::seconds>::min();
   EXPECT_TRUE(tz.next_transition(tp, &trans));
-  EXPECT_EQ(civil_second(1883, 11, 18, 12, 3, 58), trans.from);
-  EXPECT_EQ(civil_second(1883, 11, 18, 12, 0, 0), trans.to);
+  if (trans.from == civil_second(1918, 3, 31, 2, 0, 0)) {
+    // It looks like the tzdata is only 32 bit (probably macOS),
+    // which bottoms out at 1901-12-13T20:45:52+00:00.
+    EXPECT_EQ(civil_second(1918, 3, 31, 3, 0, 0), trans.to);
+  } else {
+    EXPECT_EQ(civil_second(1883, 11, 18, 12, 3, 58), trans.from);
+    EXPECT_EQ(civil_second(1883, 11, 18, 12, 0, 0), trans.to);
+  }
 }
 
 TEST(PrevTransition, AmericaNewYork) {
