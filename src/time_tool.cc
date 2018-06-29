@@ -27,7 +27,6 @@
 
 #include "cctz/civil_time.h"
 #include "cctz/time_zone.h"
-#include "time_zone_impl.h"
 
 // Pulls in the aliases from cctz for brevity.
 template <typename D>
@@ -204,7 +203,7 @@ int ZoneDump(bool zdump, cctz::time_zone zone,
         std::cout << zone.name() << "  " << cctz::format("%c UT", ttp, utc)
                   << " = " << cctz::format("%c %Z", ttp, zone);
       } else {
-        std::cout << std::setw(10) << cctz::ToUnixSeconds(ttp);
+        std::cout << std::setw(10) << std::chrono::system_clock::to_time_t(ttp);
         std::cout << " = " << cctz::format(kFormat, ttp, utc);
         std::cout << " = " << cctz::format(kFormat, ttp, zone);
       }
@@ -394,7 +393,8 @@ int main(int argc, char** argv) {
       std::size_t end;
       const time_t t = std::stoll(spec, &end);
       if (end == spec.size()) {
-        tp = cctz::FromUnixSeconds(t);
+        tp = std::chrono::time_point_cast<seconds>(
+            std::chrono::system_clock::from_time_t(t));
         have_time = true;
       }
     }
