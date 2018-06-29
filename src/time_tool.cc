@@ -112,6 +112,13 @@ std::string FormatTimeInZone(time_point<seconds> when, cctz::time_zone zone) {
   return oss.str();
 }
 
+void ZoneInfo(const std::string& label, cctz::time_zone tz) {
+  std::string version = tz.version();
+  if (version.empty()) version = "<unknown>";
+  std::cout << label << tz.name() << " [ver=" << version << " "
+            << tz.description() << "]\n";
+}
+
 void InstantInfo(const std::string& label, time_point<seconds> when,
                  cctz::time_zone zone) {
   const cctz::time_zone utc = cctz::utc_time_zone();  // might == zone
@@ -134,8 +141,7 @@ void InstantInfo(const std::string& label, time_point<seconds> when,
 
 // Report everything we know about a cctz::civil_second (YMDHMS).
 int CivilInfo(const cctz::civil_second& cs, cctz::time_zone zone) {
-  const cctz::time_zone::Impl& impl = cctz::time_zone::Impl::get(zone);
-  std::cout << "tz: " << zone.name() << " [" << impl.Description() << "]\n";
+  ZoneInfo("tz: ", zone);
   cctz::time_zone::civil_lookup cl = zone.lookup(cs);
   switch (cl.kind) {
     case cctz::time_zone::civil_lookup::UNIQUE: {
@@ -165,8 +171,7 @@ int CivilInfo(const cctz::civil_second& cs, cctz::time_zone zone) {
 
 // Report everything we know about a time_point<seconds>.
 int TimeInfo(time_point<seconds> when, cctz::time_zone zone) {
-  const cctz::time_zone::Impl& impl = cctz::time_zone::Impl::get(zone);
-  std::cout << "tz: " << zone.name() << " [" << impl.Description() << "]\n";
+  ZoneInfo("tz: ", zone);
   std::cout << "kind: UNIQUE\n";
   InstantInfo("when", when, zone);
   return 0;
@@ -176,7 +181,6 @@ int TimeInfo(time_point<seconds> when, cctz::time_zone zone) {
 int ZoneDump(bool zdump, cctz::time_zone zone,
              cctz::year_t lo_year, cctz::year_t hi_year) {
   const cctz::time_zone utc = cctz::utc_time_zone();
-  const cctz::time_zone::Impl& impl = cctz::time_zone::Impl::get(zone);
   if (zdump) {
     std::cout << zone.name() << "  "
               << std::numeric_limits<seconds::rep>::min()
@@ -185,24 +189,26 @@ int ZoneDump(bool zdump, cctz::time_zone zone,
               << std::numeric_limits<seconds::rep>::min() + 86400
               << " = NULL\n";
   } else {
-    std::cout << zone.name() << " [" << impl.Description() << "]\n";
+    ZoneInfo("", zone);
   }
 
-  auto trans = convert(cctz::civil_second(lo_year, 1, 1, 0, 0, -1), zone);
-  while (impl.NextTransition(&trans)) {
-    if (convert(trans, zone).year() >= hi_year) break;
+  auto tp = cctz::convert(cctz::civil_second(lo_year, 1, 1, 0, 0, -1), zone);
+  cctz::time_zone::civil_transition trans;
+  while (zone.next_transition(tp, &trans)) {
+    if (trans.from.year() >= hi_year && trans.to.year() >= hi_year) break;
+    tp = zone.lookup(trans.to).trans;
     if (!zdump) std::cout << "\n";
     for (int count_down = 1; count_down >= 0; --count_down) {
-      auto tp = trans - seconds(count_down);
+      auto ttp = tp - seconds(count_down);
       if (zdump) {
-        std::cout << zone.name() << "  " << cctz::format("%c UT", tp, utc)
-                  << " = " << cctz::format("%c %Z", tp, zone);
+        std::cout << zone.name() << "  " << cctz::format("%c UT", ttp, utc)
+                  << " = " << cctz::format("%c %Z", ttp, zone);
       } else {
-        std::cout << std::setw(10) << cctz::ToUnixSeconds(tp);
-        std::cout << " = " << cctz::format(kFormat, tp, utc);
-        std::cout << " = " << cctz::format(kFormat, tp, zone);
+        std::cout << std::setw(10) << cctz::ToUnixSeconds(ttp);
+        std::cout << " = " << cctz::format(kFormat, ttp, utc);
+        std::cout << " = " << cctz::format(kFormat, ttp, zone);
       }
-      auto al = zone.lookup(tp);
+      auto al = zone.lookup(ttp);
       if (zdump) {
         std::cout << " isdst=" << (al.is_dst ? '1' : '0')
                   << " gmtoff=" << al.offset << "\n";

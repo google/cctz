@@ -18,6 +18,7 @@ namespace cctz {
 
 // Defined out-of-line to avoid emitting a weak vtable in all TUs.
 ZoneInfoSource::~ZoneInfoSource() {}
+std::string ZoneInfoSource::Version() const { return std::string(); }
 
 }  // namespace cctz
 
