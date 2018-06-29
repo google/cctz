@@ -462,8 +462,8 @@ TEST(Format, ExtendedSecondOffset) {
   EXPECT_TRUE(load_time_zone("America/New_York", &tz));
   tp = convert(civil_second(1883, 11, 18, 16, 59, 59), utc);
   if (tz.lookup(tp).offset == -5 * 60 * 60) {
-    // We're likely dealing with zoneinfo that doesn't support really old
-    // timestamps, so America/New_York never looks to be on local mean time.
+    // It looks like the tzdata is only 32 bit (probably macOS),
+    // which bottoms out at 1901-12-13T20:45:52+00:00.
   } else {
     TestFormatSpecifier(tp, tz, "%E*z", "-04:56:02");
     TestFormatSpecifier(tp, tz, "%Ez", "-04:56");
