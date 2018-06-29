@@ -72,13 +72,13 @@ time_zone::civil_lookup time_zone::lookup(const civil_second& cs) const {
 }
 
 bool time_zone::next_transition(const time_point<seconds>& tp,
-                                civil_transition* ct) const {
-  return effective_impl().NextTransition(tp, ct);
+                                civil_transition* trans) const {
+  return effective_impl().NextTransition(tp, trans);
 }
 
 bool time_zone::prev_transition(const time_point<seconds>& tp,
-                                civil_transition* ct) const {
-  return effective_impl().PrevTransition(tp, ct);
+                                civil_transition* trans) const {
+  return effective_impl().PrevTransition(tp, trans);
 }
 
 std::string time_zone::version() const {
