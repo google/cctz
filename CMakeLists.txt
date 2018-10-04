@@ -58,7 +58,13 @@ function(cctz_target_set_cxx_standard target)
   endif()
 endfunction()
 
-add_library(cctz
+set(_HDRS
+  include/cctz/time_zone.h
+  include/cctz/civil_time_detail.h
+  include/cctz/zone_info_source.h
+  include/cctz/civil_time.h
+  )
+set(_SRCS
   src/civil_time_detail.cc
   src/time_zone_fixed.cc
   src/time_zone_fixed.h
@@ -77,6 +83,7 @@ add_library(cctz
   src/tzfile.h
   src/zone_info_source.cc
   )
+add_library(cctz ${_SRCS} ${_HDRS})
 cctz_target_set_cxx_standard(cctz)
 add_library(cctz::cctz ALIAS cctz)
 
