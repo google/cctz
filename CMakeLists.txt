@@ -85,12 +85,14 @@ set(_SRCS
   )
 add_library(cctz ${_SRCS} ${_HDRS})
 cctz_target_set_cxx_standard(cctz)
+target_include_directories(cctz PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+  )
 set_target_properties(cctz PROPERTIES
   PUBLIC_HEADER "${_HDRS}"
   )
 add_library(cctz::cctz ALIAS cctz)
-
-target_include_directories(cctz PUBLIC include)
 
 if (BUILD_TOOLS)
   add_executable(time_tool src/time_tool.cc)
@@ -146,5 +148,28 @@ if (BUILD_TESTING)
   cctz_target_set_cxx_standard(cctz_benchmark)
   target_link_libraries(cctz_benchmark cctz::cctz benchmark::benchmark_main)
 endif()
+
+# Install
+include(GNUInstallDirs)
+install(TARGETS cctz
+  EXPORT ${PROJECT_NAME}-targets
+  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cctz
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+if (BUILD_TOOLS)
+  install(TARGETS time_tool
+    EXPORT ${PROJECT_NAME}-targets
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+endif()
+set(CMAKE_INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+install(EXPORT ${PROJECT_NAME}-targets
+  NAMESPACE cctz::
+  DESTINATION ${CMAKE_INSTALL_CONFIGDIR}
+  )
+install(FILES cmake/${PROJECT_NAME}-config.cmake
+  DESTINATION ${CMAKE_INSTALL_CONFIGDIR}
+  )
 
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
