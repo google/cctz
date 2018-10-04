@@ -85,6 +85,9 @@ set(_SRCS
   )
 add_library(cctz ${_SRCS} ${_HDRS})
 cctz_target_set_cxx_standard(cctz)
+set_target_properties(cctz PROPERTIES
+  PUBLIC_HEADER "${_HDRS}"
+  )
 add_library(cctz::cctz ALIAS cctz)
 
 target_include_directories(cctz PUBLIC include)
