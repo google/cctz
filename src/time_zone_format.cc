@@ -12,12 +12,6 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#if !defined(HAS_STRPTIME)
-# if !defined(_MSC_VER)
-#  define HAS_STRPTIME 1  // assume everyone has strptime() except windows
-# endif
-#endif
-
 #include "cctz/time_zone.h"
 
 #include <cctype>
