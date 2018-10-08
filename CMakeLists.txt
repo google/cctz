@@ -58,13 +58,6 @@ function(cctz_target_set_cxx_standard target)
   endif()
 endfunction()
 
-# check for strptime
-include(CheckFunctionExists)
-check_function_exists(strptime HAVE_STRPTIME_FUNCTION)
-if (HAVE_STRPTIME_FUNCTION)
-  add_definitions(-DHAS_STRPTIME)
-endif ()
-
 add_library(cctz
   src/civil_time_detail.cc
   src/time_zone_fixed.cc
@@ -86,6 +79,13 @@ add_library(cctz
   )
 cctz_target_set_cxx_standard(cctz)
 add_library(cctz::cctz ALIAS cctz)
+
+# check for strptime
+include(CheckFunctionExists)
+check_function_exists(strptime HAVE_STRPTIME_FUNCTION)
+if (HAVE_STRPTIME_FUNCTION)
+  target_compile_definitions(cctz PRIVATE HAS_STRPTIME)
+endif ()
 
 target_include_directories(cctz PUBLIC include)
 
