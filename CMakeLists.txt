@@ -58,13 +58,14 @@ function(cctz_target_set_cxx_standard target)
   endif()
 endfunction()
 
-set(_HDRS
+set(CCTZ_HDRS
   include/cctz/time_zone.h
   include/cctz/civil_time_detail.h
   include/cctz/zone_info_source.h
   include/cctz/civil_time.h
   )
-set(_SRCS
+add_library(cctz "")
+target_sources(cctz PRIVATE
   src/civil_time_detail.cc
   src/time_zone_fixed.cc
   src/time_zone_fixed.h
@@ -82,15 +83,15 @@ set(_SRCS
   src/time_zone_posix.h
   src/tzfile.h
   src/zone_info_source.cc
+  ${CCTZ_HDRS}
   )
-add_library(cctz ${_SRCS} ${_HDRS})
 cctz_target_set_cxx_standard(cctz)
 target_include_directories(cctz PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
   )
 set_target_properties(cctz PROPERTIES
-  PUBLIC_HEADER "${_HDRS}"
+  PUBLIC_HEADER "${CCTZ_HDRS}"
   )
 add_library(cctz::cctz ALIAS cctz)
 
