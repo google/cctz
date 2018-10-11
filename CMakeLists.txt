@@ -64,8 +64,7 @@ set(CCTZ_HDRS
   include/cctz/zone_info_source.h
   include/cctz/civil_time.h
   )
-add_library(cctz "")
-target_sources(cctz PRIVATE
+add_library(cctz
   src/civil_time_detail.cc
   src/time_zone_fixed.cc
   src/time_zone_fixed.h
