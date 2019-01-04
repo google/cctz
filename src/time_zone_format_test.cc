@@ -62,17 +62,6 @@ void TestFormatSpecifier(time_point<D> tp, time_zone tz, const std::string& fmt,
   EXPECT_EQ("xxx " + ans + " yyy", format("xxx " + fmt + " yyy", tp, tz));
 }
 
-// These tests sometimes run on platforms that have zoneinfo data so old
-// that the transition we are attempting to check does not exist, most
-// notably Android emulators.  Fortunately, AndroidZoneInfoSource supports
-// time_zone::version() so, in cases where we've learned that it matters,
-// we can make the check conditionally.
-int VersionCmp(time_zone tz, const std::string& target) {
-  std::string version = tz.version();
-  if (version.empty() && !target.empty()) return 1;  // unknown > known
-  return version.compare(target);
-}
-
 }  // namespace
 
 //
