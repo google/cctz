@@ -174,7 +174,7 @@ Hello 2016-02-29 <- leap day is a Monday
 
 This example shows how to use all three libraries (`<chrono>`, civil time, and
 time zone) together. In this example, we know that viewers in New York watched
-Neil Armstrong first walk on the moon on July 20, 1969 at 10:56 PM. But we'd
+Neil Armstrong's first walk on the moon on July 20, 1969 at 10:56 PM. But we'd
 like to see what time it was for our friend watching in Sydney, Australia.
 
 ```
