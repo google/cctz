@@ -335,6 +335,7 @@ const char* const kTimeZoneNames[] = {
   "Asia/Pontianak",
   "Asia/Pyongyang",
   "Asia/Qatar",
+  "Asia/Qostanay",
   "Asia/Qyzylorda",
   "Asia/Rangoon",
   "Asia/Riyadh",
