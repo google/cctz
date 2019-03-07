@@ -25,7 +25,7 @@ contributing.
 
 # Getting Started
 
-CCTZ is best built and tested using the [Bazel](http://bazel.io) build system
+CCTZ is best built and tested using the [Bazel](https://bazel.io) build system
 and the [Google Test](https://github.com/google/googletest) framework. (There is
 also a simple [`Makefile`](https://github.com/google/cctz/blob/master/Makefile)
 and a
@@ -98,7 +98,7 @@ types exist to represent absolute times, classically `time_t` and more recently
 `std::chrono::time_point`.
 
 *Civil time* is the legally recognized representation of time for ordinary
-affairs (cf. http://www.merriam-webster.com/dictionary/civil). It is a
+affairs (cf. https://www.merriam-webster.com/dictionary/civil). It is a
 human-scale representation of time that consists of the six fields &mdash; year,
 month, day, hour, minute, and second (sometimes shortened to "YMDHMS") &mdash;
 and it follows the rules of the Proleptic Gregorian Calendar, with 24-hour days
@@ -123,7 +123,7 @@ above concepts. CCTZ adds to the existing C++11 `<chrono>` library to fully
 implement the above concepts.
 
 *   Absolute time &mdash; This is implemented by the existing C++11
-    [`<chrono>`](http://en.cppreference.com/w/cpp/chrono) library without
+    [`<chrono>`](https://en.cppreference.com/w/cpp/chrono) library without
     modification. For example, an absolute point in time is represented by a
     `std::chrono::time_point`.
 *   Civil time &mdash; This is implemented by the
@@ -218,7 +218,7 @@ historic event.
 
 *   CCTZ [FAQ](https://github.com/google/cctz/wiki/FAQ)
 *   See also the [Time Programming Fundamentals](https://youtu.be/2rnIHsqABfM)
-    talk from CppCon 2015 ([slides available here](http://goo.gl/ofof4N)). This
+    talk from CppCon 2015 ([slides available here](https://goo.gl/ofof4N)). This
     talk mostly describes the older CCTZ v1 API, but the *concepts* are the
     same.
 *   ISO C++ proposal to standardize the Civil-Time Library:
