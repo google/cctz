@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//   https://www.apache.org/licenses/LICENSE-2.0
 //
 //   Unless required by applicable law or agreed to in writing, software
 //   distributed under the License is distributed on an "AS IS" BASIS,
@@ -49,12 +49,14 @@
 //     }
 //   }
 
-#ifndef CCTZ_TIME_ZONE_POSIX_H_
-#define CCTZ_TIME_ZONE_POSIX_H_
+#ifndef ABSL_TIME_INTERNAL_CCTZ_TIME_ZONE_POSIX_H_
+#define ABSL_TIME_INTERNAL_CCTZ_TIME_ZONE_POSIX_H_
 
 #include <cstdint>
 #include <string>
 
+namespace absl {
+namespace time_internal {
 namespace cctz {
 
 // The date/time of the transition. The date is specified as either:
@@ -120,5 +122,7 @@ struct PosixTimeZone {
 bool ParsePosixSpec(const std::string& spec, PosixTimeZone* res);
 
 }  // namespace cctz
+}  // namespace time_internal
+}  // namespace absl
 
-#endif  // CCTZ_TIME_ZONE_POSIX_H_
+#endif  // ABSL_TIME_INTERNAL_CCTZ_TIME_ZONE_POSIX_H_

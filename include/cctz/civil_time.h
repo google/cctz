@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//   https://www.apache.org/licenses/LICENSE-2.0
 //
 //   Unless required by applicable law or agreed to in writing, software
 //   distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,11 +12,13 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#ifndef CCTZ_CIVIL_TIME_H_
-#define CCTZ_CIVIL_TIME_H_
+#ifndef ABSL_TIME_INTERNAL_CCTZ_CIVIL_TIME_H_
+#define ABSL_TIME_INTERNAL_CCTZ_CIVIL_TIME_H_
 
-#include "cctz/civil_time_detail.h"
+#include "absl/time/internal/cctz/include/cctz/civil_time_detail.h"
 
+namespace absl {
+namespace time_internal {
 namespace cctz {
 
 // The term "civil time" refers to the legally recognized human-scale time
@@ -321,5 +323,7 @@ using detail::prev_weekday;
 using detail::get_yearday;
 
 }  // namespace cctz
+}  // namespace time_internal
+}  // namespace absl
 
-#endif  // CCTZ_CIVIL_TIME_H_
+#endif  // ABSL_TIME_INTERNAL_CCTZ_CIVIL_TIME_H_

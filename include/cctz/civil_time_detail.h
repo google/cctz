@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//   https://www.apache.org/licenses/LICENSE-2.0
 //
 //   Unless required by applicable law or agreed to in writing, software
 //   distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,8 +12,8 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#ifndef CCTZ_CIVIL_TIME_DETAIL_H_
-#define CCTZ_CIVIL_TIME_DETAIL_H_
+#ifndef ABSL_TIME_INTERNAL_CCTZ_CIVIL_TIME_DETAIL_H_
+#define ABSL_TIME_INTERNAL_CCTZ_CIVIL_TIME_DETAIL_H_
 
 #include <cstdint>
 #include <limits>
@@ -31,6 +31,8 @@
 #define CONSTEXPR_M
 #endif
 
+namespace absl {
+namespace time_internal {
 namespace cctz {
 
 // Support years that at least span the range of 64-bit time_t values.
@@ -324,6 +326,37 @@ CONSTEXPR_F fields align(year_tag, fields f) noexcept {
 
 ////////////////////////////////////////////////////////////////////////
 
+namespace impl {
+
+template <typename H>
+H AbslHashValueImpl(second_tag, H h, fields f) {
+  return H::combine(std::move(h), f.y, f.m, f.d, f.hh, f.mm, f.ss);
+}
+template <typename H>
+H AbslHashValueImpl(minute_tag, H h, fields f) {
+  return H::combine(std::move(h), f.y, f.m, f.d, f.hh, f.mm);
+}
+template <typename H>
+H AbslHashValueImpl(hour_tag, H h, fields f) {
+  return H::combine(std::move(h), f.y, f.m, f.d, f.hh);
+}
+template <typename H>
+H AbslHashValueImpl(day_tag, H h, fields f) {
+  return H::combine(std::move(h), f.y, f.m, f.d);
+}
+template <typename H>
+H AbslHashValueImpl(month_tag, H h, fields f) {
+  return H::combine(std::move(h), f.y, f.m);
+}
+template <typename H>
+H AbslHashValueImpl(year_tag, H h, fields f) {
+  return H::combine(std::move(h), f.y);
+}
+
+}  // namespace impl
+
+////////////////////////////////////////////////////////////////////////
+
 template <typename T>
 class civil_time {
  public:
@@ -412,6 +445,11 @@ class civil_time {
   }
   friend CONSTEXPR_F diff_t operator-(civil_time lhs, civil_time rhs) noexcept {
     return difference(T{}, lhs.f_, rhs.f_);
+  }
+
+  template <typename H>
+  friend H AbslHashValue(H h, civil_time a) {
+    return impl::AbslHashValueImpl(T{}, std::move(h), a.f_);
   }
 
  private:
@@ -546,9 +584,11 @@ std::ostream& operator<<(std::ostream& os, weekday wd);
 
 }  // namespace detail
 }  // namespace cctz
+}  // namespace time_internal
+}  // namespace absl
 
 #undef CONSTEXPR_M
 #undef CONSTEXPR_F
 #undef CONSTEXPR_D
 
-#endif  // CCTZ_CIVIL_TIME_DETAIL_H_
+#endif  // ABSL_TIME_INTERNAL_CCTZ_CIVIL_TIME_DETAIL_H_

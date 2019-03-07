@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//   https://www.apache.org/licenses/LICENSE-2.0
 //
 //   Unless required by applicable law or agreed to in writing, software
 //   distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,13 +12,15 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#ifndef CCTZ_TIME_ZONE_LIBC_H_
-#define CCTZ_TIME_ZONE_LIBC_H_
+#ifndef ABSL_TIME_INTERNAL_CCTZ_TIME_ZONE_LIBC_H_
+#define ABSL_TIME_INTERNAL_CCTZ_TIME_ZONE_LIBC_H_
 
 #include <string>
 
 #include "time_zone_if.h"
 
+namespace absl {
+namespace time_internal {
 namespace cctz {
 
 // A time zone backed by gmtime_r(3), localtime_r(3), and mktime(3),
@@ -45,5 +47,7 @@ class TimeZoneLibC : public TimeZoneIf {
 };
 
 }  // namespace cctz
+}  // namespace time_internal
+}  // namespace absl
 
-#endif  // CCTZ_TIME_ZONE_LIBC_H_
+#endif  // ABSL_TIME_INTERNAL_CCTZ_TIME_ZONE_LIBC_H_

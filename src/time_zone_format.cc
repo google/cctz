@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//   https://www.apache.org/licenses/LICENSE-2.0
 //
 //   Unless required by applicable law or agreed to in writing, software
 //   distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +18,7 @@
 # endif
 #endif
 
-#include "cctz/time_zone.h"
+#include "absl/time/internal/cctz/include/cctz/time_zone.h"
 
 #include <cctype>
 #include <chrono>
@@ -34,9 +34,11 @@
 #include <sstream>
 #endif
 
-#include "cctz/civil_time.h"
+#include "absl/time/internal/cctz/include/cctz/civil_time.h"
 #include "time_zone_if.h"
 
+namespace absl {
+namespace time_internal {
 namespace cctz {
 namespace detail {
 
@@ -175,7 +177,7 @@ void FormatTM(std::string* out, const std::string& fmt, const std::tm& tm) {
   // strftime(3) returns the number of characters placed in the output
   // array (which may be 0 characters).  It also returns 0 to indicate
   // an error, like the array wasn't large enough.  To accommodate this,
-  // the following code grows the buffer size from 2x the format string
+  // the following code grows the buffer size from 2x the format std::string
   // length up to 32x.
   for (std::size_t i = 2; i != 32; i *= 2) {
     std::size_t buf_size = fmt.size() * i;
@@ -825,7 +827,7 @@ bool parse(const std::string& format, const std::string& input,
   // Skip any remaining whitespace.
   while (std::isspace(*data)) ++data;
 
-  // parse() must consume the entire input string.
+  // parse() must consume the entire input std::string.
   if (*data != '\0') {
     if (err != nullptr) *err = "Illegal trailing data in input string";
     return false;
@@ -903,3 +905,5 @@ bool parse(const std::string& format, const std::string& input,
 
 }  // namespace detail
 }  // namespace cctz
+}  // namespace time_internal
+}  // namespace absl

@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//   https://www.apache.org/licenses/LICENSE-2.0
 //
 //   Unless required by applicable law or agreed to in writing, software
 //   distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,17 +12,19 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#ifndef CCTZ_TIME_ZONE_IF_H_
-#define CCTZ_TIME_ZONE_IF_H_
+#ifndef ABSL_TIME_INTERNAL_CCTZ_TIME_ZONE_IF_H_
+#define ABSL_TIME_INTERNAL_CCTZ_TIME_ZONE_IF_H_
 
 #include <chrono>
 #include <cstdint>
 #include <memory>
 #include <string>
 
-#include "cctz/civil_time.h"
-#include "cctz/time_zone.h"
+#include "absl/time/internal/cctz/include/cctz/civil_time.h"
+#include "absl/time/internal/cctz/include/cctz/time_zone.h"
 
+namespace absl {
+namespace time_internal {
 namespace cctz {
 
 // A simple interface used to hide time-zone complexities from time_zone::Impl.
@@ -64,5 +66,7 @@ inline time_point<seconds> FromUnixSeconds(std::int_fast64_t t) {
 }
 
 }  // namespace cctz
+}  // namespace time_internal
+}  // namespace absl
 
-#endif  // CCTZ_TIME_ZONE_IF_H_
+#endif  // ABSL_TIME_INTERNAL_CCTZ_TIME_ZONE_IF_H_

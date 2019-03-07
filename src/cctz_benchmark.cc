@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//   https://www.apache.org/licenses/LICENSE-2.0
 //
 //   Unless required by applicable law or agreed to in writing, software
 //   distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,11 +21,13 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
-#include "cctz/civil_time.h"
-#include "cctz/time_zone.h"
+#include "absl/time/internal/cctz/include/cctz/civil_time.h"
+#include "absl/time/internal/cctz/include/cctz/time_zone.h"
 #include "time_zone_impl.h"
 
 namespace {
+
+namespace cctz = absl::time_internal::cctz;
 
 void BM_Difference_Days(benchmark::State& state) {
   const cctz::civil_day c(2014, 8, 22);

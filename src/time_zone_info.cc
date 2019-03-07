@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//   https://www.apache.org/licenses/LICENSE-2.0
 //
 //   Unless required by applicable law or agreed to in writing, software
 //   distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,7 +25,7 @@
 // a grain of salt.
 //
 // For more information see tzfile(5), http://www.iana.org/time-zones, or
-// http://en.wikipedia.org/wiki/Zoneinfo.
+// https://en.wikipedia.org/wiki/Zoneinfo.
 //
 // Note that we assume the proleptic Gregorian calendar and 60-second
 // minutes throughout.
@@ -45,10 +45,12 @@
 #include <sstream>
 #include <string>
 
-#include "cctz/civil_time.h"
+#include "absl/time/internal/cctz/include/cctz/civil_time.h"
 #include "time_zone_fixed.h"
 #include "time_zone_posix.h"
 
+namespace absl {
+namespace time_internal {
 namespace cctz {
 
 namespace {
@@ -520,7 +522,7 @@ bool TimeZoneInfo::Load(const std::string& name, ZoneInfoSource* zip) {
 
   // If we did not find version information during the standard loading
   // process (as of tzh_version '3' that is unsupported), then ask the
-  // ZoneInfoSource for any out-of-bound version string it may be privy to.
+  // ZoneInfoSource for any out-of-bound version std::string it may be privy to.
   if (version_.empty()) {
     version_ = zip->Version();
   }
@@ -970,3 +972,5 @@ bool TimeZoneInfo::PrevTransition(const time_point<seconds>& tp,
 }
 
 }  // namespace cctz
+}  // namespace time_internal
+}  // namespace absl

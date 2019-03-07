@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//   https://www.apache.org/licenses/LICENSE-2.0
 //
 //   Unless required by applicable law or agreed to in writing, software
 //   distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,16 +17,18 @@
 // times (represented by cctz::civil_second) using the rules defined by
 // a time zone (cctz::time_zone).
 
-#ifndef CCTZ_TIME_ZONE_H_
-#define CCTZ_TIME_ZONE_H_
+#ifndef ABSL_TIME_INTERNAL_CCTZ_TIME_ZONE_H_
+#define ABSL_TIME_INTERNAL_CCTZ_TIME_ZONE_H_
 
 #include <chrono>
 #include <cstdint>
 #include <string>
 #include <utility>
 
-#include "cctz/civil_time.h"
+#include "absl/time/internal/cctz/include/cctz/civil_time.h"
 
+namespace absl {
+namespace time_internal {
 namespace cctz {
 
 // Convenience aliases. Not intended as public API points.
@@ -70,7 +72,7 @@ split_seconds(const time_point<seconds>& tp) {
 //
 // See also:
 // - http://www.iana.org/time-zones
-// - http://en.wikipedia.org/wiki/Zoneinfo
+// - https://en.wikipedia.org/wiki/Zoneinfo
 class time_zone {
  public:
   time_zone() : time_zone(nullptr) {}  // Equivalent to UTC
@@ -207,7 +209,7 @@ class time_zone {
   // version() and description() provide additional information about the
   // time zone. The content of each of the returned strings is unspecified,
   // however, when the IANA Time Zone Database is the underlying data source
-  // the version() string will be in the familar form (e.g, "2018e") or
+  // the version() std::string will be in the familar form (e.g, "2018e") or
   // empty when unavailable.
   //
   // Note: These functions are for informational or testing purposes only.
@@ -220,6 +222,11 @@ class time_zone {
   }
   friend bool operator!=(time_zone lhs, time_zone rhs) {
     return !(lhs == rhs);
+  }
+
+  template <typename H>
+  friend H AbslHashValue(H h, time_zone tz) {
+    return H::combine(std::move(h), &tz.effective_impl());
   }
 
   class Impl;
@@ -372,5 +379,7 @@ inline bool parse(const std::string& fmt, const std::string& input,
 }
 
 }  // namespace cctz
+}  // namespace time_internal
+}  // namespace absl
 
-#endif  // CCTZ_TIME_ZONE_H_
+#endif  // ABSL_TIME_INTERNAL_CCTZ_TIME_ZONE_H_
