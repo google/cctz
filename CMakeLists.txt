@@ -58,6 +58,10 @@ function(cctz_target_set_cxx_standard target)
   endif()
 endfunction()
 
+if(APPLE)
+  find_library(CoreFoundation CoreFoundation)
+endif()
+
 set(CCTZ_HDRS
   include/cctz/time_zone.h
   include/cctz/civil_time_detail.h
@@ -92,6 +96,7 @@ target_include_directories(cctz PUBLIC
 set_target_properties(cctz PROPERTIES
   PUBLIC_HEADER "${CCTZ_HDRS}"
   )
+target_link_libraries(cctz PUBLIC $<$<PLATFORM_ID:Darwin>:${CoreFoundation}>)  
 add_library(cctz::cctz ALIAS cctz)
 
 if (BUILD_TOOLS)
