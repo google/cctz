@@ -28,6 +28,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <vector>
 
 #include "time_zone_fixed.h"
 #include "time_zone_impl.h"
