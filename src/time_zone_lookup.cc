@@ -28,6 +28,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <vector>
 
 #include "time_zone_fixed.h"
 #include "time_zone_impl.h"
@@ -126,8 +127,15 @@ time_zone local_time_zone() {
   _dupenv_s(&tz_env, nullptr, "TZ");
 #elif defined(__APPLE__)
   CFTimeZoneRef system_time_zone = CFTimeZoneCopyDefault();
-  CFStringRef tz_name = CFTimeZoneGetName(system_time_zone);
-  tz_env = strdup(CFStringGetCStringPtr(tz_name, CFStringGetSystemEncoding()));
+  if (CFStringRef tz_name = CFTimeZoneGetName(system_time_zone)) {
+    CFStringEncoding encoding = kCFStringEncodingUTF8;
+    CFIndex length = CFStringGetLength(tz_name);
+    CFIndex max_size = CFStringGetMaximumSizeForEncoding(length, encoding);
+    std::vector<char> buffer(max_size + 1);
+    if (CFStringGetCString(tz_name, &buffer[0], buffer.size(), encoding)) {
+      tz_env = strdup(&buffer[0]);
+    }
+  }
   CFRelease(system_time_zone);
 #else
   tz_env = std::getenv("TZ");
