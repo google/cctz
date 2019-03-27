@@ -23,12 +23,12 @@
 
 #if defined(__APPLE__)
 #include <CoreFoundation/CFTimeZone.h>
+#include <vector>
 #endif
 
 #include <cstdlib>
 #include <cstring>
 #include <string>
-#include <vector>
 
 #include "time_zone_fixed.h"
 #include "time_zone_impl.h"
@@ -120,31 +120,32 @@ time_zone fixed_time_zone(const seconds& offset) {
 
 time_zone local_time_zone() {
   const char* zone = ":localtime";
+#if defined(__ANDROID__)
+  char sysprop[PROP_VALUE_MAX];
+  if (__system_property_get("persist.sys.timezone", sysprop) > 0) {
+    zone = sysprop;
+  }
+#endif
+#if defined(__APPLE__)
+  std::vector<char> buffer;
+  CFTimeZoneRef tz_default = CFTimeZoneCopyDefault();
+  if (CFStringRef tz_name = CFTimeZoneGetName(tz_default)) {
+    CFStringEncoding encoding = kCFStringEncodingUTF8;
+    CFIndex length = CFStringGetLength(tz_name);
+    buffer.resize(CFStringGetMaximumSizeForEncoding(length, encoding) + 1);
+    if (CFStringGetCString(tz_name, &buffer[0], buffer.size(), encoding)) {
+      zone = &buffer[0];
+    }
+  }
+  CFRelease(tz_default);
+#endif
 
   // Allow ${TZ} to override to default zone.
   char* tz_env = nullptr;
 #if defined(_MSC_VER)
   _dupenv_s(&tz_env, nullptr, "TZ");
-#elif defined(__APPLE__)
-  CFTimeZoneRef system_time_zone = CFTimeZoneCopyDefault();
-  if (CFStringRef tz_name = CFTimeZoneGetName(system_time_zone)) {
-    CFStringEncoding encoding = kCFStringEncodingUTF8;
-    CFIndex length = CFStringGetLength(tz_name);
-    CFIndex max_size = CFStringGetMaximumSizeForEncoding(length, encoding);
-    std::vector<char> buffer(max_size + 1);
-    if (CFStringGetCString(tz_name, &buffer[0], buffer.size(), encoding)) {
-      tz_env = strdup(&buffer[0]);
-    }
-  }
-  CFRelease(system_time_zone);
 #else
   tz_env = std::getenv("TZ");
-#endif
-#if defined(__ANDROID__)
-  char sysprop[PROP_VALUE_MAX];
-  if (tz_env == nullptr)
-    if (__system_property_get("persist.sys.timezone", sysprop) > 0)
-      tz_env = sysprop;
 #endif
   if (tz_env) zone = tz_env;
 
@@ -168,8 +169,6 @@ time_zone local_time_zone() {
   const std::string name = zone;
 #if defined(_MSC_VER)
   free(localtime_env);
-  free(tz_env);
-#elif defined(__APPLE__)
   free(tz_env);
 #endif
 
