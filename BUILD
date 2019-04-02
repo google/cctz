@@ -15,16 +15,18 @@
 licenses(["notice"])  # Apache License
 
 config_setting(
-      name = "osx",
-      constraint_values = [
-          "@bazel_tools//platforms:osx"
-      ]
-  )config_setting(
-      name = "ios",
-      constraint_values = [
-          "@bazel_tools//platforms:ios",
-      ]
-  )
+    name = "osx",
+    constraint_values = [
+        "@bazel_tools//platforms:osx"
+    ],
+)
+
+config_setting(
+    name = "ios",
+    constraint_values = [
+        "@bazel_tools//platforms:ios",
+    ],
+)
 
 ### libraries
 
