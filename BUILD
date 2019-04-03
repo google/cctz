@@ -14,6 +14,20 @@
 
 licenses(["notice"])  # Apache License
 
+config_setting(
+    name = "osx",
+    constraint_values = [
+        "@bazel_tools//platforms:osx"
+    ],
+)
+
+config_setting(
+    name = "ios",
+    constraint_values = [
+        "@bazel_tools//platforms:ios",
+    ],
+)
+
 ### libraries
 
 cc_library(
@@ -51,6 +65,15 @@ cc_library(
         "include/cctz/time_zone.h",
         "include/cctz/zone_info_source.h",
     ],
+    linkopts = select({
+        "//:osx": [
+            "-framework Foundation",
+        ],
+        "//:ios": [
+            "-framework Foundation",
+        ],
+        "//conditions:default": [],
+    }),
     includes = ["include"],
     visibility = ["//visibility:public"],
     deps = [":civil_time"],
