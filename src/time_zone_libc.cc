@@ -53,7 +53,7 @@ auto tm_zone(const std::tm& tm) -> decltype(tzname[0]) {
 #elif defined(__native_client__) || defined(__myriad2__) || \
     defined(__EMSCRIPTEN__)
 // Uses the globals: 'timezone' and 'tzname'.
-auto tm_gmtoff(const std::tm& tm) -> decltype(_timezone) {
+auto tm_gmtoff(const std::tm& tm) -> decltype(_timezone + 0) {
   const bool is_dst = tm.tm_isdst > 0;
   return _timezone + (is_dst ? 60 * 60 : 0);
 }
