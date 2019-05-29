@@ -664,6 +664,7 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
   return std::unique_ptr<ZoneInfoSource>(new FileZoneInfoSource(fp, length));
 }
 
+#if defined(__ANDROID__)
 class AndroidZoneInfoSource : public FileZoneInfoSource {
  public:
   static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
@@ -680,7 +681,6 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
   // Use of the "file:" prefix is intended for testing purposes only.
   if (name.compare(0, 5, "file:") == 0) return Open(name.substr(5));
 
-#if defined(__ANDROID__)
   // See Android's libc/tzcode/bionic.cpp for additional information.
   for (const char* tzdata : {"/data/misc/zoneinfo/current/tzdata",
                              "/system/usr/share/zoneinfo/tzdata"}) {
@@ -715,9 +715,10 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
       }
     }
   }
-#endif  // __ANDROID__
+
   return nullptr;
 }
+#endif  // __ANDROID__
 
 }  // namespace
 
@@ -735,7 +736,9 @@ bool TimeZoneInfo::Load(const std::string& name) {
   auto zip = cctz_extension::zone_info_source_factory(
       name, [](const std::string& name) -> std::unique_ptr<ZoneInfoSource> {
         if (auto zip = FileZoneInfoSource::Open(name)) return zip;
+#if defined(__ANDROID__)
         if (auto zip = AndroidZoneInfoSource::Open(name)) return zip;
+#endif  // __ANDROID__
         return nullptr;
       });
   return zip != nullptr && Load(name, zip.get());
