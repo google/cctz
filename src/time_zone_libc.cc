@@ -133,7 +133,7 @@ bool make_time(const civil_second& cs, int is_dst, std::time_t* t, int* off) {
       return false;
     }
   }
-  *off = tm_gmtoff(tm);
+  *off = static_cast<int>(tm_gmtoff(tm));
   return true;
 }
 
@@ -200,7 +200,7 @@ time_zone::absolute_lookup TimeZoneLibC::BreakTime(
   const year_t year = tmp->tm_year + year_t{1900};
   al.cs = civil_second(year, tmp->tm_mon + 1, tmp->tm_mday,
                        tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
-  al.offset = tm_gmtoff(*tmp);
+  al.offset = static_cast<int>(tm_gmtoff(*tmp));
   al.abbr = local_ ? tm_zone(*tmp) : "UTC";  // as expected by cctz
   al.is_dst = tmp->tm_isdst > 0;
   return al;
