@@ -233,7 +233,7 @@ void ZoneDump(bool zdump, const std::string& fmt, cctz::time_zone zone,
 }
 
 const char* Basename(const char* p) {
-  if (const char* b = strrchr(p, '/')) return ++b;
+  if (const char* b = std::strrchr(p, '/')) return ++b;
   return p;
 }
 
@@ -297,19 +297,19 @@ bool ParseYearRange(bool zdump, const std::string& args,
   return false;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, const char** argv) {
   const char* argv0 = (argc > 0) ? (argc--, *argv++) : (argc = 0, "time_tool");
   const std::string prog = Basename(argv0);
 
   // Escape arguments that look like negative offsets so that they
   // don't look like flags.
+  std::vector<std::string> eargs;
   for (int i = 0; i < argc; ++i) {
-    if (strcmp(argv[i], "--") == 0) break;
+    if (std::strcmp(argv[i], "--") == 0) break;
     if (LooksLikeNegOffset(argv[i])) {
-      char* buf = new char[strlen(argv[i] + 2)];
-      buf[0] = ' ';  // will later be ignorned
-      strcpy(buf + 1, argv[i]);
-      argv[i] = buf;
+      eargs.push_back(" ");  // space will later be ignorned
+      eargs.back().append(argv[i]);
+      argv[i] = eargs.back().c_str();
     }
   }
 
@@ -362,27 +362,27 @@ int main(int argc, char** argv) {
         ++optind;
         break;
       }
-      if (strcmp(opt, "tz") == 0) {
+      if (std::strcmp(opt, "tz") == 0) {
         if (optind + 1 == argc) {
           std::cerr << argv0 << ": option '--tz' requires an argument\n";
           ++opterr;
         } else {
           zones = argv[++optind];
         }
-      } else if (strncmp(opt, "tz=", 3) == 0) {
+      } else if (std::strncmp(opt, "tz=", 3) == 0) {
         zones = opt + 3;
-      } else if (strcmp(opt, "fmt") == 0) {
+      } else if (std::strcmp(opt, "fmt") == 0) {
         if (optind + 1 == argc) {
           std::cerr << argv0 << ": option '--fmt' requires an argument\n";
           ++opterr;
         } else {
           fmt = argv[++optind];
         }
-      } else if (strncmp(opt, "fmt=", 4) == 0) {
+      } else if (std::strncmp(opt, "fmt=", 4) == 0) {
         fmt = opt + 4;
-      } else if (strcmp(opt, "zdump") == 0) {
+      } else if (std::strcmp(opt, "zdump") == 0) {
         zdump = true;
-      } else if (strcmp(opt, "zone_dump") == 0) {
+      } else if (std::strcmp(opt, "zone_dump") == 0) {
         zone_dump = true;
       } else {
         std::cerr << argv0 << ": unrecognized option '--" << opt << "'\n";
