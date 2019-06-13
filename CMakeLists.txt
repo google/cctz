@@ -99,6 +99,10 @@ set_target_properties(cctz PROPERTIES
 target_link_libraries(cctz PUBLIC $<$<PLATFORM_ID:Darwin>:${CoreFoundation}>)  
 add_library(cctz::cctz ALIAS cctz)
 
+if (NOT WIN32)
+  target_compile_options(cctz PRIVATE -DHAS_STRPTIME=1 -D_XOPEN_SOURCE=700)
+endif()
+
 if (BUILD_TOOLS)
   add_executable(time_tool src/time_tool.cc)
   cctz_target_set_cxx_standard(time_tool)

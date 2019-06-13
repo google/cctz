@@ -28,6 +28,13 @@ config_setting(
     ],
 )
 
+config_setting(
+    name = "windows",
+    constraint_values = [
+        "@bazel_tools//platforms:windows",
+    ],
+)
+
 ### libraries
 
 cc_library(
@@ -65,6 +72,15 @@ cc_library(
         "include/cctz/time_zone.h",
         "include/cctz/zone_info_source.h",
     ],
+    copts = select({
+        "//:windows": [],
+        "//conditions:default": [
+            # Assume all non-windows platforms have strptime.
+            "-DHAS_STRPTIME=1",
+            # Include strptime from time.h.
+            "-D_XOPEN_SOURCE=700",
+        ],
+    }),
     includes = ["include"],
     linkopts = select({
         "//:osx": [

@@ -35,6 +35,11 @@ LDFLAGS ?= -O3
 PREFIX ?= /usr/local
 DESTDIR ?=
 
+# Assume non-Windows platforms support strptime.
+ifneq ($(OS),Windows_NT)
+	CXXFLAGS += -DHAS_STRPTIME=1 -D_XOPEN_SOURCE=700
+endif
+
 # possible support for googletest
 ## TESTS = civil_time_test time_zone_lookup_test time_zone_format_test
 ## TEST_FLAGS = ...
