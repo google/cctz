@@ -101,10 +101,9 @@ std::string FormatTimeInZone(const std::string& fmt, time_point<seconds> when,
   std::ostringstream oss;
   oss << std::setw(36) << std::left << cctz::format(fmt, when, zone);
   cctz::time_zone::absolute_lookup al = zone.lookup(when);
-  cctz::civil_day cd(al.cs);
-  oss << " [wd=" << WeekDayName(cctz::get_weekday(cd))
+  oss << " [wd=" << WeekDayName(cctz::get_weekday(al.cs))
       << " yd=" << std::setw(3) << std::setfill('0')
-      << std::right << cctz::get_yearday(cd)
+      << std::right << cctz::get_yearday(al.cs)
       << " dst=" << (al.is_dst ? 'T' : 'F')
       << " off=" << std::showpos << al.offset << std::noshowpos << "]";
   return oss.str();
@@ -215,7 +214,7 @@ void ZoneDump(bool zdump, const std::string& fmt, cctz::time_zone zone,
         std::cout << " isdst=" << (al.is_dst ? '1' : '0')
                   << " gmtoff=" << al.offset << "\n";
       } else {
-        const char* wd = WeekDayName(get_weekday(cctz::civil_day(al.cs)));
+        const char* wd = WeekDayName(get_weekday(al.cs));
         std::cout << " [wd=" << wd << " dst=" << (al.is_dst ? 'T' : 'F')
                   << " off=" << al.offset << "]\n";
       }
