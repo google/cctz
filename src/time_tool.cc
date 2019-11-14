@@ -141,7 +141,7 @@ void InstantInfo(const std::string& label, const std::string& fmt,
 }
 
 // Report everything we know about a cctz::civil_second (YMDHMS).
-void CivilInfo(const std::string& fmt, const cctz::civil_second& cs,
+void CivilInfo(const std::string& fmt, const cctz::civil_second cs,
                cctz::time_zone zone) {
   ZoneInfo("tz: ", zone);
   cctz::time_zone::civil_lookup cl = zone.lookup(cs);
