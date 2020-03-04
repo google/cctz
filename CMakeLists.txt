@@ -177,4 +177,10 @@ install(FILES cmake/${PROJECT_NAME}-config.cmake
   DESTINATION ${CMAKE_INSTALL_CONFIGDIR}
   )
 
-feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
+if (CMAKE_VERSION VERSION_LESS "3.8")
+  set(quiet_on_empty "")
+else()
+  set(quiet_on_empty QUIET_ON_EMPTY)
+endif()
+
+feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES ${quiet_on_empty})
