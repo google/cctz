@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 2.8.12)
 
+if (POLICY CMP0025)
+  cmake_policy(SET CMP0025 NEW)
+endif()
+
 project(cctz)
 
 set(CMAKE_MODULE_PATH
@@ -177,4 +181,10 @@ install(FILES cmake/${PROJECT_NAME}-config.cmake
   DESTINATION ${CMAKE_INSTALL_CONFIGDIR}
   )
 
-feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
+if (CMAKE_VERSION VERSION_LESS "3.8")
+  set(quiet_on_empty "")
+else()
+  set(quiet_on_empty QUIET_ON_EMPTY)
+endif()
+
+feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES ${quiet_on_empty})
