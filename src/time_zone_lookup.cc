@@ -21,11 +21,6 @@
 #endif
 #endif
 
-#if defined(__APPLE__)
-#include <CoreFoundation/CFTimeZone.h>
-#include <vector>
-#endif
-
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -125,19 +120,6 @@ time_zone local_time_zone() {
   if (__system_property_get("persist.sys.timezone", sysprop) > 0) {
     zone = sysprop;
   }
-#endif
-#if defined(__APPLE__)
-  std::vector<char> buffer;
-  CFTimeZoneRef tz_default = CFTimeZoneCopyDefault();
-  if (CFStringRef tz_name = CFTimeZoneGetName(tz_default)) {
-    CFStringEncoding encoding = kCFStringEncodingUTF8;
-    CFIndex length = CFStringGetLength(tz_name);
-    buffer.resize(CFStringGetMaximumSizeForEncoding(length, encoding) + 1);
-    if (CFStringGetCString(tz_name, &buffer[0], buffer.size(), encoding)) {
-      zone = &buffer[0];
-    }
-  }
-  CFRelease(tz_default);
 #endif
 
   // Allow ${TZ} to override to default zone.
