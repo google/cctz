@@ -26,6 +26,7 @@
 #include <utility>
 
 #include "cctz/civil_time.h"
+#include "cctz/string_detail.h"
 
 namespace cctz {
 
