@@ -31,18 +31,24 @@ struct char_range {
 
   friend bool operator==(char_range lhs, char_range rhs) {
     if (lhs.begin == rhs.begin && lhs.end == rhs.end) return true;
-    if (lhs.end - lhs.begin != rhs.end - rhs.begin) return false;
-    return memcmp(lhs.begin, rhs.begin, lhs.end - lhs.begin) == 0;
+    if (lhs.size() != rhs.size()) return false;
+    return memcmp(lhs.begin, rhs.begin, lhs.size()) == 0;
   }
 
   friend bool operator!=(char_range lhs, char_range rhs) {
     return !(lhs == rhs);
   }
 
-  bool starts_with(char_range s) {
-    if (end - begin < s.end - s.begin) return false;
-    return memcmp(begin, s.begin, s.end - s.begin) == 0;
+  bool starts_with(char_range s) const {
+    if (size() < s.size()) return false;
+    return memcmp(begin, s.begin, s.size()) == 0;
   }
+  bool starts_with(char c) const {
+    if (begin == end) return false;
+    return *begin == c;
+  }
+
+  size_t size() const { return end - begin; }
 
   const char* begin;
   const char* end;

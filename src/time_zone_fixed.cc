@@ -47,35 +47,32 @@ int Parse02d(const char* p) {
 
 }  // namespace
 
-bool FixedOffsetFromName(detail::char_range name_range, seconds* offset) {
-  std::string name(name_range.begin, name_range.end);
-  if (name.compare(0, std::string::npos, "UTC", 3) == 0) {
+bool FixedOffsetFromName(detail::char_range name, seconds* offset) {
+  if (name == "UTC") {
     *offset = seconds::zero();
     return true;
   }
 
+  // <prefix>+99:99:99
   const std::size_t prefix_len = sizeof(kFixedZonePrefix) - 1;
-  const char* const ep = kFixedZonePrefix + prefix_len;
-  if (name.size() != prefix_len + 9)  // <prefix>+99:99:99
+  if (name.size() != prefix_len + 9)  return false;
+  if (!name.starts_with(kFixedZonePrefix)) return false;
+  name.begin += prefix_len;
+  if (name.begin[0] != '+' && name.begin[0] != '-')
     return false;
-  if (!std::equal(kFixedZonePrefix, ep, name.begin()))
-    return false;
-  const char* np = name.data() + prefix_len;
-  if (np[0] != '+' && np[0] != '-')
-    return false;
-  if (np[3] != ':' || np[6] != ':')  // see note below about large offsets
+  if (name.begin[3] != ':' || name.begin[6] != ':')  // see note below about large offsets
     return false;
 
-  int hours = Parse02d(np + 1);
+  int hours = Parse02d(name.begin + 1);
   if (hours == -1) return false;
-  int mins = Parse02d(np + 4);
+  int mins = Parse02d(name.begin + 4);
   if (mins == -1) return false;
-  int secs = Parse02d(np + 7);
+  int secs = Parse02d(name.begin + 7);
   if (secs == -1) return false;
 
   secs += ((hours * 60) + mins) * 60;
   if (secs > 24 * 60 * 60) return false;  // outside supported offset range
-  *offset = seconds(secs * (np[0] == '-' ? -1 : 1));  // "-" means west
+  *offset = seconds(secs * (name.begin[0] == '-' ? -1 : 1));  // "-" means west
   return true;
 }
 
