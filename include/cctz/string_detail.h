@@ -12,15 +12,23 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#ifndef CCTZ_CIVIL_TIME_DETAIL_H_
-#define CCTZ_CIVIL_TIME_DETAIL_H_
+#ifndef CCTZ_CIVIL_STRING_DETAIL_H_
+#define CCTZ_CIVIL_STRING_DETAIL_H_
 
+#include <cstring>
 #include <string>
 
 namespace cctz {
 namespace detail {
 
 struct char_range {
+  char_range(const char* s)
+      : begin(s), end(s + strlen(s)) {}
+  char_range(const std::string& s)
+      : begin(s.data()), end(s.data() + s.size()) {}
+  char_range(const char_range&) = default;
+  char_range& operator=(const char_range&) = default;
+
   const char* begin;
   const char* end;
 };
@@ -28,4 +36,4 @@ struct char_range {
 }  // namespace detail
 }  // namespace cctz
 
-#endif  // CCTZ_CIVIL_TIME_DETAIL_H_
+#endif  // CCTZ_CIVIL_STRING_DETAIL_H_

@@ -181,12 +181,13 @@ char* FormatOffset(char* ep, int offset, const char* mode) {
 }
 
 // Formats a std::tm using strftime(3).
-void FormatTM(std::string* out, const std::string& fmt, const std::tm& tm) {
+void FormatTM(std::string* out, char_range fmt_range, const std::tm& tm) {
   // strftime(3) returns the number of characters placed in the output
   // array (which may be 0 characters).  It also returns 0 to indicate
   // an error, like the array wasn't large enough.  To accommodate this,
   // the following code grows the buffer size from 2x the format string
   // length up to 32x.
+  std::string fmt(fmt_range.begin, fmt_range.end);
   for (std::size_t i = 2; i != 32; i *= 2) {
     std::size_t buf_size = fmt.size() * i;
     std::vector<char> buf(buf_size);
@@ -298,8 +299,10 @@ const std::int_fast64_t kExp10[kDigits10_64 + 1] = {
 // not support the tm_gmtoff and tm_zone extensions to std::tm.
 //
 // Requires that zero() <= fs < seconds(1).
-std::string format(const std::string& format, const time_point<seconds>& tp,
+std::string format(char_range format_range, const time_point<seconds>& tp,
                    const detail::femtoseconds& fs, const time_zone& tz) {
+  std::string format(format_range.begin, format_range.end);
+
   std::string result;
   result.reserve(format.size());  // A reasonable guess for the result size.
   const time_zone::absolute_lookup al = tz.lookup(tp);
@@ -613,9 +616,12 @@ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
 //
 // We also handle the %z specifier to accommodate platforms that do not
 // support the tm_gmtoff extension to std::tm.  %Z is parsed but ignored.
-bool parse(const std::string& format, const std::string& input,
+bool parse(char_range format_range, char_range input_range,
            const time_zone& tz, time_point<seconds>* sec,
            detail::femtoseconds* fs, std::string* err) {
+  std::string format(format_range.begin, format_range.end);
+  std::string input(input_range.begin, input_range.end);
+
   // The unparsed input.
   const char* data = input.c_str();  // NUL terminated
 

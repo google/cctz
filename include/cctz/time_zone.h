@@ -231,10 +231,16 @@ class time_zone {
   const Impl* impl_;
 };
 
+namespace detail {
+bool load_time_zone(char_range name, time_zone* tz);
+}
+
 // Loads the named time zone. May perform I/O on the initial load.
 // If the name is invalid, or some other kind of error occurs, returns
 // false and "*tz" is set to the UTC time zone.
-bool load_time_zone(const std::string& name, time_zone* tz);
+inline bool load_time_zone(const std::string& name, time_zone* tz) {
+  return detail::load_time_zone(name, tz);
+}
 
 // Returns a time_zone representing UTC. Cannot fail.
 time_zone utc_time_zone();
@@ -271,10 +277,32 @@ inline time_point<seconds> convert(const civil_second& cs,
 
 namespace detail {
 using femtoseconds = std::chrono::duration<std::int_fast64_t, std::femto>;
-std::string format(const std::string&, const time_point<seconds>&,
+std::string format(char_range, const time_point<seconds>&,
                    const femtoseconds&, const time_zone&);
-bool parse(const std::string&, const std::string&, const time_zone&,
+bool parse(char_range, char_range, const time_zone&,
            time_point<seconds>*, femtoseconds*, std::string* err = nullptr);
+
+template <typename D>
+inline std::string format(char_range fmt, const time_point<D>& tp,
+                          const time_zone& tz) {
+  const auto p = detail::split_seconds(tp);
+  const auto n = std::chrono::duration_cast<detail::femtoseconds>(p.second);
+  return format(fmt, p.first, n, tz);
+}
+
+template <typename D>
+inline bool parse(char_range fmt, char_range input,
+                  const time_zone& tz, time_point<D>* tpp) {
+  time_point<seconds> sec;
+  detail::femtoseconds fs;
+  const bool b = detail::parse(fmt, input, tz, &sec, &fs);
+  if (b) {
+    // TODO: Return false if unrepresentable as a time_point<D>.
+    *tpp = std::chrono::time_point_cast<D>(sec);
+    *tpp += std::chrono::duration_cast<D>(fs);
+  }
+  return b;
+}
 }  // namespace detail
 
 // Formats the given time_point in the given cctz::time_zone according to
@@ -308,9 +336,7 @@ bool parse(const std::string&, const std::string&, const time_zone&,
 template <typename D>
 inline std::string format(const std::string& fmt, const time_point<D>& tp,
                           const time_zone& tz) {
-  const auto p = detail::split_seconds(tp);
-  const auto n = std::chrono::duration_cast<detail::femtoseconds>(p.second);
-  return detail::format(fmt, p.first, n, tz);
+  return detail::format(fmt, tp, tz);
 }
 
 // Parses an input string according to the provided format string and
@@ -361,15 +387,7 @@ inline std::string format(const std::string& fmt, const time_point<D>& tp,
 template <typename D>
 inline bool parse(const std::string& fmt, const std::string& input,
                   const time_zone& tz, time_point<D>* tpp) {
-  time_point<seconds> sec;
-  detail::femtoseconds fs;
-  const bool b = detail::parse(fmt, input, tz, &sec, &fs);
-  if (b) {
-    // TODO: Return false if unrepresentable as a time_point<D>.
-    *tpp = std::chrono::time_point_cast<D>(sec);
-    *tpp += std::chrono::duration_cast<D>(fs);
-  }
-  return b;
+  return detail::parse(fmt, input, tz, tpp);
 }
 
 }  // namespace cctz

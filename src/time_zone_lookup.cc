@@ -104,8 +104,10 @@ const time_zone::Impl& time_zone::effective_impl() const {
   return *impl_;
 }
 
-bool load_time_zone(const std::string& name, time_zone* tz) {
-  return time_zone::Impl::LoadTimeZone(name, tz);
+namespace detail {
+bool load_time_zone(char_range name, time_zone* tz) {
+  return time_zone::Impl::LoadTimeZone(std::string(name.begin, name.end), tz);
+}
 }
 
 time_zone utc_time_zone() {
