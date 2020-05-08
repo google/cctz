@@ -55,6 +55,8 @@
 #include <cstdint>
 #include <string>
 
+#include "cctz/string_detail.h"
+
 namespace cctz {
 
 // The date/time of the transition. The date is specified as either:
@@ -117,7 +119,7 @@ struct PosixTimeZone {
 // filling in any missing values (DST offset, or start/end transition times)
 // with the standard-defined defaults. Returns false if the specification
 // could not be parsed (although some fields of *res may have been altered).
-bool ParsePosixSpec(const std::string& spec, PosixTimeZone* res);
+bool ParsePosixSpec(detail::char_range spec, PosixTimeZone* res);
 
 }  // namespace cctz
 

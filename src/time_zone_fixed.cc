@@ -47,7 +47,8 @@ int Parse02d(const char* p) {
 
 }  // namespace
 
-bool FixedOffsetFromName(const std::string& name, seconds* offset) {
+bool FixedOffsetFromName(detail::char_range name_range, seconds* offset) {
+  std::string name(name_range.begin, name_range.end);
   if (name.compare(0, std::string::npos, "UTC", 3) == 0) {
     *offset = seconds::zero();
     return true;

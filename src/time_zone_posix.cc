@@ -128,7 +128,8 @@ const char* ParseDateTime(const char* p, PosixTransition* res) {
 }  // namespace
 
 // spec = std offset [ dst [ offset ] , datetime , datetime ]
-bool ParsePosixSpec(const std::string& spec, PosixTimeZone* res) {
+bool ParsePosixSpec(detail::char_range spec_range, PosixTimeZone* res) {
+  std::string spec(spec_range.begin, spec_range.end);
   const char* p = spec.c_str();
   if (*p == ':') return false;
 

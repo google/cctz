@@ -65,7 +65,7 @@ class TimeZoneInfo : public TimeZoneIf {
   TimeZoneInfo& operator=(const TimeZoneInfo&) = delete;
 
   // Loads the zoneinfo for the given name, returning true if successful.
-  bool Load(const std::string& name);
+  bool Load(detail::char_range name);
 
   // TimeZoneIf implementations.
   time_zone::absolute_lookup BreakTime(
@@ -92,15 +92,15 @@ class TimeZoneInfo : public TimeZoneIf {
     std::size_t DataLength(std::size_t time_len) const;
   };
 
-  void CheckTransition(const std::string& name, const TransitionType& tt,
+  void CheckTransition(detail::char_range name, const TransitionType& tt,
                        std::int_fast32_t offset, bool is_dst,
-                       const std::string& abbr) const;
+                       detail::char_range abbr) const;
   bool EquivTransitions(std::uint_fast8_t tt1_index,
                         std::uint_fast8_t tt2_index) const;
-  void ExtendTransitions(const std::string& name, const Header& hdr);
+  void ExtendTransitions(detail::char_range name, const Header& hdr);
 
   bool ResetToBuiltinUTC(const seconds& offset);
-  bool Load(const std::string& name, ZoneInfoSource* zip);
+  bool Load(detail::char_range name, ZoneInfoSource* zip);
 
   // Helpers for BreakTime() and MakeTime().
   time_zone::absolute_lookup LocalTime(std::int_fast64_t unix_time,
