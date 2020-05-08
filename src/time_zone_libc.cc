@@ -174,7 +174,7 @@ std::time_t find_trans(std::time_t lo, std::time_t hi, int offset) {
 }  // namespace
 
 TimeZoneLibC::TimeZoneLibC(detail::char_range name)
-    : local_(std::string(name.begin, name.end) == "localtime") {}
+    : local_(name == "localtime") {}
 
 time_zone::absolute_lookup TimeZoneLibC::BreakTime(
     const time_point<seconds>& tp) const {

@@ -106,7 +106,7 @@ const time_zone::Impl& time_zone::effective_impl() const {
 
 namespace detail {
 bool load_time_zone(char_range name, time_zone* tz) {
-  return time_zone::Impl::LoadTimeZone(std::string(name.begin, name.end), tz);
+  return time_zone::Impl::LoadTimeZone(name, tz);
 }
 }
 

@@ -29,6 +29,16 @@ struct char_range {
   char_range(const char_range&) = default;
   char_range& operator=(const char_range&) = default;
 
+  friend bool operator==(char_range lhs, char_range rhs) {
+    if (lhs.begin == rhs.begin && lhs.end == rhs.end) return true;
+    if (lhs.end - lhs.begin != rhs.end - rhs.begin) return false;
+    return memcmp(lhs.begin, rhs.begin, lhs.end - lhs.begin) == 0;
+  }
+
+  friend bool operator!=(char_range lhs, char_range rhs) {
+    return !(lhs == rhs);
+  }
+
   const char* begin;
   const char* end;
 };
