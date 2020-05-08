@@ -39,6 +39,11 @@ struct char_range {
     return !(lhs == rhs);
   }
 
+  bool starts_with(char_range s) {
+    if (end - begin < s.end - s.begin) return false;
+    return memcmp(begin, s.begin, s.end - s.begin) == 0;
+  }
+
   const char* begin;
   const char* end;
 };
