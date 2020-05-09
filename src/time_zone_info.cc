@@ -256,12 +256,10 @@ std::size_t TimeZoneInfo::Header::DataLength(std::size_t time_len) const {
 }
 
 // Check that the TransitionType has the expected offset/is_dst/abbreviation.
-void TimeZoneInfo::CheckTransition(detail::char_range name_range,
+void TimeZoneInfo::CheckTransition(const std::string& name,
                                    const TransitionType& tt,
                                    std::int_fast32_t offset, bool is_dst,
-                                   detail::char_range abbr_range) const {
-  std::string name(name_range.begin, name_range.end);
-  std::string abbr(abbr_range.begin, abbr_range.end);
+                                   const std::string& abbr) const {
   if (tt.utc_offset != offset || tt.is_dst != is_dst ||
       &abbreviations_[tt.abbr_index] != abbr) {
     std::clog << name << ": Transition"
@@ -288,9 +286,8 @@ bool TimeZoneInfo::EquivTransitions(std::uint_fast8_t tt1_index,
 
 // Use the POSIX-TZ-environment-variable-style string to handle times
 // in years after the last transition stored in the zoneinfo data.
-void TimeZoneInfo::ExtendTransitions(detail::char_range name_range,
+void TimeZoneInfo::ExtendTransitions(const std::string& name,
                                      const Header& hdr) {
-  std::string name(name_range.begin, name_range.end);
   extended_ = false;
   bool extending = !future_spec_.empty();
 
@@ -391,8 +388,7 @@ void TimeZoneInfo::ExtendTransitions(detail::char_range name_range,
   assert(tr == &transitions_[0] + transitions_.size());
 }
 
-bool TimeZoneInfo::Load(detail::char_range name_range, ZoneInfoSource* zip) {
-  std::string name(name_range.begin, name_range.end);
+bool TimeZoneInfo::Load(const std::string& name, ZoneInfoSource* zip) {
   // Read and validate the header.
   tzhead tzh;
   if (zip->Read(&tzh, sizeof(tzh)) != sizeof(tzh))
@@ -601,7 +597,7 @@ inline FILE* FOpen(const char* path, const char* mode) {
 // A stdio(3)-backed implementation of ZoneInfoSource.
 class FileZoneInfoSource : public ZoneInfoSource {
  public:
-  static std::unique_ptr<ZoneInfoSource> Open(detail::char_range name);
+  static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
 
   std::size_t Read(void* ptr, std::size_t size) override {
     size = std::min(size, len_);
@@ -631,8 +627,7 @@ class FileZoneInfoSource : public ZoneInfoSource {
 };
 
 std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
-    detail::char_range name_range) {
-  std::string name(name_range.begin, name_range.end);
+    const std::string& name) {
   // Use of the "file:" prefix is intended for testing purposes only.
   const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
 
@@ -671,7 +666,7 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
 
 class AndroidZoneInfoSource : public FileZoneInfoSource {
  public:
-  static std::unique_ptr<ZoneInfoSource> Open(detail::char_range name);
+  static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
   std::string Version() const override { return version_; }
 
  private:
@@ -681,8 +676,7 @@ class AndroidZoneInfoSource : public FileZoneInfoSource {
 };
 
 std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
-    detail::char_range name_range) {
-  std::string name(name_range.begin, name_range.end);
+    const std::string& name) {
   // Use of the "file:" prefix is intended for testing purposes only.
   const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
 
@@ -726,8 +720,7 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
 
 }  // namespace
 
-bool TimeZoneInfo::Load(detail::char_range name_range) {
-  std::string name(name_range.begin, name_range.end);
+bool TimeZoneInfo::Load(const std::string& name) {
   // We can ensure that the loading of UTC or any other fixed-offset
   // zone never fails because the simple, fixed-offset state can be
   // internally generated. Note that this depends on our choice to not
@@ -739,7 +732,7 @@ bool TimeZoneInfo::Load(detail::char_range name_range) {
 
   // Find and use a ZoneInfoSource to load the named zone.
   auto zip = cctz_extension::zone_info_source_factory(
-      name, [](detail::char_range name) -> std::unique_ptr<ZoneInfoSource> {
+      name, [](const std::string& name) -> std::unique_ptr<ZoneInfoSource> {
         if (auto zip = FileZoneInfoSource::Open(name)) return zip;
         if (auto zip = AndroidZoneInfoSource::Open(name)) return zip;
         return nullptr;
