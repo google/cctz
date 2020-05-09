@@ -25,6 +25,8 @@ namespace detail {
 struct char_range {
   char_range(const char* s)
       : begin(s), end(s + strlen(s)) {}
+  char_range(const char* begin, const char* end)
+      : begin(begin), end(end) {}
   char_range(const std::string& s)
       : begin(s.data()), end(s.data() + s.size()) {}
   char_range(const char_range&) = default;

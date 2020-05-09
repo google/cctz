@@ -299,10 +299,8 @@ const std::int_fast64_t kExp10[kDigits10_64 + 1] = {
 // not support the tm_gmtoff and tm_zone extensions to std::tm.
 //
 // Requires that zero() <= fs < seconds(1).
-std::string format(char_range format_range, const time_point<seconds>& tp,
+std::string format(char_range format, const time_point<seconds>& tp,
                    const detail::femtoseconds& fs, const time_zone& tz) {
-  std::string format(format_range.begin, format_range.end);
-
   std::string result;
   result.reserve(format.size());  // A reasonable guess for the result size.
   const time_zone::absolute_lookup al = tz.lookup(tp);
@@ -318,9 +316,9 @@ std::string format(char_range format_range, const time_point<seconds>& tp,
   //   [pending ... cur) : formatting pending, but no special cases
   //   [cur ... format.end()) : unexamined
   // Initially, everything is in the unexamined part.
-  const char* pending = format.c_str();  // NUL terminated
-  const char* cur = pending;
-  const char* end = pending + format.length();
+  const char* pending = format.begin;
+  const char* cur = format.begin;
+  const char* end = format.end;
 
   while (cur != end) {  // while something is unexamined
     // Moves cur to the next percent sign.
@@ -355,7 +353,7 @@ std::string format(char_range format_range, const time_point<seconds>& tp,
     // Simple specifiers that we handle ourselves.
     if (strchr("YmdeHMSzZs%", *cur)) {
       if (cur - 1 != pending) {
-        FormatTM(&result, std::string(pending, cur - 1), tm);
+        FormatTM(&result, char_range(pending, cur - 1), tm);
       }
       switch (*cur) {
         case 'Y':
@@ -410,7 +408,7 @@ std::string format(char_range format_range, const time_point<seconds>& tp,
       if (*(cur + 1) == 'z') {
         // Formats %:z.
         if (cur - 1 != pending) {
-          FormatTM(&result, std::string(pending, cur - 1), tm);
+          FormatTM(&result, char_range(pending, cur - 1), tm);
         }
         bp = FormatOffset(ep, al.offset, ":");
         result.append(bp, static_cast<std::size_t>(ep - bp));
@@ -421,7 +419,7 @@ std::string format(char_range format_range, const time_point<seconds>& tp,
         if (*(cur + 2) == 'z') {
           // Formats %::z.
           if (cur - 1 != pending) {
-            FormatTM(&result, std::string(pending, cur - 1), tm);
+            FormatTM(&result, char_range(pending, cur - 1), tm);
           }
           bp = FormatOffset(ep, al.offset, ":*");
           result.append(bp, static_cast<std::size_t>(ep - bp));
@@ -432,7 +430,7 @@ std::string format(char_range format_range, const time_point<seconds>& tp,
           if (*(cur + 3) == 'z') {
             // Formats %:::z.
             if (cur - 1 != pending) {
-              FormatTM(&result, std::string(pending, cur - 1), tm);
+              FormatTM(&result, char_range(pending, cur - 1), tm);
             }
             bp = FormatOffset(ep, al.offset, ":*:");
             result.append(bp, static_cast<std::size_t>(ep - bp));
@@ -450,7 +448,7 @@ std::string format(char_range format_range, const time_point<seconds>& tp,
     if (*cur == 'z') {
       // Formats %Ez.
       if (cur - 2 != pending) {
-        FormatTM(&result, std::string(pending, cur - 2), tm);
+        FormatTM(&result, char_range(pending, cur - 2), tm);
       }
       bp = FormatOffset(ep, al.offset, ":");
       result.append(bp, static_cast<std::size_t>(ep - bp));
@@ -458,7 +456,7 @@ std::string format(char_range format_range, const time_point<seconds>& tp,
     } else if (*cur == '*' && cur + 1 != end && *(cur + 1) == 'z') {
       // Formats %E*z.
       if (cur - 2 != pending) {
-        FormatTM(&result, std::string(pending, cur - 2), tm);
+        FormatTM(&result, char_range(pending, cur - 2), tm);
       }
       bp = FormatOffset(ep, al.offset, ":*");
       result.append(bp, static_cast<std::size_t>(ep - bp));
@@ -467,7 +465,7 @@ std::string format(char_range format_range, const time_point<seconds>& tp,
                (*(cur + 1) == 'S' || *(cur + 1) == 'f')) {
       // Formats %E*S or %E*F.
       if (cur - 2 != pending) {
-        FormatTM(&result, std::string(pending, cur - 2), tm);
+        FormatTM(&result, char_range(pending, cur - 2), tm);
       }
       char* cp = ep;
       bp = Format64(cp, 15, fs.count());
@@ -486,7 +484,7 @@ std::string format(char_range format_range, const time_point<seconds>& tp,
     } else if (*cur == '4' && cur + 1 != end && *(cur + 1) == 'Y') {
       // Formats %E4Y.
       if (cur - 2 != pending) {
-        FormatTM(&result, std::string(pending, cur - 2), tm);
+        FormatTM(&result, char_range(pending, cur - 2), tm);
       }
       bp = Format64(ep, 4, al.cs.year());
       result.append(bp, static_cast<std::size_t>(ep - bp));
@@ -498,7 +496,7 @@ std::string format(char_range format_range, const time_point<seconds>& tp,
         if (*np == 'S' || *np == 'f') {
           // Formats %E#S or %E#f.
           if (cur - 2 != pending) {
-            FormatTM(&result, std::string(pending, cur - 2), tm);
+            FormatTM(&result, char_range(pending, cur - 2), tm);
           }
           bp = ep;
           if (n > 0) {
@@ -517,7 +515,7 @@ std::string format(char_range format_range, const time_point<seconds>& tp,
 
   // Formats any remaining data.
   if (end != pending) {
-    FormatTM(&result, std::string(pending, end), tm);
+    FormatTM(&result, char_range(pending, end), tm);
   }
 
   return result;
