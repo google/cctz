@@ -15,6 +15,7 @@
 #ifndef CCTZ_CIVIL_STRING_DETAIL_H_
 #define CCTZ_CIVIL_STRING_DETAIL_H_
 
+#include <cctype>
 #include <cstring>
 #include <string>
 
@@ -44,6 +45,14 @@ struct char_range {
     return memcmp(begin, s.begin, s.size()) == 0;
   }
 
+  bool consume_prefix(char_range s) {
+    if (starts_with(s)) {
+      begin += s.size();
+      return true;
+    }
+    return false;
+  }
+
   bool starts_with(char c) const {
     if (begin == end) return false;
     return *begin == c;
@@ -55,6 +64,16 @@ struct char_range {
       return true;
     }
     return false;
+  }
+
+  bool consume_leading_spaces() {
+    bool consumed = false;
+    while (begin != end) {
+      if (!std::isspace(*begin)) return consumed;
+      ++begin;
+      consumed = true;
+    }
+    return consumed;
   }
 
   size_t size() const { return end - begin; }

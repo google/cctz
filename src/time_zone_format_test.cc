@@ -1292,7 +1292,9 @@ TEST(Parse, ExtendedSecondOffset) {
   const time_zone utc = utc_time_zone();
   time_point<cctz::seconds> tp;
 
-  for (auto fmt : {"%Ez", "%E*z", "%:z", "%::z", "%:::z"}) {
+  for (auto fmt : {"%Ez",  "%:z", "%::z", "%:::z"}) {
+    SCOPED_TRACE(fmt);
+
     EXPECT_TRUE(parse(fmt, "+00:00:00", utc, &tp));
     EXPECT_EQ(convert(civil_second(1970, 1, 1, 0, 0, 0), utc), tp);
     EXPECT_TRUE(parse(fmt, "-12:34:56", utc, &tp));
