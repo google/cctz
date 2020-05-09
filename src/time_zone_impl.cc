@@ -45,7 +45,8 @@ time_zone time_zone::Impl::UTC() {
   return time_zone(UTCImpl());
 }
 
-bool time_zone::Impl::LoadTimeZone(const std::string& name, time_zone* tz) {
+bool time_zone::Impl::LoadTimeZone(detail::char_range name_range, time_zone* tz) {
+  std::string name(name_range.begin, name_range.end);
   const time_zone::Impl* const utc_impl = UTCImpl();
 
   // First check for UTC (which is never a key in time_zone_map).
@@ -102,7 +103,7 @@ void time_zone::Impl::ClearTimeZoneMapTestOnly() {
   }
 }
 
-time_zone::Impl::Impl(const std::string& name) : name_(name) {}
+time_zone::Impl::Impl(detail::char_range name) : name_(name.begin, name.end) {}
 
 const time_zone::Impl* time_zone::Impl::UTCImpl() {
   static Impl* utc_impl = [] {

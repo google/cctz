@@ -181,12 +181,13 @@ char* FormatOffset(char* ep, int offset, const char* mode) {
 }
 
 // Formats a std::tm using strftime(3).
-void FormatTM(std::string* out, const std::string& fmt, const std::tm& tm) {
+void FormatTM(std::string* out, char_range fmt_range, const std::tm& tm) {
   // strftime(3) returns the number of characters placed in the output
   // array (which may be 0 characters).  It also returns 0 to indicate
   // an error, like the array wasn't large enough.  To accommodate this,
   // the following code grows the buffer size from 2x the format string
   // length up to 32x.
+  std::string fmt(fmt_range.begin, fmt_range.end);
   for (std::size_t i = 2; i != 32; i *= 2) {
     std::size_t buf_size = fmt.size() * i;
     std::vector<char> buf(buf_size);
@@ -199,54 +200,37 @@ void FormatTM(std::string* out, const std::string& fmt, const std::tm& tm) {
 
 // Used for %E#S/%E#f specifiers and for data values in parse().
 template <typename T>
-const char* ParseInt(const char* dp, int width, T min, T max, T* vp) {
-  if (dp != nullptr) {
-    const T kmin = std::numeric_limits<T>::min();
-    bool erange = false;
-    bool neg = false;
-    T value = 0;
-    if (*dp == '-') {
-      neg = true;
-      if (width <= 0 || --width != 0) {
-        ++dp;
-      } else {
-        dp = nullptr;  // width was 1
-      }
-    }
-    if (const char* const bp = dp) {
-      while (const char* cp = strchr(kDigits, *dp)) {
-        int d = static_cast<int>(cp - kDigits);
-        if (d >= 10) break;
-        if (value < kmin / 10) {
-          erange = true;
-          break;
-        }
-        value *= 10;
-        if (value < kmin + d) {
-          erange = true;
-          break;
-        }
-        value -= d;
-        dp += 1;
-        if (width > 0 && --width == 0) break;
-      }
-      if (dp != bp && !erange && (neg || value != kmin)) {
-        if (!neg || value != 0) {
-          if (!neg) value = -value;  // make positive
-          if (min <= value && value <= max) {
-            *vp = value;
-          } else {
-            dp = nullptr;
-          }
-        } else {
-          dp = nullptr;
-        }
-      } else {
-        dp = nullptr;
-      }
-    }
+const char* ParseInt(char_range s, int width, T min, T max, T* vp) {
+  const T kmin = std::numeric_limits<T>::min();
+  bool neg = false;
+  T value = 0;
+  if (s.consume_prefix('-')) {
+    neg = true;
+    if (width == 1) return nullptr;
+    if (width > 1) --width;
   }
-  return dp;
+  const char* cp = s.begin;
+  while (cp != s.end) {
+    int d = *cp - '0';
+    if (d < 0 || 10 <= d) break;
+    if (value < kmin / 10) return nullptr;
+    value *= 10;
+    if (value < kmin + d) return nullptr;
+    value -= d;
+    ++cp;
+    if (width > 0 && --width == 0) break;
+  }
+  if (cp == s.begin) return nullptr;
+  if (!neg && value == kmin) return nullptr;
+  if (neg && value == 0) return nullptr;
+
+  if (!neg) value = -value;  // make positive
+
+  if (!(min <= value && value <= max)) {
+    return nullptr;
+  }
+  *vp = value;
+  return cp;
 }
 
 // The number of base-10 digits that can be represented by a signed 64-bit
@@ -298,7 +282,7 @@ const std::int_fast64_t kExp10[kDigits10_64 + 1] = {
 // not support the tm_gmtoff and tm_zone extensions to std::tm.
 //
 // Requires that zero() <= fs < seconds(1).
-std::string format(const std::string& format, const time_point<seconds>& tp,
+std::string format(char_range format, const time_point<seconds>& tp,
                    const detail::femtoseconds& fs, const time_zone& tz) {
   std::string result;
   result.reserve(format.size());  // A reasonable guess for the result size.
@@ -315,9 +299,9 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
   //   [pending ... cur) : formatting pending, but no special cases
   //   [cur ... format.end()) : unexamined
   // Initially, everything is in the unexamined part.
-  const char* pending = format.c_str();  // NUL terminated
-  const char* cur = pending;
-  const char* end = pending + format.length();
+  const char* pending = format.begin;
+  const char* cur = format.begin;
+  const char* end = format.end;
 
   while (cur != end) {  // while something is unexamined
     // Moves cur to the next percent sign.
@@ -352,7 +336,7 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
     // Simple specifiers that we handle ourselves.
     if (strchr("YmdeHMSzZs%", *cur)) {
       if (cur - 1 != pending) {
-        FormatTM(&result, std::string(pending, cur - 1), tm);
+        FormatTM(&result, char_range(pending, cur - 1), tm);
       }
       switch (*cur) {
         case 'Y':
@@ -407,7 +391,7 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
       if (*(cur + 1) == 'z') {
         // Formats %:z.
         if (cur - 1 != pending) {
-          FormatTM(&result, std::string(pending, cur - 1), tm);
+          FormatTM(&result, char_range(pending, cur - 1), tm);
         }
         bp = FormatOffset(ep, al.offset, ":");
         result.append(bp, static_cast<std::size_t>(ep - bp));
@@ -418,7 +402,7 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
         if (*(cur + 2) == 'z') {
           // Formats %::z.
           if (cur - 1 != pending) {
-            FormatTM(&result, std::string(pending, cur - 1), tm);
+            FormatTM(&result, char_range(pending, cur - 1), tm);
           }
           bp = FormatOffset(ep, al.offset, ":*");
           result.append(bp, static_cast<std::size_t>(ep - bp));
@@ -429,7 +413,7 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
           if (*(cur + 3) == 'z') {
             // Formats %:::z.
             if (cur - 1 != pending) {
-              FormatTM(&result, std::string(pending, cur - 1), tm);
+              FormatTM(&result, char_range(pending, cur - 1), tm);
             }
             bp = FormatOffset(ep, al.offset, ":*:");
             result.append(bp, static_cast<std::size_t>(ep - bp));
@@ -447,7 +431,7 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
     if (*cur == 'z') {
       // Formats %Ez.
       if (cur - 2 != pending) {
-        FormatTM(&result, std::string(pending, cur - 2), tm);
+        FormatTM(&result, char_range(pending, cur - 2), tm);
       }
       bp = FormatOffset(ep, al.offset, ":");
       result.append(bp, static_cast<std::size_t>(ep - bp));
@@ -455,7 +439,7 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
     } else if (*cur == '*' && cur + 1 != end && *(cur + 1) == 'z') {
       // Formats %E*z.
       if (cur - 2 != pending) {
-        FormatTM(&result, std::string(pending, cur - 2), tm);
+        FormatTM(&result, char_range(pending, cur - 2), tm);
       }
       bp = FormatOffset(ep, al.offset, ":*");
       result.append(bp, static_cast<std::size_t>(ep - bp));
@@ -464,7 +448,7 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
                (*(cur + 1) == 'S' || *(cur + 1) == 'f')) {
       // Formats %E*S or %E*F.
       if (cur - 2 != pending) {
-        FormatTM(&result, std::string(pending, cur - 2), tm);
+        FormatTM(&result, char_range(pending, cur - 2), tm);
       }
       char* cp = ep;
       bp = Format64(cp, 15, fs.count());
@@ -483,7 +467,7 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
     } else if (*cur == '4' && cur + 1 != end && *(cur + 1) == 'Y') {
       // Formats %E4Y.
       if (cur - 2 != pending) {
-        FormatTM(&result, std::string(pending, cur - 2), tm);
+        FormatTM(&result, char_range(pending, cur - 2), tm);
       }
       bp = Format64(ep, 4, al.cs.year());
       result.append(bp, static_cast<std::size_t>(ep - bp));
@@ -491,30 +475,34 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
     } else if (std::isdigit(*cur)) {
       // Possibly found %E#S or %E#f.
       int n = 0;
-      if (const char* np = ParseInt(cur, 0, 0, 1024, &n)) {
-        if (*np == 'S' || *np == 'f') {
-          // Formats %E#S or %E#f.
-          if (cur - 2 != pending) {
-            FormatTM(&result, std::string(pending, cur - 2), tm);
-          }
-          bp = ep;
-          if (n > 0) {
-            if (n > kDigits10_64) n = kDigits10_64;
-            bp = Format64(bp, n, (n > 15) ? fs.count() * kExp10[n - 15]
-                                          : fs.count() / kExp10[15 - n]);
-            if (*np == 'S') *--bp = '.';
-          }
-          if (*np == 'S') bp = Format02d(bp, al.cs.second());
-          result.append(bp, static_cast<std::size_t>(ep - bp));
-          pending = cur = ++np;
+      const char* np = ParseInt(char_range(cur, end), 0, 0, 1024, &n);
+      if (np == nullptr || np == end) {
+        // TODO(kfm): I think this is a bug in the original
+        continue;
+      }
+      if (*np == 'S' || *np == 'f') {
+        // Formats %E#S or %E#f.
+        if (cur - 2 != pending) {
+          FormatTM(&result, char_range(pending, cur - 2), tm);
         }
+        bp = ep;
+        if (n > 0) {
+          if (n > kDigits10_64) n = kDigits10_64;
+          bp = Format64(bp, n,
+                        (n > 15) ? fs.count() * kExp10[n - 15]
+                                 : fs.count() / kExp10[15 - n]);
+          if (*np == 'S') *--bp = '.';
+        }
+        if (*np == 'S') bp = Format02d(bp, al.cs.second());
+        result.append(bp, ep);
+        pending = cur = ++np;
       }
     }
   }
 
   // Formats any remaining data.
   if (end != pending) {
-    FormatTM(&result, std::string(pending, end), tm);
+    FormatTM(&result, char_range(pending, end), tm);
   }
 
   return result;
@@ -522,79 +510,73 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
 
 namespace {
 
-const char* ParseOffset(const char* dp, const char* mode, int* offset) {
-  if (dp != nullptr) {
-    const char first = *dp++;
-    if (first == '+' || first == '-') {
-      char sep = mode[0];
-      int hours = 0;
-      int minutes = 0;
-      int seconds = 0;
-      const char* ap = ParseInt(dp, 2, 0, 23, &hours);
-      if (ap != nullptr && ap - dp == 2) {
-        dp = ap;
-        if (sep != '\0' && *ap == sep) ++ap;
-        const char* bp = ParseInt(ap, 2, 0, 59, &minutes);
-        if (bp != nullptr && bp - ap == 2) {
-          dp = bp;
-          if (sep != '\0' && *bp == sep) ++bp;
-          const char* cp = ParseInt(bp, 2, 0, 59, &seconds);
-          if (cp != nullptr && cp - bp == 2) dp = cp;
-        }
-        *offset = ((hours * 60 + minutes) * 60) + seconds;
-        if (first == '-') *offset = -*offset;
-      } else {
-        dp = nullptr;
-      }
-    } else if (first == 'Z') {  // Zulu
-      *offset = 0;
-    } else {
-      dp = nullptr;
-    }
+const char* ParseOffset(char_range data, const char* mode, int* offset) {
+  if (data.begin == data.end) return nullptr;
+
+  const char first = *data.begin++;
+  if (first == 'Z') {  // Zulu
+    *offset = 0;
+    return data.begin;
   }
-  return dp;
+  if (first != '+' && first != '-') return nullptr;
+
+  char sep = mode[0];
+  int hours = 0;
+  int minutes = 0;
+  int seconds = 0;
+  const char* hours_end = ParseInt(data, 2, 0, 23, &hours);
+  if (hours_end == nullptr) return nullptr;
+  if (hours_end - data.begin != 2) return nullptr;
+
+  if (sep != '\0' && *hours_end == sep) ++hours_end;
+  data.begin = hours_end;
+  const char* minutes_end = ParseInt(data, 2, 0, 59, &minutes);
+
+  if (minutes_end != nullptr && minutes_end - data.begin == 2) {
+    if (sep != '\0' && *minutes_end == sep) ++minutes_end;
+    data.begin = minutes_end;
+
+    const char* seconds_end = ParseInt(data, 2, 0, 59, &seconds);
+    if (seconds_end != nullptr && seconds_end - data.begin == 2)
+      data.begin = seconds_end;
+  }
+
+  *offset = ((hours * 60 + minutes) * 60) + seconds;
+  if (first == '-') *offset = -*offset;
+  return data.begin;
 }
 
-const char* ParseZone(const char* dp, std::string* zone) {
+const char* ParseZone(char_range data, std::string* zone) {
   zone->clear();
-  if (dp != nullptr) {
-    while (*dp != '\0' && !std::isspace(*dp)) zone->push_back(*dp++);
-    if (zone->empty()) dp = nullptr;
+  const char* dp = data.begin;
+  while (dp != data.end) {
+    if (std::isspace(*dp)) break;
+    ++dp;
   }
+  if (dp == data.begin) return nullptr;
+  zone->append(data.begin, dp);
   return dp;
 }
 
-const char* ParseSubSeconds(const char* dp, detail::femtoseconds* subseconds) {
-  if (dp != nullptr) {
-    std::int_fast64_t v = 0;
-    std::int_fast64_t exp = 0;
-    const char* const bp = dp;
-    while (const char* cp = strchr(kDigits, *dp)) {
-      int d = static_cast<int>(cp - kDigits);
-      if (d >= 10) break;
-      if (exp < 15) {
-        exp += 1;
-        v *= 10;
-        v += d;
-      }
-      ++dp;
+const char* ParseSubSeconds(char_range s, detail::femtoseconds* subseconds) {
+  std::int_fast64_t v = 0;
+  std::int_fast64_t exp = 0;
+  const char* cp = s.begin;
+  while (cp != s.end) {
+    int d = *cp - '0';
+    if (d < 0 || 10 <= d) break;
+    if (exp < 15) {
+      exp += 1;
+      v *= 10;
+      v += d;
     }
-    if (dp != bp) {
-      v *= kExp10[15 - exp];
-      *subseconds = detail::femtoseconds(v);
-    } else {
-      dp = nullptr;
-    }
+    ++cp;
   }
-  return dp;
-}
+  if (cp == s.begin) return nullptr;
 
-// Parses a string into a std::tm using strptime(3).
-const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
-  if (dp != nullptr) {
-    dp = strptime(dp, fmt, tm);
-  }
-  return dp;
+  v *= kExp10[15 - exp];
+  *subseconds = detail::femtoseconds(v);
+  return cp;
 }
 
 }  // namespace
@@ -613,14 +595,18 @@ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
 //
 // We also handle the %z specifier to accommodate platforms that do not
 // support the tm_gmtoff extension to std::tm.  %Z is parsed but ignored.
-bool parse(const std::string& format, const std::string& input,
+bool parse(char_range format, char_range input,
            const time_zone& tz, time_point<seconds>* sec,
            detail::femtoseconds* fs, std::string* err) {
-  // The unparsed input.
-  const char* data = input.c_str();  // NUL terminated
+  auto make_err = [err]() {
+    if (err != nullptr) *err = "Failed to parse input";
+    return false;
+  };
+  // To avoid repeated allocations, we keep the scratch buffer around once we
+  // decide that we need to use it.
+  std::string null_terminated_scratch_buffer;
 
-  // Skips leading whitespace.
-  while (std::isspace(*data)) ++data;
+  input.consume_leading_spaces();
 
   const year_t kyearmax = std::numeric_limits<year_t>::max();
   const year_t kyearmin = std::numeric_limits<year_t>::min();
@@ -643,7 +629,6 @@ bool parse(const std::string& format, const std::string& input,
   int offset = 0;  // No offset from passed tz.
   std::string zone = "UTC";
 
-  const char* fmt = format.c_str();  // NUL terminated
   bool twelve_hour = false;
   bool afternoon = false;
 
@@ -651,53 +636,54 @@ bool parse(const std::string& format, const std::string& input,
   std::int_fast64_t percent_s = 0;
 
   // Steps through format, one specifier at a time.
-  while (data != nullptr && *fmt != '\0') {
-    if (std::isspace(*fmt)) {
-      while (std::isspace(*data)) ++data;
-      while (std::isspace(*++fmt)) continue;
+  while (input.begin != input.end && format.begin != format.end) {
+    if (format.consume_leading_spaces()) {
+      input.consume_leading_spaces();
       continue;
     }
 
-    if (*fmt != '%') {
-      if (*data == *fmt) {
-        ++data;
-        ++fmt;
-      } else {
-        data = nullptr;
-      }
+    if (!format.consume_prefix('%')) {
+      if (*format.begin != *input.begin) return make_err();
+
+      ++input.begin;
+      ++format.begin;
       continue;
     }
 
-    const char* percent = fmt;
-    if (*++fmt == '\0') {
-      data = nullptr;
-      continue;
-    }
-    switch (*fmt++) {
+    if (format.begin == format.end) return make_err();
+
+    const char* percent = format.begin - 1;
+    switch (*format.begin++) {
       case 'Y':
         // Symmetrically with FormatTime(), directly handing %Y avoids the
         // tm.tm_year overflow problem.  However, tm.tm_year will still be
         // used by other specifiers like %D.
-        data = ParseInt(data, 0, kyearmin, kyearmax, &year);
-        if (data != nullptr) saw_year = true;
+        input.begin = ParseInt(input, 0, kyearmin, kyearmax, &year);
+        if (input.begin == nullptr) return make_err();
+        saw_year = true;
         continue;
       case 'm':
-        data = ParseInt(data, 2, 1, 12, &tm.tm_mon);
-        if (data != nullptr) tm.tm_mon -= 1;
+        input.begin = ParseInt(input, 2, 1, 12, &tm.tm_mon);
+        if (input.begin == nullptr) return make_err();
+        tm.tm_mon -= 1;
         continue;
       case 'd':
       case 'e':
-        data = ParseInt(data, 2, 1, 31, &tm.tm_mday);
+        input.begin = ParseInt(input, 2, 1, 31, &tm.tm_mday);
+        if (input.begin == nullptr) return make_err();
         continue;
       case 'H':
-        data = ParseInt(data, 2, 0, 23, &tm.tm_hour);
+        input.begin = ParseInt(input, 2, 0, 23, &tm.tm_hour);
+        if (input.begin == nullptr) return make_err();
         twelve_hour = false;
         continue;
       case 'M':
-        data = ParseInt(data, 2, 0, 59, &tm.tm_min);
+        input.begin = ParseInt(input, 2, 0, 59, &tm.tm_min);
+        if (input.begin == nullptr) return make_err();
         continue;
       case 'S':
-        data = ParseInt(data, 2, 0, 60, &tm.tm_sec);
+        input.begin = ParseInt(input, 2, 0, 60, &tm.tm_sec);
+        if (input.begin == nullptr) return make_err();
         continue;
       case 'I':
       case 'l':
@@ -711,113 +697,124 @@ bool parse(const std::string& format, const std::string& input,
         twelve_hour = false;
         break;
       case 'z':
-        data = ParseOffset(data, "", &offset);
-        if (data != nullptr) saw_offset = true;
+        input.begin = ParseOffset(input, "", &offset);
+        if (input.begin == nullptr) return make_err();
+        saw_offset = true;
         continue;
       case 'Z':  // ignored; zone abbreviations are ambiguous
-        data = ParseZone(data, &zone);
+        input.begin = ParseZone(input, &zone);
+        if (input.begin == nullptr) return make_err();
         continue;
       case 's':
-        data = ParseInt(data, 0,
+        input.begin = ParseInt(input, 0,
                         std::numeric_limits<std::int_fast64_t>::min(),
                         std::numeric_limits<std::int_fast64_t>::max(),
                         &percent_s);
-        if (data != nullptr) saw_percent_s = true;
+        if (input.begin == nullptr) return make_err();
+        saw_percent_s = true;
         continue;
       case ':':
-        if (fmt[0] == 'z' ||
-            (fmt[0] == ':' &&
-             (fmt[1] == 'z' || (fmt[1] == ':' && fmt[2] == 'z')))) {
-          data = ParseOffset(data, ":", &offset);
-          if (data != nullptr) saw_offset = true;
-          fmt += (fmt[0] == 'z') ? 1 : (fmt[1] == 'z') ? 2 : 3;
-          continue;
+        if (format.starts_with('z')) {
+          format.begin += 1;
+        } else if (format.starts_with(":z")) {
+          format.begin += 2;
+        } else if (format.starts_with("::z")) {
+          format.begin += 3;
+        } else {
+          break;
         }
-        break;
+        input.begin = ParseOffset(input, ":", &offset);
+        if (input.begin == nullptr) return make_err();
+        saw_offset = true;
+        continue;
       case '%':
-        data = (*data == '%' ? data + 1 : nullptr);
+        if (!input.consume_prefix('%')) return make_err();
         continue;
       case 'E':
-        if (fmt[0] == 'z' || (fmt[0] == '*' && fmt[1] == 'z')) {
-          data = ParseOffset(data, ":", &offset);
-          if (data != nullptr) saw_offset = true;
-          fmt += (fmt[0] == 'z') ? 1 : 2;
+        if (format.consume_prefix('z') || format.consume_prefix("*z")) {
+          input.begin = ParseOffset(input, ":", &offset);
+          if (input.begin == nullptr) return make_err();
+          saw_offset = true;
           continue;
         }
-        if (fmt[0] == '*' && fmt[1] == 'S') {
-          data = ParseInt(data, 2, 0, 60, &tm.tm_sec);
-          if (data != nullptr && *data == '.') {
-            data = ParseSubSeconds(data + 1, &subseconds);
+        if (format.consume_prefix("*S")) {
+          input.begin = ParseInt(input, 2, 0, 60, &tm.tm_sec);
+          if (input.begin == nullptr) return make_err();
+          if (input.consume_prefix('.')) {
+            input.begin = ParseSubSeconds(input, &subseconds);
+            if (input.begin == nullptr) return make_err();
           }
-          fmt += 2;
           continue;
         }
-        if (fmt[0] == '*' && fmt[1] == 'f') {
-          if (data != nullptr && std::isdigit(*data)) {
-            data = ParseSubSeconds(data, &subseconds);
+        if (format.consume_prefix("*f")) {
+          if (std::isdigit(*input.begin)) {
+            input.begin = ParseSubSeconds(input, &subseconds);
+            if (input.begin == nullptr) return make_err();
           }
-          fmt += 2;
           continue;
         }
-        if (fmt[0] == '4' && fmt[1] == 'Y') {
-          const char* bp = data;
-          data = ParseInt(data, 4, year_t{-999}, year_t{9999}, &year);
-          if (data != nullptr) {
-            if (data - bp == 4) {
-              saw_year = true;
-            } else {
-              data = nullptr;  // stopped too soon
-            }
-          }
-          fmt += 2;
+        if (format.consume_prefix("4Y")) {
+          const char* old_pos = input.begin;
+          input.begin = ParseInt(input, 4, year_t{-999}, year_t{9999}, &year);
+          if (input.begin == nullptr) return make_err();
+          if (input.begin - old_pos != 4) return make_err(); // stopped too soon
+          saw_year = true;
           continue;
         }
-        if (std::isdigit(*fmt)) {
+
+        if (std::isdigit(*format.begin)) {
           int n = 0;  // value ignored
-          if (const char* np = ParseInt(fmt, 0, 0, 1024, &n)) {
-            if (*np == 'S') {
-              data = ParseInt(data, 2, 0, 60, &tm.tm_sec);
-              if (data != nullptr && *data == '.') {
-                data = ParseSubSeconds(data + 1, &subseconds);
+          if (const char* np = ParseInt(format.begin, 0, 0, 1024, &n)) {
+            if (np != format.end) {
+              if (*np == 'S') {
+                input.begin = ParseInt(input, 2, 0, 60, &tm.tm_sec);
+                if (input.begin == nullptr) return make_err();
+                if (input.consume_prefix('.')) {
+                  input.begin = ParseSubSeconds(input, &subseconds);
+                  if (input.begin == nullptr) return make_err();
+                }
+                format.begin = ++np;
+                continue;
               }
-              fmt = ++np;
-              continue;
-            }
-            if (*np == 'f') {
-              if (data != nullptr && std::isdigit(*data)) {
-                data = ParseSubSeconds(data, &subseconds);
+              if (*np == 'f') {
+                if (std::isdigit(*input.begin)) {
+                  input.begin = ParseSubSeconds(input, &subseconds);
+                  if (input.begin == nullptr) return make_err();
+                }
+                format.begin = ++np;
+                continue;
               }
-              fmt = ++np;
-              continue;
             }
           }
         }
-        if (*fmt == 'c') twelve_hour = false;  // probably uses %H
-        if (*fmt == 'X') twelve_hour = false;  // probably uses %H
-        if (*fmt != '\0') ++fmt;
+        if (*format.begin == 'c') twelve_hour = false;  // probably uses %H
+        if (*format.begin == 'X') twelve_hour = false;  // probably uses %H
+        if (format.begin != format.end) ++format.begin;
         break;
       case 'O':
-        if (*fmt == 'H') twelve_hour = false;
-        if (*fmt == 'I') twelve_hour = true;
-        if (*fmt != '\0') ++fmt;
+        if (*format.begin == 'H') twelve_hour = false;
+        if (*format.begin == 'I') twelve_hour = true;
+        if (format.begin != format.end) ++format.begin;
         break;
     }
 
     // Parses the current specifier.
-    const char* orig_data = data;
-    std::string spec(percent, static_cast<std::size_t>(fmt - percent));
-    data = ParseTM(data, spec.c_str(), &tm);
+    const char* orig_input_pos = input.begin;
+    std::string spec(percent, format.begin);
+    null_terminated_scratch_buffer.assign(input.begin, input.size());
+    const char* tmp_p = strptime(null_terminated_scratch_buffer.c_str(), spec.c_str(), &tm);
+    if (tmp_p == nullptr) return make_err();
+    input.begin += tmp_p - null_terminated_scratch_buffer.data();
 
     // If we successfully parsed %p we need to remember whether the result
     // was AM or PM so that we can adjust tm_hour before time_zone::lookup().
     // So reparse the input with a known AM hour, and check if it is shifted
     // to a PM hour.
-    if (spec == "%p" && data != nullptr) {
+    if (spec == "%p") {
       std::string test_input = "1";
-      test_input.append(orig_data, static_cast<std::size_t>(data - orig_data));
-      const char* test_data = test_input.c_str();
+      test_input.append(orig_input_pos, input.begin);
       std::tm tmp{};
-      ParseTM(test_data, "%I%p", &tmp);
+      strptime(test_input.c_str(), "%I%p", &tmp);
       afternoon = (tmp.tm_hour == 13);
     }
   }
@@ -827,16 +824,10 @@ bool parse(const std::string& format, const std::string& input,
     tm.tm_hour += 12;
   }
 
-  if (data == nullptr) {
-    if (err != nullptr) *err = "Failed to parse input";
-    return false;
-  }
-
-  // Skip any remaining whitespace.
-  while (std::isspace(*data)) ++data;
+  input.consume_leading_spaces();
 
   // parse() must consume the entire input string.
-  if (*data != '\0') {
+  if (input.begin != input.end) {
     if (err != nullptr) *err = "Illegal trailing data in input string";
     return false;
   }

@@ -36,7 +36,7 @@ namespace cctz {
 // Note: FixedOffsetFromName() fails on syntax errors or when the parsed
 // offset exceeds 24 hours.  FixedOffsetToName() and FixedOffsetToAbbr()
 // both produce "UTC" when the argument offset exceeds 24 hours.
-bool FixedOffsetFromName(const std::string& name, seconds* offset);
+bool FixedOffsetFromName(detail::char_range name, seconds* offset);
 std::string FixedOffsetToName(const seconds& offset);
 std::string FixedOffsetToAbbr(const seconds& offset);
 

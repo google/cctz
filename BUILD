@@ -39,7 +39,10 @@ cc_library(
         "include/cctz/civil_time.h",
     ],
     includes = ["include"],
-    textual_hdrs = ["include/cctz/civil_time_detail.h"],
+    textual_hdrs = [
+        "include/cctz/civil_time_detail.h",
+        "include/cctz/string_detail.h",
+    ],
     visibility = ["//visibility:public"],
 )
 
