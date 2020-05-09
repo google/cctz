@@ -43,9 +43,18 @@ struct char_range {
     if (size() < s.size()) return false;
     return memcmp(begin, s.begin, s.size()) == 0;
   }
+
   bool starts_with(char c) const {
     if (begin == end) return false;
     return *begin == c;
+  }
+
+  bool consume_prefix(char c) {
+    if (starts_with(c)) {
+      ++begin;
+      return true;
+    }
+    return false;
   }
 
   size_t size() const { return end - begin; }

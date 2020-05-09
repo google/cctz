@@ -23,130 +23,140 @@ namespace cctz {
 
 namespace {
 
-const char kDigits[] = "0123456789";
-
-const char* ParseInt(const char* p, int min, int max, int* vp) {
+const char* ParseInt(detail::char_range s, int min, int max, int* vp) {
   int value = 0;
-  const char* op = p;
   const int kMaxInt = std::numeric_limits<int>::max();
-  for (; const char* dp = strchr(kDigits, *p); ++p) {
-    int d = static_cast<int>(dp - kDigits);
-    if (d >= 10) break;  // '\0'
+  const char* p = s.begin;
+  while (p != s.end) {
+    int d = *p - '0';
+    if (d < 0 || 10 <= d) break;
     if (value > kMaxInt / 10) return nullptr;
     value *= 10;
     if (value > kMaxInt - d) return nullptr;
     value += d;
+    ++p;
   }
-  if (p == op || value < min || value > max) return nullptr;
+  if (p == s.begin || value < min || max < value) return nullptr;
   *vp = value;
   return p;
 }
 
 // abbr = <.*?> | [^-+,\d]{3,}
-const char* ParseAbbr(const char* p, std::string* abbr) {
-  const char* op = p;
+const char* ParseAbbr(detail::char_range s, std::string* abbr) {
+  const char* p = s.begin;
   if (*p == '<') {  // special zoneinfo <...> form
     while (*++p != '>') {
-      if (*p == '\0') return nullptr;
+      if (p == s.end) return nullptr;
     }
-    abbr->assign(op + 1, static_cast<std::size_t>(p - op) - 1);
-    return ++p;
+    size_t size = p - s.begin;
+    abbr->assign(s.begin + 1, size - 1);
+    return p + 1;
   }
-  while (*p != '\0') {
-    if (strchr("-+,", *p)) break;
-    if (strchr(kDigits, *p)) break;
+  while (p != s.end) {
+    if (strchr("-+,0123456789", *p)) break;
     ++p;
   }
-  if (p - op < 3) return nullptr;
-  abbr->assign(op, static_cast<std::size_t>(p - op));
+  size_t size = p - s.begin;
+  if (size < 3) return nullptr;
+  abbr->assign(s.begin, size);
   return p;
 }
 
 // offset = [+|-]hh[:mm[:ss]] (aggregated into single seconds value)
-const char* ParseOffset(const char* p, int min_hour, int max_hour, int sign,
+const char* ParseOffset(detail::char_range s, int min_hour, int max_hour, int sign,
                         std::int_fast32_t* offset) {
-  if (p == nullptr) return nullptr;
-  if (*p == '+' || *p == '-') {
-    if (*p++ == '-') sign = -sign;
+  if (s.consume_prefix('-')) {
+    sign = -sign;
+  } else {
+    s.consume_prefix('+');
   }
+
   int hours = 0;
   int minutes = 0;
   int seconds = 0;
 
-  p = ParseInt(p, min_hour, max_hour, &hours);
-  if (p == nullptr) return nullptr;
-  if (*p == ':') {
-    p = ParseInt(p + 1, 0, 59, &minutes);
-    if (p == nullptr) return nullptr;
-    if (*p == ':') {
-      p = ParseInt(p + 1, 0, 59, &seconds);
-      if (p == nullptr) return nullptr;
+  s.begin = ParseInt(s, min_hour, max_hour, &hours);
+  if (s.begin == nullptr) return nullptr;
+  if (s.consume_prefix(':')) {
+    s.begin = ParseInt(s, 0, 59, &minutes);
+    if (s.begin == nullptr) return nullptr;
+    if (s.consume_prefix(':')) {
+      s.begin = ParseInt(s, 0, 59, &seconds);
+      if (s.begin == nullptr) return nullptr;
     }
   }
   *offset = sign * ((((hours * 60) + minutes) * 60) + seconds);
-  return p;
+  return s.begin;
 }
 
 // datetime = ( Jn | n | Mm.w.d ) [ / offset ]
-const char* ParseDateTime(const char* p, PosixTransition* res) {
-  if (p != nullptr && *p == ',') {
-    if (*++p == 'M') {
+const char* ParseDateTime(detail::char_range s, PosixTransition* res) {
+  if (s.consume_prefix(',')) {
+    if (s.consume_prefix('M')) {
       int month = 0;
-      if ((p = ParseInt(p + 1, 1, 12, &month)) != nullptr && *p == '.') {
+      s.begin = ParseInt(s, 1, 12, &month);
+      if (s.begin == nullptr) return nullptr;
+      if (s.consume_prefix('.')) {
         int week = 0;
-        if ((p = ParseInt(p + 1, 1, 5, &week)) != nullptr && *p == '.') {
+        s.begin = ParseInt(s, 1, 5, &week);
+        if (s.begin == nullptr) return nullptr;
+        if (s.consume_prefix('.')) {
           int weekday = 0;
-          if ((p = ParseInt(p + 1, 0, 6, &weekday)) != nullptr) {
-            res->date.fmt = PosixTransition::M;
-            res->date.m.month = static_cast<std::int_fast8_t>(month);
-            res->date.m.week = static_cast<std::int_fast8_t>(week);
-            res->date.m.weekday = static_cast<std::int_fast8_t>(weekday);
-          }
+          s.begin =  ParseInt(s, 0, 6, &weekday);
+          if (s.begin == nullptr) return nullptr;
+          res->date.fmt = PosixTransition::M;
+          res->date.m.month = static_cast<std::int_fast8_t>(month);
+          res->date.m.week = static_cast<std::int_fast8_t>(week);
+          res->date.m.weekday = static_cast<std::int_fast8_t>(weekday);
         }
       }
-    } else if (*p == 'J') {
+    } else if (s.consume_prefix('J')) {
       int day = 0;
-      if ((p = ParseInt(p + 1, 1, 365, &day)) != nullptr) {
-        res->date.fmt = PosixTransition::J;
-        res->date.j.day = static_cast<std::int_fast16_t>(day);
-      }
+      s.begin = ParseInt(s, 1, 365, &day);
+      if (s.begin == nullptr) return nullptr;
+      res->date.fmt = PosixTransition::J;
+      res->date.j.day = static_cast<std::int_fast16_t>(day);
     } else {
       int day = 0;
-      if ((p = ParseInt(p, 0, 365, &day)) != nullptr) {
-        res->date.fmt = PosixTransition::N;
-        res->date.n.day = static_cast<std::int_fast16_t>(day);
-      }
+      s.begin =  ParseInt(s, 0, 365, &day);
+      if (s.begin == nullptr) return nullptr;
+      res->date.fmt = PosixTransition::N;
+      res->date.n.day = static_cast<std::int_fast16_t>(day);
     }
   }
-  if (p != nullptr) {
-    res->time.offset = 2 * 60 * 60;  // default offset is 02:00:00
-    if (*p == '/') p = ParseOffset(p + 1, -167, 167, 1, &res->time.offset);
+  res->time.offset = 2 * 60 * 60;  // default offset is 02:00:00
+  if (s.consume_prefix('/')) {
+    s.begin = ParseOffset(s, -167, 167, 1, &res->time.offset);
+    if (s.begin == nullptr) return nullptr;
   }
-  return p;
+  return s.begin;
 }
 
 }  // namespace
 
 // spec = std offset [ dst [ offset ] , datetime , datetime ]
-bool ParsePosixSpec(detail::char_range spec_range, PosixTimeZone* res) {
-  std::string spec(spec_range.begin, spec_range.end);
-  const char* p = spec.c_str();
-  if (*p == ':') return false;
+bool ParsePosixSpec(detail::char_range spec, PosixTimeZone* res) {
+  if (spec.starts_with(':')) return false;
 
-  p = ParseAbbr(p, &res->std_abbr);
-  p = ParseOffset(p, 0, 24, -1, &res->std_offset);
-  if (p == nullptr) return false;
-  if (*p == '\0') return true;
+  spec.begin = ParseAbbr(spec, &res->std_abbr);
+  if (spec.begin == nullptr) return false;
 
-  p = ParseAbbr(p, &res->dst_abbr);
-  if (p == nullptr) return false;
+  spec.begin = ParseOffset(spec, 0, 24, -1, &res->std_offset);
+  if (spec.begin == nullptr) return false;
+  if (spec.begin == spec.end) return true;
+
+  spec.begin = ParseAbbr(spec, &res->dst_abbr);
+  if (spec.begin == nullptr) return false;
   res->dst_offset = res->std_offset + (60 * 60);  // default
-  if (*p != ',') p = ParseOffset(p, 0, 24, -1, &res->dst_offset);
+  if (!spec.starts_with(',')) {
+    spec.begin = ParseOffset(spec.begin, 0, 24, -1, &res->dst_offset);
+    if (spec.begin == nullptr) return false;
+  }
 
-  p = ParseDateTime(p, &res->dst_start);
-  p = ParseDateTime(p, &res->dst_end);
-
-  return p != nullptr && *p == '\0';
+  spec.begin = ParseDateTime(spec, &res->dst_start);
+  if (spec.begin == nullptr) return false;
+  spec.begin = ParseDateTime(spec, &res->dst_end);
+  return spec.begin == spec.end;
 }
 
 }  // namespace cctz
