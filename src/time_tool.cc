@@ -37,9 +37,9 @@ using seconds = cctz::seconds;
 // parse() specifiers for command-line time arguments.
 const char* const kFormats[] = {
   "%Y   %m   %d   %H   %M   %E*S",
-  "%Y - %m - %d T %H : %M : %E*S",
+  "%Y - %m - %d %ET %H : %M : %E*S",
   "%Y - %m - %d %H : %M : %E*S",
-  "%Y - %m - %d T %H : %M",
+  "%Y - %m - %d %ET %H : %M",
   "%Y - %m - %d %H : %M",
   "%Y - %m - %d",
   "%a %b %d %H : %M : %E*S %Z %Y",
