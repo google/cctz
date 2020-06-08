@@ -131,7 +131,8 @@ std::tm ToTM(const time_zone::absolute_lookup& al) {
 // Returns the week of the year [0:53] given a civil day and the day on
 // which weeks are defined to start.
 int ToWeek(const civil_day& cd, weekday week_start) {
-  return static_cast<int>((cd - prev_weekday(civil_year(cd), week_start)) / 7);
+  const civil_day d(cd.year() % 400, cd.month(), cd.day());
+  return static_cast<int>((d - prev_weekday(civil_year(d), week_start)) / 7);
 }
 
 const char kDigits[] = "0123456789";
@@ -650,9 +651,10 @@ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
 // Sets year, tm_mon and tm_mday given the year, week_num, and tm_wday,
 // and the day on which weeks are defined to start.
 void FromWeek(int week_num, weekday week_start, year_t* year, std::tm* tm) {
-  civil_day cd = prev_weekday(civil_year(*year), week_start);  // week 0
+  const civil_year y(*year % 400);
+  civil_day cd = prev_weekday(y, week_start);  // week 0
   cd = next_weekday(cd - 1, FromTmWday(tm->tm_wday)) + (week_num * 7);
-  *year = cd.year();
+  *year += cd.year() - y.year();
   tm->tm_mon = cd.month() - 1;
   tm->tm_mday = cd.day();
 }
