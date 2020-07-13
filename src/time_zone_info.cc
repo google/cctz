@@ -232,7 +232,7 @@ bool TimeZoneInfo::ResetToBuiltinUTC(const seconds& offset) {
 
   default_transition_type_ = 0;
   abbreviations_ = FixedOffsetToAbbr(offset);
-  abbreviations_.append(1, '\0');  // add NUL
+  abbreviations_.append(1, '\0');
   future_spec_.clear();  // never needed for a fixed-offset zone
   extended_ = false;
 
@@ -282,9 +282,41 @@ bool TimeZoneInfo::EquivTransitions(std::uint_fast8_t tt1_index,
   if (tt1_index == tt2_index) return true;
   const TransitionType& tt1(transition_types_[tt1_index]);
   const TransitionType& tt2(transition_types_[tt2_index]);
-  if (tt1.is_dst != tt2.is_dst) return false;
   if (tt1.utc_offset != tt2.utc_offset) return false;
+  if (tt1.is_dst != tt2.is_dst) return false;
   if (tt1.abbr_index != tt2.abbr_index) return false;
+  return true;
+}
+
+// Find/make a transition type with these attributes.
+bool TimeZoneInfo::GetTransitionType(std::int_fast32_t utc_offset, bool is_dst,
+                                     const std::string& abbr,
+                                     std::uint_fast8_t* index) {
+  std::size_t type_index = 0;
+  std::size_t abbr_index = abbreviations_.size();
+  for (; type_index != transition_types_.size(); ++type_index) {
+    const TransitionType& tt(transition_types_[type_index]);
+    const char* tt_abbr = &abbreviations_[tt.abbr_index];
+    if (tt_abbr == abbr) abbr_index = tt.abbr_index;
+    if (tt.utc_offset == utc_offset && tt.is_dst == is_dst) {
+      if (abbr_index == tt.abbr_index) break;  // reuse
+    }
+  }
+  if (type_index > 255 || abbr_index > 255) {
+    // No index space (8 bits) available for a new type or abbreviation.
+    return false;
+  }
+  if (type_index == transition_types_.size()) {
+    TransitionType& tt(*transition_types_.emplace(transition_types_.end()));
+    tt.utc_offset = static_cast<std::int_least32_t>(utc_offset);
+    tt.is_dst = is_dst;
+    if (abbr_index == abbreviations_.size()) {
+      abbreviations_.append(abbr);
+      abbreviations_.append(1, '\0');
+    }
+    tt.abbr_index = static_cast<std::uint_least8_t>(abbr_index);
+  }
+  *index = static_cast<std::uint_least8_t>(type_index);
   return true;
 }
 
@@ -297,28 +329,21 @@ bool TimeZoneInfo::ExtendTransitions() {
   PosixTimeZone posix;
   if (!ParsePosixSpec(future_spec_, &posix)) return false;
 
-  // Find transition types for the future specification.
-  std::uint_fast8_t std_ti = default_transition_type_;
-  std::uint_fast8_t dst_ti = default_transition_type_;
-  for (std::uint_fast8_t i = 0; i != transition_types_.size(); ++i) {
-    const TransitionType& tt(transition_types_[i]);
-    const char* abbr = &abbreviations_[tt.abbr_index];
-    if (tt.is_dst) {
-      if (tt.utc_offset == posix.dst_offset && abbr == posix.dst_abbr) {
-        dst_ti = i;
-      }
-    } else {
-      if (tt.utc_offset == posix.std_offset && abbr == posix.std_abbr) {
-        std_ti = i;
-      }
-    }
-  }
+  // Find transition type for the future std specification.
+  std::uint_fast8_t std_ti;
+  if (!GetTransitionType(posix.std_offset, false, posix.std_abbr, &std_ti))
+    return false;
 
   if (posix.dst_abbr.empty()) {  // std only
     // The future specification should match the last transition, and
     // that means that handling the future will fall out naturally.
     return EquivTransitions(transitions_.back().type_index, std_ti);
   }
+
+  // Find transition type for the future dst specification.
+  std::uint_fast8_t dst_ti;
+  if (!GetTransitionType(posix.dst_offset, true, posix.dst_abbr, &dst_ti))
+    return false;
 
   // Extend the transitions for an additional 400 years using the
   // future specification. Years beyond those can be handled by
@@ -406,7 +431,7 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
   const char* bp = tbuf.data();
 
   // Decode and validate the transitions.
-  transitions_.reserve(hdr.timecnt + 2);  // We might add a couple.
+  transitions_.reserve(hdr.timecnt + 2);
   transitions_.resize(hdr.timecnt);
   for (std::size_t i = 0; i != hdr.timecnt; ++i) {
     transitions_[i].unix_time = (time_len == 4) ? Decode32(bp) : Decode64(bp);
@@ -427,6 +452,7 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
   }
 
   // Decode and validate the transition types.
+  transition_types_.reserve(hdr.typecnt + 2);
   transition_types_.resize(hdr.typecnt);
   for (std::size_t i = 0; i != hdr.typecnt; ++i) {
     transition_types_[i].utc_offset =
@@ -457,6 +483,7 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
   }
 
   // Copy all the abbreviations.
+  abbreviations_.reserve(hdr.charcnt + 10);
   abbreviations_.assign(bp, hdr.charcnt);
   bp += hdr.charcnt;
 
@@ -545,9 +572,8 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
       // Check that the transitions are ordered by civil time. Essentially
       // this means that an offset change cannot cross another such change.
       // No one does this in practice, and we depend on it in MakeTime().
-      if (!Transition::ByCivilTime()(transitions_[i - 1], tr)) {
+      if (!Transition::ByCivilTime()(transitions_[i - 1], tr))
         return false;  // out of order
-      }
     }
   }
 
