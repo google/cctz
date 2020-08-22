@@ -139,6 +139,11 @@ time_zone local_time_zone() {
   }
   CFRelease(tz_default);
 #endif
+#if defined(__EMSCRIPTEN__)
+  // Emscripten doesn't necessarily link in filesystem support nor have zoneinfo
+  // files available, so use libc (which does work) instead.
+  zone = "libc:localtime";
+#endif
 
   // Allow ${TZ} to override to default zone.
   char* tz_env = nullptr;
