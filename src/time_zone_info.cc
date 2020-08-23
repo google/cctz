@@ -44,6 +44,10 @@
 #include <sstream>
 #include <string>
 
+#if HAVE_CCTZ_CONFIG_H
+#include "cctz/config.h"
+#endif
+
 #include "cctz/civil_time.h"
 #include "time_zone_fixed.h"
 #include "time_zone_posix.h"
@@ -642,16 +646,20 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
   std::string path;
   if (pos == name.size() || name[pos] != '/') {
     const char* tzdir = "/usr/share/zoneinfo";
-    char* tzdir_env = nullptr;
+#if defined(CCTZ_TZDIR)
+    const char *tzdir_env = CCTZ_TZDIR;
+#else
+    char *tzdir_env = nullptr;
 #if defined(_MSC_VER)
     _dupenv_s(&tzdir_env, nullptr, "TZDIR");
 #else
     tzdir_env = std::getenv("TZDIR");
 #endif
+#endif
     if (tzdir_env && *tzdir_env) tzdir = tzdir_env;
     path += tzdir;
     path += '/';
-#if defined(_MSC_VER)
+#if !defined(CCTZ_TZDIR) && defined(_MSC_VER)
     free(tzdir_env);
 #endif
   }

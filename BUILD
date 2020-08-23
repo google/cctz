@@ -30,6 +30,48 @@ config_setting(
     ],
 )
 
+config_setting(
+    name = "windows",
+    constraint_values = [
+        "@bazel_tools//platforms:windows",
+    ],
+)
+
+filegroup(
+    name = "zoneinfo",
+    srcs = glob(["testdata/zoneinfo/**/*"]),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "localtime",
+    srcs = [
+        "testdata/zoneinfo/localtime",
+    ],
+)
+
+genrule(
+    name = "config",
+    srcs = [
+        ":localtime",
+    ],
+    outs = [
+        "include/cctz/config.h",
+    ],
+    cmd = """set -e
+LOCALTIME_LOCATION=$(location :localtime)
+cat <<EOF > $@
+#ifndef CCTZ_CONFIG_H_
+#define CCTZ_CONFIG_H_ 1
+
+#if USE_CCTZ_TZDIR
+#define CCTZ_TZDIR "$$(dirname $$LOCALTIME_LOCATION)"
+#endif
+
+#endif  // CCTZ_CONFIG_H_
+EOF""",
+)
+
 ### libraries
 
 cc_library(
@@ -64,9 +106,24 @@ cc_library(
         "src/zone_info_source.cc",
     ],
     hdrs = [
+        "include/cctz/config.h",
         "include/cctz/time_zone.h",
         "include/cctz/zone_info_source.h",
     ],
+    data = [
+        ":config",
+        ":zoneinfo",
+    ],
+    defines = select({
+        "//:windows": [
+            "HAVE_CCTZ_CONFIG_H=1",
+            "USE_CCTZ_TZDIR=1",
+        ],
+        "//conditions:default": [
+            "HAVE_CCTZ_CONFIG_H=1",
+            "USE_CCTZ_TZDIR=0",
+        ],
+    }),
     includes = ["include"],
     linkopts = select({
         "//:osx": [
@@ -82,6 +139,17 @@ cc_library(
 )
 
 ### tests
+
+test_suite(
+    name = "all_tests",
+    tests = [
+        ":cctz_benchmark",
+        ":civil_time_test",
+        ":time_zone_format_test",
+        ":time_zone_lookup_test",
+    ],
+    visibility = ["//visibility:public"],
+)
 
 cc_test(
     name = "civil_time_test",
