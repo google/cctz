@@ -17,6 +17,13 @@ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 licenses(["notice"])  # Apache License
 
 config_setting(
+    name = "freebsd",
+    constraint_values = [
+        "@bazel_tools//platforms:freebsd",
+    ],
+)
+
+config_setting(
     name = "osx",
     constraint_values = [
         "@bazel_tools//platforms:osx",
@@ -74,6 +81,9 @@ cc_library(
         ],
         "//:ios": [
             "-framework Foundation",
+        ],
+        "//:freebsd": [
+            "-lm",
         ],
         "//conditions:default": [],
     }),
