@@ -14,7 +14,7 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 
-licenses(["notice"])  # Apache License
+licenses(["notice"])
 
 config_setting(
     name = "freebsd",
