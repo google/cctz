@@ -24,6 +24,13 @@ config_setting(
 )
 
 config_setting(
+    name = "openbsd",
+    constraint_values = [
+        "@bazel_tools//platforms:openbsd",
+    ],
+)
+
+config_setting(
     name = "osx",
     constraint_values = [
         "@bazel_tools//platforms:osx",
@@ -49,6 +56,10 @@ cc_library(
     textual_hdrs = ["include/cctz/civil_time_detail.h"],
     visibility = ["//visibility:public"],
 )
+
+BSD_LINKOPTS = [
+    "-lm",
+]
 
 cc_library(
     name = "time_zone",
@@ -82,9 +93,8 @@ cc_library(
         "//:ios": [
             "-framework Foundation",
         ],
-        "//:freebsd": [
-            "-lm",
-        ],
+        "//:freebsd": BSD_LINKOPTS,
+        "//:openbsd": BSD_LINKOPTS,
         "//conditions:default": [],
     }),
     visibility = ["//visibility:public"],
