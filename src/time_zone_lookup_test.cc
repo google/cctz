@@ -12,8 +12,6 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#include "cctz/time_zone.h"
-
 #include <chrono>
 #include <cstddef>
 #include <cstdlib>
@@ -24,6 +22,7 @@
 #include <vector>
 
 #include "cctz/civil_time.h"
+#include "cctz/time_zone.h"
 #include "gtest/gtest.h"
 
 namespace chrono = std::chrono;
@@ -32,6 +31,7 @@ namespace cctz {
 
 namespace {
 
+// clang-format off
 // A list of known time-zone names.
 const char* const kTimeZoneNames[] = {
   "Africa/Abidjan",
@@ -629,6 +629,7 @@ const char* const kTimeZoneNames[] = {
   "Zulu",
   nullptr
 };
+// clang-format on
 
 // Helper to return a loaded time zone by value (UTC on error).
 time_zone LoadZone(const std::string& name) {
@@ -803,8 +804,8 @@ TEST(TimeZone, Equality) {
 TEST(StdChronoTimePoint, TimeTAlignment) {
   // Ensures that the Unix epoch and the system clock epoch are an integral
   // number of seconds apart. This simplifies conversions to/from time_t.
-  auto diff = chrono::system_clock::time_point() -
-              chrono::system_clock::from_time_t(0);
+  auto diff =
+      chrono::system_clock::time_point() - chrono::system_clock::from_time_t(0);
   EXPECT_EQ(chrono::system_clock::time_point::duration::zero(),
             diff % chrono::seconds(1));
 }
@@ -813,20 +814,20 @@ TEST(BreakTime, TimePointResolution) {
   const time_zone utc = utc_time_zone();
   const auto t0 = chrono::system_clock::from_time_t(0);
 
-  ExpectTime(chrono::time_point_cast<chrono::nanoseconds>(t0), utc,
-             1970, 1, 1, 0, 0, 0, 0, false, "UTC");
-  ExpectTime(chrono::time_point_cast<chrono::microseconds>(t0), utc,
-             1970, 1, 1, 0, 0, 0, 0, false, "UTC");
-  ExpectTime(chrono::time_point_cast<chrono::milliseconds>(t0), utc,
-             1970, 1, 1, 0, 0, 0, 0, false, "UTC");
-  ExpectTime(chrono::time_point_cast<chrono::seconds>(t0), utc,
-             1970, 1, 1, 0, 0, 0, 0, false, "UTC");
-  ExpectTime(chrono::time_point_cast<cctz::seconds>(t0), utc,
-             1970, 1, 1, 0, 0, 0, 0, false, "UTC");
-  ExpectTime(chrono::time_point_cast<chrono::minutes>(t0), utc,
-             1970, 1, 1, 0, 0, 0, 0, false, "UTC");
-  ExpectTime(chrono::time_point_cast<chrono::hours>(t0), utc,
-             1970, 1, 1, 0, 0, 0, 0, false, "UTC");
+  ExpectTime(chrono::time_point_cast<chrono::nanoseconds>(t0), utc, 1970, 1, 1,
+             0, 0, 0, 0, false, "UTC");
+  ExpectTime(chrono::time_point_cast<chrono::microseconds>(t0), utc, 1970, 1, 1,
+             0, 0, 0, 0, false, "UTC");
+  ExpectTime(chrono::time_point_cast<chrono::milliseconds>(t0), utc, 1970, 1, 1,
+             0, 0, 0, 0, false, "UTC");
+  ExpectTime(chrono::time_point_cast<chrono::seconds>(t0), utc, 1970, 1, 1, 0,
+             0, 0, 0, false, "UTC");
+  ExpectTime(chrono::time_point_cast<cctz::seconds>(t0), utc, 1970, 1, 1, 0, 0,
+             0, 0, false, "UTC");
+  ExpectTime(chrono::time_point_cast<chrono::minutes>(t0), utc, 1970, 1, 1, 0,
+             0, 0, 0, false, "UTC");
+  ExpectTime(chrono::time_point_cast<chrono::hours>(t0), utc, 1970, 1, 1, 0, 0,
+             0, 0, false, "UTC");
 }
 
 TEST(BreakTime, LocalTimeInUTC) {
@@ -908,9 +909,8 @@ TEST(MakeTime, TimePointResolution) {
       chrono::time_point_cast<chrono::minutes>(
           convert(civil_second(2015, 1, 2, 3, 4, 5), utc));
   EXPECT_EQ("04:00", format("%M:%E*S", tp_m, utc));
-  const time_point<chrono::hours> tp_h =
-      chrono::time_point_cast<chrono::hours>(
-          convert(civil_second(2015, 1, 2, 3, 4, 5), utc));
+  const time_point<chrono::hours> tp_h = chrono::time_point_cast<chrono::hours>(
+      convert(civil_second(2015, 1, 2, 3, 4, 5), utc));
   EXPECT_EQ("00:00", format("%M:%E*S", tp_h, utc));
 }
 
@@ -929,7 +929,7 @@ TEST(MakeTime, Normalization) {
 
 // NOTE: Run this with -ftrapv to detect overflow problems.
 TEST(MakeTime, SysSecondsLimits) {
-  const char RFC3339[] =  "%Y-%m-%d%ET%H:%M:%S%Ez";
+  const char RFC3339[] = "%Y-%m-%d%ET%H:%M:%S%Ez";
   const time_zone utc = utc_time_zone();
   const time_zone east = fixed_time_zone(chrono::hours(14));
   const time_zone west = fixed_time_zone(-chrono::hours(14));

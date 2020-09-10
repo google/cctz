@@ -23,6 +23,7 @@
 
 #if defined(__APPLE__)
 #include <CoreFoundation/CFTimeZone.h>
+
 #include <vector>
 #endif
 
@@ -64,9 +65,7 @@ int __system_property_get(const char* name, char* value) {
 }  // namespace
 #endif
 
-std::string time_zone::name() const {
-  return effective_impl().Name();
-}
+std::string time_zone::name() const { return effective_impl().Name(); }
 
 time_zone::absolute_lookup time_zone::lookup(
     const time_point<seconds>& tp) const {
@@ -87,9 +86,7 @@ bool time_zone::prev_transition(const time_point<seconds>& tp,
   return effective_impl().PrevTransition(tp, trans);
 }
 
-std::string time_zone::version() const {
-  return effective_impl().Version();
-}
+std::string time_zone::version() const { return effective_impl().Version(); }
 
 std::string time_zone::description() const {
   return effective_impl().Description();

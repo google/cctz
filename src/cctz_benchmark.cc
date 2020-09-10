@@ -101,6 +101,7 @@ const char RFC3339_sec[] = "%Y-%m-%d%ET%H:%M:%S%Ez";
 const char RFC1123_full[] = "%a, %d %b %Y %H:%M:%S %z";
 const char RFC1123_no_wday[] = "%d %b %Y %H:%M:%S %z";
 
+// clang-format off
 // A list of known time-zone names.
 // TODO: Refactor with src/time_zone_lookup_test.cc.
 const char* const kTimeZoneNames[] = {
@@ -699,6 +700,7 @@ const char* const kTimeZoneNames[] = {
   "Zulu",
   nullptr
 };
+// clang-format on
 
 std::vector<std::string> AllTimeZoneNames() {
   std::vector<std::string> names;

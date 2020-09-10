@@ -31,8 +31,7 @@ class TimeZoneLibC : public TimeZoneIf {
   // TimeZoneIf implementations.
   time_zone::absolute_lookup BreakTime(
       const time_point<seconds>& tp) const override;
-  time_zone::civil_lookup MakeTime(
-      const civil_second& cs) const override;
+  time_zone::civil_lookup MakeTime(const civil_second& cs) const override;
   bool NextTransition(const time_point<seconds>& tp,
                       time_zone::civil_transition* trans) const override;
   bool PrevTransition(const time_point<seconds>& tp,

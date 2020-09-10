@@ -1022,6 +1022,7 @@ TEST(CivilTime, LeapYears) {
       int day;
     } leap_day;  // The date of the day after Feb 28.
   } kLeapYearTable[]{
+      // clang-format off
       {1900, 365, {3, 1}},
       {1999, 365, {3, 1}},
       {2000, 366, {2, 29}},  // leap year
@@ -1035,6 +1036,7 @@ TEST(CivilTime, LeapYears) {
       {2008, 366, {2, 29}},  // leap year
       {2009, 365, {3, 1}},
       {2100, 365, {3, 1}},
+      // clang-format on
   };
 
   for (const auto& e : kLeapYearTable) {

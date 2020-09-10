@@ -51,8 +51,8 @@ using second_t = std::int_fast8_t;  // [0:59]
 
 // Normalized civil-time fields: Y-M-D HH:MM:SS.
 struct fields {
-  CONSTEXPR_M fields(year_t year, month_t month, day_t day,
-                     hour_t hour, minute_t minute, second_t second)
+  CONSTEXPR_M fields(year_t year, month_t month, day_t day, hour_t hour,
+                     minute_t minute, second_t second)
       : y(year), m(month), d(day), hh(hour), mm(minute), ss(second) {}
   std::int_least64_t y;
   std::int_least8_t m;
@@ -99,8 +99,8 @@ CONSTEXPR_F int days_per_month(year_t y, month_t m) noexcept {
   return k_days_per_month[m] + (m == 2 && is_leap_year(y));
 }
 
-CONSTEXPR_F fields n_day(year_t y, month_t m, diff_t d, diff_t cd,
-                         hour_t hh, minute_t mm, second_t ss) noexcept {
+CONSTEXPR_F fields n_day(year_t y, month_t m, diff_t d, diff_t cd, hour_t hh,
+                         minute_t mm, second_t ss) noexcept {
   year_t ey = y % 400;
   const year_t oey = ey;
   ey += (cd / 146097) * 400;
@@ -160,8 +160,8 @@ CONSTEXPR_F fields n_day(year_t y, month_t m, diff_t d, diff_t cd,
   }
   return fields(y + (ey - oey), m, static_cast<day_t>(d), hh, mm, ss);
 }
-CONSTEXPR_F fields n_mon(year_t y, diff_t m, diff_t d, diff_t cd,
-                         hour_t hh, minute_t mm, second_t ss) noexcept {
+CONSTEXPR_F fields n_mon(year_t y, diff_t m, diff_t d, diff_t cd, hour_t hh,
+                         minute_t mm, second_t ss) noexcept {
   if (m != 12) {
     y += m / 12;
     m %= 12;
@@ -172,8 +172,8 @@ CONSTEXPR_F fields n_mon(year_t y, diff_t m, diff_t d, diff_t cd,
   }
   return n_day(y, static_cast<month_t>(m), d, cd, hh, mm, ss);
 }
-CONSTEXPR_F fields n_hour(year_t y, diff_t m, diff_t d, diff_t cd,
-                          diff_t hh, minute_t mm, second_t ss) noexcept {
+CONSTEXPR_F fields n_hour(year_t y, diff_t m, diff_t d, diff_t cd, diff_t hh,
+                          minute_t mm, second_t ss) noexcept {
   cd += hh / 24;
   hh %= 24;
   if (hh < 0) {
@@ -272,8 +272,8 @@ CONSTEXPR_F diff_t ymd_ord(year_t y, month_t m, day_t d) noexcept {
 // yet the difference between two such extreme values may actually be
 // small, so we take a little care to avoid overflow when possible by
 // exploiting the 146097-day cycle.
-CONSTEXPR_F diff_t day_difference(year_t y1, month_t m1, day_t d1,
-                                  year_t y2, month_t m2, day_t d2) noexcept {
+CONSTEXPR_F diff_t day_difference(year_t y1, month_t m1, day_t d1, year_t y2,
+                                  month_t m2, day_t d2) noexcept {
   const diff_t a_c4_off = y1 % 400;
   const diff_t b_c4_off = y2 % 400;
   diff_t c4_diff = (y1 - a_c4_off) - (y2 - b_c4_off);
@@ -313,9 +313,7 @@ CONSTEXPR_F diff_t difference(second_tag, fields f1, fields f2) noexcept {
 ////////////////////////////////////////////////////////////////////////
 
 // Aligns the (normalized) fields struct to the indicated field.
-CONSTEXPR_F fields align(second_tag, fields f) noexcept {
-  return f;
-}
+CONSTEXPR_F fields align(second_tag, fields f) noexcept { return f; }
 CONSTEXPR_F fields align(minute_tag, fields f) noexcept {
   return fields{f.y, f.m, f.d, f.hh, f.mm, 0};
 }
@@ -363,11 +361,11 @@ class civil_time {
       : civil_time(ct.f_) {}
 
   // Factories for the maximum/minimum representable civil_time.
-  static CONSTEXPR_F civil_time (max)() {
+  static CONSTEXPR_F civil_time(max)() {
     const auto max_year = (std::numeric_limits<std::int_least64_t>::max)();
     return civil_time(max_year, 12, 31, 23, 59, 59);
   }
-  static CONSTEXPR_F civil_time (min)() {
+  static CONSTEXPR_F civil_time(min)() {
     const auto min_year = (std::numeric_limits<std::int_least64_t>::min)();
     return civil_time(min_year, 1, 1, 0, 0, 0);
   }
@@ -393,17 +391,13 @@ class civil_time {
     }
     return *this;
   }
-  CONSTEXPR_M civil_time& operator++() noexcept {
-    return *this += 1;
-  }
+  CONSTEXPR_M civil_time& operator++() noexcept { return *this += 1; }
   CONSTEXPR_M civil_time operator++(int) noexcept {
     const civil_time a = *this;
     ++*this;
     return a;
   }
-  CONSTEXPR_M civil_time& operator--() noexcept {
-    return *this -= 1;
-  }
+  CONSTEXPR_M civil_time& operator--() noexcept { return *this -= 1; }
   CONSTEXPR_M civil_time operator--(int) noexcept {
     const civil_time a = *this;
     --*this;
@@ -455,6 +449,7 @@ using civil_second = civil_time<second_tag>;
 template <typename T1, typename T2>
 CONSTEXPR_F bool operator<(const civil_time<T1>& lhs,
                            const civil_time<T2>& rhs) noexcept {
+  // clang-format off
   return (lhs.year() < rhs.year() ||
           (lhs.year() == rhs.year() &&
            (lhs.month() < rhs.month() ||
@@ -466,6 +461,7 @@ CONSTEXPR_F bool operator<(const civil_time<T1>& lhs,
                  (lhs.minute() < rhs.minute() ||
                   (lhs.minute() == rhs.minute() &&
                    (lhs.second() < rhs.second())))))))))));
+  // clang-format on
 }
 template <typename T1, typename T2>
 CONSTEXPR_F bool operator<=(const civil_time<T1>& lhs,

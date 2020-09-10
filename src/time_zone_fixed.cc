@@ -57,11 +57,9 @@ bool FixedOffsetFromName(const std::string& name, seconds* offset) {
   const char* const ep = kFixedZonePrefix + prefix_len;
   if (name.size() != prefix_len + 9)  // <prefix>+99:99:99
     return false;
-  if (!std::equal(kFixedZonePrefix, ep, name.begin()))
-    return false;
+  if (!std::equal(kFixedZonePrefix, ep, name.begin())) return false;
   const char* np = name.data() + prefix_len;
-  if (np[0] != '+' && np[0] != '-')
-    return false;
+  if (np[0] != '+' && np[0] != '-') return false;
   if (np[3] != ':' || np[6] != ':')  // see note below about large offsets
     return false;
 

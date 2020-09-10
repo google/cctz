@@ -12,14 +12,13 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#include "cctz/time_zone.h"
-
 #include <chrono>
 #include <iomanip>
 #include <sstream>
 #include <string>
 
 #include "cctz/civil_time.h"
+#include "cctz/time_zone.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -46,10 +45,10 @@ namespace {
   } while (0)
 
 const char RFC3339_full[] = "%Y-%m-%d%ET%H:%M:%E*S%Ez";
-const char RFC3339_sec[] =  "%Y-%m-%d%ET%H:%M:%S%Ez";
+const char RFC3339_sec[] = "%Y-%m-%d%ET%H:%M:%S%Ez";
 
 const char RFC1123_full[] = "%a, %d %b %Y %H:%M:%S %z";
-const char RFC1123_no_wday[] =  "%d %b %Y %H:%M:%S %z";
+const char RFC1123_no_wday[] = "%d %b %Y %H:%M:%S %z";
 
 // A helper that tests the given format specifier by itself, and with leading
 // and trailing characters.  For example: TestFormatSpecifier(tp, "%a", "Thu").
@@ -108,12 +107,10 @@ TEST(Format, TimePointExtendedResolution) {
   EXPECT_EQ(
       "12:34:56.012345678901234",
       detail::format(kFmt, tp, detail::femtoseconds(12345678901234), utc));
-  EXPECT_EQ(
-      "12:34:56.001234567890123",
-      detail::format(kFmt, tp, detail::femtoseconds(1234567890123), utc));
-  EXPECT_EQ(
-      "12:34:56.000123456789012",
-      detail::format(kFmt, tp, detail::femtoseconds(123456789012), utc));
+  EXPECT_EQ("12:34:56.001234567890123",
+            detail::format(kFmt, tp, detail::femtoseconds(1234567890123), utc));
+  EXPECT_EQ("12:34:56.000123456789012",
+            detail::format(kFmt, tp, detail::femtoseconds(123456789012), utc));
 
   EXPECT_EQ("12:34:56.000000000000123",
             detail::format(kFmt, tp, detail::femtoseconds(123), utc));
@@ -1515,8 +1512,8 @@ TEST(Parse, MaxRange) {
       parse(RFC3339_sec, "-292277022657-01-27T08:29:51+01:00", utc, &tp));
 
   // tests max/min civil-second overflow
-  EXPECT_FALSE(parse(RFC3339_sec, "9223372036854775807-12-31T23:59:59-00:01",
-                     utc, &tp));
+  EXPECT_FALSE(
+      parse(RFC3339_sec, "9223372036854775807-12-31T23:59:59-00:01", utc, &tp));
   EXPECT_FALSE(parse(RFC3339_sec, "-9223372036854775808-01-01T00:00:00+00:01",
                      utc, &tp));
 
