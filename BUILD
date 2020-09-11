@@ -83,6 +83,11 @@ cc_library(
 
 ### tests
 
+test_suite(
+    name = "all_tests",
+    visibility = ["//visibility:public"],
+)
+
 cc_test(
     name = "civil_time_test",
     size = "small",
