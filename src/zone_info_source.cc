@@ -47,8 +47,8 @@ std::unique_ptr<cctz::ZoneInfoSource> DefaultFactory(
 // Windows linker cannot handle that. Nor does the MinGW compiler know how to
 // pass "#pragma comment(linker, ...)" to the Windows linker.
 #if (__has_attribute(weak) || defined(__GNUC__)) && !defined(__MINGW32__)
-ZoneInfoSourceFactory zone_info_source_factory __attribute__((weak)) =
-    DefaultFactory;
+ZoneInfoSourceFactory zone_info_source_factory
+    __attribute__((weak)) = DefaultFactory;
 #elif defined(_MSC_VER) && !defined(__MINGW32__) && !defined(_LIBCPP_VERSION)
 extern ZoneInfoSourceFactory zone_info_source_factory;
 extern ZoneInfoSourceFactory default_factory;

@@ -28,7 +28,7 @@ class ZoneInfoSource {
   virtual ~ZoneInfoSource();
 
   virtual std::size_t Read(void* ptr, std::size_t size) = 0;  // like fread()
-  virtual int Skip(std::size_t offset) = 0;                   // like fseek()
+  virtual int Skip(std::size_t offset) = 0;  // like fseek()
 
   // Until the zoneinfo data supports versioning information, we provide
   // a way for a ZoneInfoSource to indicate it out-of-band.  The default
@@ -43,10 +43,11 @@ namespace cctz_extension {
 // A function-pointer type for a factory that returns a ZoneInfoSource
 // given the name of a time zone and a fallback factory.  Returns null
 // when the data for the named zone cannot be found.
-using ZoneInfoSourceFactory = std::unique_ptr<cctz::ZoneInfoSource> (*)(
-    const std::string&,
-    const std::function<
-        std::unique_ptr<cctz::ZoneInfoSource>(const std::string&)>&);
+using ZoneInfoSourceFactory =
+    std::unique_ptr<cctz::ZoneInfoSource> (*)(
+        const std::string&,
+        const std::function<std::unique_ptr<cctz::ZoneInfoSource>(
+            const std::string&)>&);
 
 // The user can control the mapping of zone names to zoneinfo data by
 // providing a definition for cctz_extension::zone_info_source_factory.

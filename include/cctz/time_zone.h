@@ -37,8 +37,8 @@ using sys_seconds = seconds;  // Deprecated.  Use cctz::seconds instead.
 
 namespace detail {
 template <typename D>
-inline std::pair<time_point<seconds>, D> split_seconds(
-    const time_point<D>& tp) {
+inline std::pair<time_point<seconds>, D>
+split_seconds(const time_point<D>& tp) {
   auto sec = std::chrono::time_point_cast<seconds>(tp);
   auto sub = tp - sec;
   if (sub.count() < 0) {
@@ -47,8 +47,8 @@ inline std::pair<time_point<seconds>, D> split_seconds(
   }
   return {sec, std::chrono::duration_cast<D>(sub)};
 }
-inline std::pair<time_point<seconds>, seconds> split_seconds(
-    const time_point<seconds>& tp) {
+inline std::pair<time_point<seconds>, seconds>
+split_seconds(const time_point<seconds>& tp) {
   return {tp, seconds::zero()};
 }
 }  // namespace detail
@@ -192,13 +192,15 @@ class time_zone {
   bool next_transition(const time_point<seconds>& tp,
                        civil_transition* trans) const;
   template <typename D>
-  bool next_transition(const time_point<D>& tp, civil_transition* trans) const {
+  bool next_transition(const time_point<D>& tp,
+                       civil_transition* trans) const {
     return next_transition(detail::split_seconds(tp).first, trans);
   }
   bool prev_transition(const time_point<seconds>& tp,
                        civil_transition* trans) const;
   template <typename D>
-  bool prev_transition(const time_point<D>& tp, civil_transition* trans) const {
+  bool prev_transition(const time_point<D>& tp,
+                       civil_transition* trans) const {
     return prev_transition(detail::split_seconds(tp).first, trans);
   }
 
@@ -216,7 +218,9 @@ class time_zone {
   friend bool operator==(time_zone lhs, time_zone rhs) {
     return &lhs.effective_impl() == &rhs.effective_impl();
   }
-  friend bool operator!=(time_zone lhs, time_zone rhs) { return !(lhs == rhs); }
+  friend bool operator!=(time_zone lhs, time_zone rhs) {
+    return !(lhs == rhs);
+  }
 
   class Impl;
 
