@@ -34,9 +34,9 @@ template <typename D>
 using time_point = cctz::time_point<D>;
 using seconds = cctz::seconds;
 
-// clang-format off
 // parse() specifiers for command-line time arguments.
 const char* const kFormats[] = {
+    // clang-format off
   "%Y   %m   %d   %H   %M   %E*S",
   "%Y - %m - %d %ET %H : %M : %E*S",
   "%Y - %m - %d %H : %M : %E*S",
@@ -57,8 +57,8 @@ const char* const kFormats[] = {
   "%e %b %Y",
   "%b %e %Y",
   nullptr
+    // clang-format on
 };
-// clang-format on
 
 bool ParseTimeSpec(const std::string& args, time_point<seconds>* when) {
   const cctz::time_zone ignored{};
@@ -87,13 +87,20 @@ bool ParseCivilSpec(const std::string& args, cctz::civil_second* when) {
 
 const char* WeekDayName(cctz::weekday wd) {
   switch (wd) {
-    case cctz::weekday::monday: return "Mon";
-    case cctz::weekday::tuesday: return "Tue";
-    case cctz::weekday::wednesday: return "Wed";
-    case cctz::weekday::thursday: return "Thu";
-    case cctz::weekday::friday: return "Fri";
-    case cctz::weekday::saturday: return "Sat";
-    case cctz::weekday::sunday: return "Sun";
+    case cctz::weekday::monday:
+      return "Mon";
+    case cctz::weekday::tuesday:
+      return "Tue";
+    case cctz::weekday::wednesday:
+      return "Wed";
+    case cctz::weekday::thursday:
+      return "Thu";
+    case cctz::weekday::friday:
+      return "Fri";
+    case cctz::weekday::saturday:
+      return "Sat";
+    case cctz::weekday::sunday:
+      return "Sun";
   }
   return "XXX";
 }
@@ -104,9 +111,8 @@ std::string FormatTimeInZone(const std::string& fmt, time_point<seconds> when,
   oss << std::setw(36) << std::left << cctz::format(fmt, when, zone);
   cctz::time_zone::absolute_lookup al = zone.lookup(when);
   oss << " [wd=" << WeekDayName(cctz::get_weekday(al.cs))
-      << " yd=" << std::setw(3) << std::setfill('0')
-      << std::right << cctz::get_yearday(al.cs)
-      << " dst=" << (al.is_dst ? 'T' : 'F')
+      << " yd=" << std::setw(3) << std::setfill('0') << std::right
+      << cctz::get_yearday(al.cs) << " dst=" << (al.is_dst ? 'T' : 'F')
       << " off=" << std::showpos << al.offset << std::noshowpos << "]";
   return oss.str();
 }
@@ -121,7 +127,7 @@ void ZoneInfo(const std::string& label, cctz::time_zone tz) {
 void InstantInfo(const std::string& label, const std::string& fmt,
                  time_point<seconds> when, cctz::time_zone zone) {
   const cctz::time_zone loc = cctz::local_time_zone();  // might == zone
-  const cctz::time_zone utc = cctz::utc_time_zone();  // might == zone
+  const cctz::time_zone utc = cctz::utc_time_zone();    // might == zone
   const std::string time_label = "time_t";
   const std::string utc_label = "UTC";
   const std::string loc_label = "local";
@@ -185,8 +191,7 @@ void ZoneDump(bool zdump, const std::string& fmt, cctz::time_zone zone,
               cctz::year_t lo_year, cctz::year_t hi_year) {
   const cctz::time_zone utc = cctz::utc_time_zone();
   if (zdump) {
-    std::cout << zone.name() << "  "
-              << std::numeric_limits<seconds::rep>::min()
+    std::cout << zone.name() << "  " << std::numeric_limits<seconds::rep>::min()
               << " = NULL\n";
     std::cout << zone.name() << "  "
               << std::numeric_limits<seconds::rep>::min() + 86400
@@ -227,8 +232,7 @@ void ZoneDump(bool zdump, const std::string& fmt, cctz::time_zone zone,
     std::cout << zone.name() << "  "
               << std::numeric_limits<seconds::rep>::max() - 86400
               << " = NULL\n";
-    std::cout << zone.name() << "  "
-              << std::numeric_limits<seconds::rep>::max()
+    std::cout << zone.name() << "  " << std::numeric_limits<seconds::rep>::max()
               << " = NULL\n";
   }
 }
@@ -267,8 +271,8 @@ std::vector<std::string> StrSplit(char sep, const std::string& s) {
 }
 
 // Parses [<lo-year>,]<hi-year>.
-bool ParseYearRange(bool zdump, const std::string& args,
-                    cctz::year_t* lo_year, cctz::year_t* hi_year) {
+bool ParseYearRange(bool zdump, const std::string& args, cctz::year_t* lo_year,
+                    cctz::year_t* hi_year) {
   std::size_t pos = 0;
   std::size_t digit_pos = pos + (args[pos] == '-' ? 1 : 0);
   if (digit_pos >= args.size() || !std::isdigit(args[digit_pos])) {
@@ -358,7 +362,7 @@ int main(int argc, const char** argv) {
           break;
         }
       }
-    } else {  // long options
+    } else {                 // long options
       if (*++opt == '\0') {  // "--"
         ++optind;
         break;
