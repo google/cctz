@@ -37,26 +37,26 @@ using seconds = cctz::seconds;
 // parse() specifiers for command-line time arguments.
 const char* const kFormats[] = {
     // clang-format off
-  "%Y   %m   %d   %H   %M   %E*S",
-  "%Y - %m - %d %ET %H : %M : %E*S",
-  "%Y - %m - %d %H : %M : %E*S",
-  "%Y - %m - %d %ET %H : %M",
-  "%Y - %m - %d %H : %M",
-  "%Y - %m - %d",
-  "%a %b %d %H : %M : %E*S %Z %Y",
-  "%a %e %b %Y %H : %M : %E*S",
-  "%a %b %e %Y %H : %M : %E*S",
-  "%e %b %Y %H : %M : %E*S",
-  "%b %e %Y %H : %M : %E*S",
-  "%a %e %b %Y %H : %M",
-  "%a %b %e %Y %H : %M",
-  "%e %b %Y %H : %M",
-  "%b %e %Y %H : %M",
-  "%a %e %b %Y",
-  "%a %b %e %Y",
-  "%e %b %Y",
-  "%b %e %Y",
-  nullptr
+    "%Y   %m   %d   %H   %M   %E*S",
+    "%Y - %m - %d %ET %H : %M : %E*S",
+    "%Y - %m - %d %H : %M : %E*S",
+    "%Y - %m - %d %ET %H : %M",
+    "%Y - %m - %d %H : %M",
+    "%Y - %m - %d",
+    "%a %b %d %H : %M : %E*S %Z %Y",
+    "%a %e %b %Y %H : %M : %E*S",
+    "%a %b %e %Y %H : %M : %E*S",
+    "%e %b %Y %H : %M : %E*S",
+    "%b %e %Y %H : %M : %E*S",
+    "%a %e %b %Y %H : %M",
+    "%a %b %e %Y %H : %M",
+    "%e %b %Y %H : %M",
+    "%b %e %Y %H : %M",
+    "%a %e %b %Y",
+    "%a %b %e %Y",
+    "%e %b %Y",
+    "%b %e %Y",
+    nullptr
     // clang-format on
 };
 
@@ -87,20 +87,15 @@ bool ParseCivilSpec(const std::string& args, cctz::civil_second* when) {
 
 const char* WeekDayName(cctz::weekday wd) {
   switch (wd) {
-    case cctz::weekday::monday:
-      return "Mon";
-    case cctz::weekday::tuesday:
-      return "Tue";
-    case cctz::weekday::wednesday:
-      return "Wed";
-    case cctz::weekday::thursday:
-      return "Thu";
-    case cctz::weekday::friday:
-      return "Fri";
-    case cctz::weekday::saturday:
-      return "Sat";
-    case cctz::weekday::sunday:
-      return "Sun";
+    // clang-format off
+    case cctz::weekday::monday: return "Mon";
+    case cctz::weekday::tuesday: return "Tue";
+    case cctz::weekday::wednesday: return "Wed";
+    case cctz::weekday::thursday: return "Thu";
+    case cctz::weekday::friday: return "Fri";
+    case cctz::weekday::saturday: return "Sat";
+    case cctz::weekday::sunday: return "Sun";
+    // clang-format off
   }
   return "XXX";
 }
