@@ -382,16 +382,10 @@ class civil_time {
 
   // Assigning arithmetic.
   CONSTEXPR_M civil_time& operator+=(diff_t n) noexcept {
-    f_ = step(T{}, f_, n);
-    return *this;
+    return *this = *this + n;
   }
   CONSTEXPR_M civil_time& operator-=(diff_t n) noexcept {
-    if (n != (std::numeric_limits<diff_t>::min)()) {
-      f_ = step(T{}, f_, -n);
-    } else {
-      f_ = step(T{}, step(T{}, f_, -(n + 1)), 1);
-    }
-    return *this;
+    return *this = *this - n;
   }
   CONSTEXPR_M civil_time& operator++() noexcept {
     return *this += 1;
@@ -412,13 +406,17 @@ class civil_time {
 
   // Binary arithmetic operators.
   friend CONSTEXPR_F civil_time operator+(civil_time a, diff_t n) noexcept {
-    return a += n;
+    return civil_time(step(T{}, a.f_, n));
   }
   friend CONSTEXPR_F civil_time operator+(diff_t n, civil_time a) noexcept {
-    return a += n;
+    return a + n;
   }
   friend CONSTEXPR_F civil_time operator-(civil_time a, diff_t n) noexcept {
-    return a -= n;
+    if (n != (std::numeric_limits<diff_t>::min)()) {
+      return civil_time(step(T{}, a.f_, -n));
+    } else {
+      return civil_time(step(T{}, step(T{}, a.f_, -(n + 1)), 1));
+    }
   }
   friend CONSTEXPR_F diff_t operator-(civil_time lhs, civil_time rhs) noexcept {
     return difference(T{}, lhs.f_, rhs.f_);
