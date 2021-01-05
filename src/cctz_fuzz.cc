@@ -41,7 +41,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                 fuzzed_data.ConsumeIntegral<std::uint64_t>(),
                 fuzzed_data.ConsumeIntegral<std::uint64_t>()), tz);
         std::string format = fuzzed_data.ConsumeRandomLengthString();
-        cctz::format(format, when, tz);
+        std::string formatted = cctz::format(format, when, tz);
+        cctz::parse(format, formatted, tz, &tp);
     }
 
     return 0;
