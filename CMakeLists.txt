@@ -46,6 +46,16 @@ if (BUILD_TESTING)
   )
 endif()
 
+if (BUILD_FUZZ)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_compile_options(-fsanitize=fuzzer-no-link)
+    add_link_options(-fsanitize=fuzzer-no-link)
+  else()
+    message( SEND_ERROR "You must use clang++ for compiling fuzzers" )
+  endif()
+endif()
+
+
 # Starting from CMake >= 3.1, if a specific standard is required,
 # it can be set from the command line with:
 #     cmake -DCMAKE_CXX_STANDARD=[11|14|17]
@@ -102,6 +112,13 @@ set_target_properties(cctz PROPERTIES
   )
 target_link_libraries(cctz PUBLIC $<$<PLATFORM_ID:Darwin>:${CoreFoundation}>)  
 add_library(cctz::cctz ALIAS cctz)
+
+if (BUILD_FUZZ)
+  add_executable(cctz_fuzz src/cctz_fuzz.cc)
+  cctz_target_set_cxx_standard(cctz_fuzz)
+  target_link_libraries(cctz_fuzz cctz::cctz)
+  target_link_libraries(cctz_fuzz -fsanitize=fuzzer)
+endif()
 
 if (BUILD_TOOLS)
   add_executable(time_tool src/time_tool.cc)
