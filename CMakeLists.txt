@@ -51,7 +51,7 @@ if (BUILD_FUZZ)
     add_compile_options(-fsanitize=fuzzer-no-link)
     add_link_options(-fsanitize=fuzzer-no-link)
   else()
-    message( SEND_ERROR "You must use clang++ for compiling fuzzers" )
+    message(SEND_ERROR "You must use clang++ for compiling fuzzers")
   endif()
 endif()
 
