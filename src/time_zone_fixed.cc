@@ -48,9 +48,11 @@ int Parse02d(const char* p) {
 }  // namespace
 
 bool FixedOffsetFromName(const std::string& name, seconds* offset) {
-  if (name.compare(0, std::string::npos, "UTC", 3) == 0) {
-    *offset = seconds::zero();
-    return true;
+  if (name.rfind("UTC", 0, 3) == 0) {
+    if (name.size() == 3 || (name.size() == 4 && name[3] == '0')) {
+      *offset = seconds::zero();  // "UTC" or "UTC0"
+      return true;
+    }
   }
 
   const std::size_t prefix_len = sizeof(kFixedZonePrefix) - 1;
