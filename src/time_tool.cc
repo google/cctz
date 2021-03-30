@@ -249,14 +249,18 @@ bool LooksLikeNegOffset(const char* s) {
 
 std::vector<std::string> StrSplit(char sep, const std::string& s) {
   std::vector<std::string> v;
-  std::string::size_type pos = 0;
-  for (;;) {
-    std::string::size_type spos = s.find(sep, pos);
-    if (spos == std::string::npos) break;
-    v.push_back(s.substr(pos, spos - pos));
-    pos = spos + 1;
+  // An empty string value corresponds to an empty vector, not a vector
+  // with a single, empty string.
+  if (!s.empty()) {
+    std::string::size_type pos = 0;
+    for (;;) {
+      std::string::size_type spos = s.find(sep, pos);
+      if (spos == std::string::npos) break;
+      v.push_back(s.substr(pos, spos - pos));
+      pos = spos + 1;
+    }
+    v.push_back(s.substr(pos));
   }
-  v.push_back(s.substr(pos));
   return v;
 }
 
@@ -309,7 +313,7 @@ int main(int argc, const char** argv) {
   }
 
   // Determine the time zone and other options.
-  std::string zones;  // empty means localtime
+  std::string zones = "localtime";
   std::string fmt = "%Y-%m-%d %H:%M:%S %E*z (%Z)";
   bool zone_dump = (prog == "zone_dump");
   bool zdump = false;  // Use zdump(8) format.
@@ -428,7 +432,7 @@ int main(int argc, const char** argv) {
   for (const std::string& tz : StrSplit(',', zones)) {
     std::cout << leader;
     cctz::time_zone zone;
-    if (tz.empty()) {
+    if (tz == "localtime") {
       zone = cctz::local_time_zone();
     } else if (!cctz::load_time_zone(tz, &zone)) {
       std::cerr << tz << ": Unrecognized time zone\n";
