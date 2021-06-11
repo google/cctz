@@ -148,7 +148,6 @@ time_zone local_time_zone() {
   CFRelease(tz_default);
 #endif
 #if defined(__Fuchsia__)
-  // Note: Declared outside of unnamed scope to avoid early destruction.
   std::string primary_tz;
   {
     const zx::duration kTimeout = zx::msec(500);
@@ -156,8 +155,10 @@ time_zone local_time_zone() {
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
     std::unique_ptr<sys::ComponentContext> context =
         sys::ComponentContext::Create();
-    fuchsia::intl::PropertyProviderPtr intl_provider =
-        context->svc()->Connect<fuchsia::intl::PropertyProvider>();
+    // Note: We can't use the synchronous FIDL API here because it doesn't
+    // allow timeouts; if the FIDL call failed, local_time_zone() would never
+    // return.
+    auto intl_provider = context->svc()->Connect<fuchsia::intl::PropertyProvider>();
     intl_provider->GetProfile(
         [&loop, &primary_tz](fuchsia::intl::Profile profile) {
           if (!profile.time_zones().empty()) {

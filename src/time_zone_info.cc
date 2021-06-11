@@ -39,15 +39,11 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <functional>
 #include <memory>
 #include <sstream>
 #include <string>
-#include <utility>
-
-#if defined(__Fuchsia__)
-#include <fstream>
-#endif
 
 #include "cctz/civil_time.h"
 #include "time_zone_fixed.h"
@@ -56,6 +52,12 @@
 namespace cctz {
 
 namespace {
+
+#if defined(__Fuchsia__)
+const bool kIsFuchsia = true;
+#else
+const bool kIsFuchsia = false;
+#endif
 
 inline bool IsLeap(year_t year) {
   return (year % 4) == 0 && ((year % 100) != 0 || (year % 400) == 0);
@@ -606,6 +608,22 @@ inline FILE* FOpen(const char* path, const char* mode) {
 #endif
 }
 
+// Returns the size (in bytes) of the given file.
+std::size_t FSize(FILE* fp) {
+  if (fp == nullptr) {
+    return 0;
+  }
+  std::size_t length = 0;
+  if (fseek(fp, 0, SEEK_END) == 0) {
+    long offset = ftell(fp);
+    if (offset >= 0) {
+      length = static_cast<std::size_t>(offset);
+    }
+    rewind(fp);
+  }
+  return length;
+}
+
 // A stdio(3)-backed implementation of ZoneInfoSource.
 class FileZoneInfoSource : public ZoneInfoSource {
  public:
@@ -632,11 +650,6 @@ class FileZoneInfoSource : public ZoneInfoSource {
   explicit FileZoneInfoSource(
       FILE* fp, std::size_t len = std::numeric_limits<std::size_t>::max())
       : fp_(fp, fclose), len_(len) {}
-
-  // Returns a file pointer and the size of the file in bytes. If the file
-  // cannot be opened, returns a null file pointer and a size of 0.
-  static std::pair<FILE*, std::size_t> OpenZoneInfoFile(
-      const std::string& path);
 
  private:
   std::unique_ptr<FILE, int(*)(FILE*)> fp_;
@@ -668,27 +681,10 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
   path.append(name, pos, std::string::npos);
 
   // Open the zoneinfo file.
-  auto fp_and_len = FileZoneInfoSource::OpenZoneInfoFile(path);
-  if (fp_and_len.first == nullptr) {
-    return nullptr;
-  }
-  return std::unique_ptr<ZoneInfoSource>(
-      new FileZoneInfoSource(fp_and_len.first, fp_and_len.second));
-}
-
-std::pair<FILE*, std::size_t> FileZoneInfoSource::OpenZoneInfoFile(
-    const std::string& path) {
   FILE* fp = FOpen(path.c_str(), "rb");
-  if (fp == nullptr) return std::make_pair(nullptr, 0);
-  std::size_t length = 0;
-  if (fseek(fp, 0, SEEK_END) == 0) {
-    long offset = ftell(fp);
-    if (offset >= 0) {
-      length = static_cast<std::size_t>(offset);
-    }
-    rewind(fp);
-  }
-  return std::make_pair(fp, length);
+  if (fp == nullptr) return nullptr;
+  std::size_t length = FSize(fp);
+  return std::unique_ptr<ZoneInfoSource>(new FileZoneInfoSource(fp, length));
 }
 
 class AndroidZoneInfoSource : public FileZoneInfoSource {
@@ -745,8 +741,7 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
   return nullptr;
 }
 
-#if defined(__Fuchsia__)
-// An info source for using cctz inside Fuchsia components. This attempts to
+// A zoneinfo source for use inside Fuchsia components. This attempts to
 // read zoneinfo files from one of several known paths in a component's
 // incoming namespace. [Config data][1] is preferred, but package-specific
 // resources are also supported.
@@ -766,13 +761,15 @@ class FuchsiaZoneInfoSource : public FileZoneInfoSource {
   std::string version_;
 };
 
-// Reads the contents of the file as ASCII. Returns an empty string on error.
-std::string ReadFileAsString(const std::string& path) {
+// Reads the first line of the file into a string. Returns an empty string on
+// error.
+std::string ReadFirstLine(const std::string& path) {
+  std::string line;
   std::ifstream input_stream(path);
-  if (!input_stream.good()) return "";
-  std::string contents((std::istreambuf_iterator<char>(input_stream)),
-                       std::istreambuf_iterator<char>());
-  return contents;
+  if (input_stream.good()) {
+    std::getline(input_stream, line);
+  }
+  return line;
 }
 
 std::unique_ptr<ZoneInfoSource> FuchsiaZoneInfoSource::Open(
@@ -793,34 +790,36 @@ std::unique_ptr<ZoneInfoSource> FuchsiaZoneInfoSource::Open(
 
   // Use of the "file:" prefix is intended for testing purposes only.
   const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
-  const bool is_test_path = (pos != name.size() && name[pos] == '/');
+  const bool is_absolute_path = (pos != name.size() && name[pos] == '/');
   const auto path_prefixes =
-      is_test_path ? kEmptyPathPrefixes : kTzdataPathPrefixes;
+      is_absolute_path ? kEmptyPathPrefixes : kTzdataPathPrefixes;
 
   for (const char* tzdata_dir : path_prefixes) {
     // Map the time-zone name to a path name.
     // Fuchsia builds place time zone files at <tzdata>/<format>/...
     std::string path = tzdata_dir;
-    if (!is_test_path) {
+    if (!is_absolute_path) {
       path += kZoneinfoFormatPrefix;
     }
     path.append(name, pos, std::string::npos);
 
-    const auto fp_and_len = FileZoneInfoSource::OpenZoneInfoFile(path);
-    if (fp_and_len.first == nullptr) {
+    FILE* fp = FOpen(path.c_str(), "rb");
+    if (fp == nullptr) {
       continue;
     }
 
+    std::size_t len = FSize(fp);
     std::string version_path = tzdata_dir;
     version_path += kVersionFileName;
-    std::string version_str = ReadFileAsString(version_path);
+    // revision.txt should contain no newlines, but to be defensive we read just
+    // the first line.
+    std::string version_str = ReadFirstLine(version_path);
 
     return std::unique_ptr<ZoneInfoSource>(new FuchsiaZoneInfoSource(
-        fp_and_len.first, fp_and_len.second, version_str.c_str()));
+        fp, len, version_str.c_str()));
   }
   return nullptr;
 }
-#endif
 }  // namespace
 
 bool TimeZoneInfo::Load(const std::string& name) {
@@ -836,12 +835,11 @@ bool TimeZoneInfo::Load(const std::string& name) {
   // Find and use a ZoneInfoSource to load the named zone.
   auto zip = cctz_extension::zone_info_source_factory(
       name, [](const std::string& n) -> std::unique_ptr<ZoneInfoSource> {
-#if defined(__Fuchsia__)
-        if (auto z = FuchsiaZoneInfoSource::Open(n)) return z;
-#else
+        if (kIsFuchsia) {
+          if (auto z = FuchsiaZoneInfoSource::Open(n)) return z;
+        }
         if (auto z = FileZoneInfoSource::Open(n)) return z;
         if (auto z = AndroidZoneInfoSource::Open(n)) return z;
-#endif
         return nullptr;
       });
   return zip != nullptr && Load(zip.get());
