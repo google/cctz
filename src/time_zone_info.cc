@@ -39,6 +39,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <functional>
 #include <memory>
 #include <sstream>
@@ -51,6 +52,18 @@
 namespace cctz {
 
 namespace {
+
+#if defined(__ANDROID__) || defined(ANDROID)
+const bool kIsAndroid = true;
+#else
+const bool kIsAndroid = false;
+#endif
+
+#if defined(__Fuchsia__)
+const bool kIsFuchsia = true;
+#else
+const bool kIsFuchsia = false;
+#endif
 
 inline bool IsLeap(year_t year) {
   return (year % 4) == 0 && ((year % 100) != 0 || (year % 400) == 0);
@@ -725,6 +738,84 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
   return nullptr;
 }
 
+// A zoneinfo source for use inside Fuchsia components. This attempts to
+// read zoneinfo files from one of several known paths in a component's
+// incoming namespace. [Config data][1] is preferred, but package-specific
+// resources are also supported.
+//
+// Fuchsia's implementation supports `FileZoneInfoSource::Version()`.
+//
+// [1]: https://fuchsia.dev/fuchsia-src/development/components/data#using_config_data_in_your_component
+class FuchsiaZoneInfoSource : public FileZoneInfoSource {
+ public:
+  static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
+  std::string Version() const override { return version_; }
+
+ private:
+  explicit FuchsiaZoneInfoSource(FILE* fp, const char* vers)
+      : FileZoneInfoSource(fp), version_(vers) {}
+
+  std::string version_;
+};
+
+// Reads the first line of the file into a string. Returns an empty string on
+// error.
+std::string ReadFirstLine(const std::string& path) {
+  std::string line;
+  std::ifstream input_stream(path);
+  if (input_stream.good()) {
+    std::getline(input_stream, line);
+  }
+  return line;
+}
+
+std::unique_ptr<ZoneInfoSource> FuchsiaZoneInfoSource::Open(
+    const std::string& name) {
+  // Locations where a Fuchsia component might find zoneinfo files, in
+  // descending order of preference.
+  const auto kTzdataPathPrefixes = {
+      "/config/data/tzdata/",
+      "/pkg/data/tzdata/",
+      "/data/tzdata/",
+  };
+  // Used for tests.
+  const auto kEmptyPathPrefixes = {""};
+  // Location under <tzdata> where tzif2 files are stored.
+  const auto kZoneinfoFormatPrefix = "zoneinfo/tzif2/";
+  // Fuchsia builds place the version string in <tzdata>/revision.txt.
+  const auto kVersionFileName = "revision.txt";
+
+  // Use of the "file:" prefix is intended for testing purposes only.
+  const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
+  const bool is_absolute_path = (pos != name.size() && name[pos] == '/');
+  const auto path_prefixes =
+      is_absolute_path ? kEmptyPathPrefixes : kTzdataPathPrefixes;
+
+  for (const char* tzdata_dir : path_prefixes) {
+    // Map the time-zone name to a path name.
+    // Fuchsia builds place time zone files at <tzdata>/<format>/...
+    std::string path = tzdata_dir;
+    if (!is_absolute_path) {
+      path += kZoneinfoFormatPrefix;
+    }
+    path.append(name, pos, std::string::npos);
+
+    FILE* fp = FOpen(path.c_str(), "rb");
+    if (fp == nullptr) {
+      continue;
+    }
+
+    std::string version_path = tzdata_dir;
+    version_path += kVersionFileName;
+    // revision.txt should contain no newlines, but to be defensive we read just
+    // the first line.
+    std::string version_str = ReadFirstLine(version_path);
+
+    return std::unique_ptr<ZoneInfoSource>(
+        new FuchsiaZoneInfoSource(fp, version_str.c_str()));
+  }
+  return nullptr;
+}
 }  // namespace
 
 bool TimeZoneInfo::Load(const std::string& name) {
@@ -741,7 +832,12 @@ bool TimeZoneInfo::Load(const std::string& name) {
   auto zip = cctz_extension::zone_info_source_factory(
       name, [](const std::string& n) -> std::unique_ptr<ZoneInfoSource> {
         if (auto z = FileZoneInfoSource::Open(n)) return z;
-        if (auto z = AndroidZoneInfoSource::Open(n)) return z;
+        if (kIsAndroid) {
+          if (auto z = AndroidZoneInfoSource::Open(n)) return z;
+        }
+        if (kIsFuchsia) {
+          if (auto z = FuchsiaZoneInfoSource::Open(n)) return z;
+        }
         return nullptr;
       });
   return zip != nullptr && Load(zip.get());
