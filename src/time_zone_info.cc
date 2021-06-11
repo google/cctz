@@ -53,6 +53,12 @@ namespace cctz {
 
 namespace {
 
+#if defined(__ANDROID__) || defined(ANDROID)
+const bool kIsAndroid = true;
+#else
+const bool kIsAndroid = false;
+#endif
+
 #if defined(__Fuchsia__)
 const bool kIsFuchsia = true;
 #else
@@ -608,22 +614,6 @@ inline FILE* FOpen(const char* path, const char* mode) {
 #endif
 }
 
-// Returns the size (in bytes) of the given file.
-std::size_t FSize(FILE* fp) {
-  if (fp == nullptr) {
-    return 0;
-  }
-  std::size_t length = 0;
-  if (fseek(fp, 0, SEEK_END) == 0) {
-    long offset = ftell(fp);
-    if (offset >= 0) {
-      length = static_cast<std::size_t>(offset);
-    }
-    rewind(fp);
-  }
-  return length;
-}
-
 // A stdio(3)-backed implementation of ZoneInfoSource.
 class FileZoneInfoSource : public ZoneInfoSource {
  public:
@@ -683,7 +673,14 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
   // Open the zoneinfo file.
   FILE* fp = FOpen(path.c_str(), "rb");
   if (fp == nullptr) return nullptr;
-  std::size_t length = FSize(fp);
+  std::size_t length = 0;
+  if (fseek(fp, 0, SEEK_END) == 0) {
+    long offset = ftell(fp);
+    if (offset >= 0) {
+      length = static_cast<std::size_t>(offset);
+    }
+    rewind(fp);
+  }
   return std::unique_ptr<ZoneInfoSource>(new FileZoneInfoSource(fp, length));
 }
 
@@ -755,8 +752,8 @@ class FuchsiaZoneInfoSource : public FileZoneInfoSource {
   std::string Version() const override { return version_; }
 
  private:
-  explicit FuchsiaZoneInfoSource(FILE* fp, std::size_t len, const char* vers)
-      : FileZoneInfoSource(fp, len), version_(vers) {}
+  explicit FuchsiaZoneInfoSource(FILE* fp, const char* vers)
+      : FileZoneInfoSource(fp), version_(vers) {}
 
   std::string version_;
 };
@@ -808,15 +805,14 @@ std::unique_ptr<ZoneInfoSource> FuchsiaZoneInfoSource::Open(
       continue;
     }
 
-    std::size_t len = FSize(fp);
     std::string version_path = tzdata_dir;
     version_path += kVersionFileName;
     // revision.txt should contain no newlines, but to be defensive we read just
     // the first line.
     std::string version_str = ReadFirstLine(version_path);
 
-    return std::unique_ptr<ZoneInfoSource>(new FuchsiaZoneInfoSource(
-        fp, len, version_str.c_str()));
+    return std::unique_ptr<ZoneInfoSource>(
+        new FuchsiaZoneInfoSource(fp, version_str.c_str()));
   }
   return nullptr;
 }
@@ -835,11 +831,13 @@ bool TimeZoneInfo::Load(const std::string& name) {
   // Find and use a ZoneInfoSource to load the named zone.
   auto zip = cctz_extension::zone_info_source_factory(
       name, [](const std::string& n) -> std::unique_ptr<ZoneInfoSource> {
+        if (auto z = FileZoneInfoSource::Open(n)) return z;
+        if (kIsAndroid) {
+          if (auto z = AndroidZoneInfoSource::Open(n)) return z;
+        }
         if (kIsFuchsia) {
           if (auto z = FuchsiaZoneInfoSource::Open(n)) return z;
         }
-        if (auto z = FileZoneInfoSource::Open(n)) return z;
-        if (auto z = AndroidZoneInfoSource::Open(n)) return z;
         return nullptr;
       });
   return zip != nullptr && Load(zip.get());
