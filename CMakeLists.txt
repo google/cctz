@@ -100,7 +100,9 @@ target_include_directories(cctz PUBLIC
 set_target_properties(cctz PROPERTIES
   PUBLIC_HEADER "${CCTZ_HDRS}"
   )
-target_link_libraries(cctz PUBLIC $<$<PLATFORM_ID:Darwin>:${CoreFoundation}>)  
+if(APPLE)
+  target_link_libraries(cctz PUBLIC ${CoreFoundation})
+endif()
 add_library(cctz::cctz ALIAS cctz)
 
 if (BUILD_TOOLS)
@@ -169,7 +171,7 @@ install(TARGETS cctz
 if (BUILD_TOOLS)
   install(TARGETS time_tool
     EXPORT ${PROJECT_NAME}-targets
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
 endif()
 set(CMAKE_INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
