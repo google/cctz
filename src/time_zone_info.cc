@@ -39,7 +39,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <fstream>
 #include <functional>
 #include <memory>
 #include <sstream>
@@ -53,18 +52,6 @@
 namespace cctz {
 
 namespace {
-
-#if defined(__ANDROID__) || defined(ANDROID)
-const bool kIsAndroid = true;
-#else
-const bool kIsAndroid = false;
-#endif
-
-#if defined(__Fuchsia__)
-const bool kIsFuchsia = true;
-#else
-const bool kIsFuchsia = false;
-#endif
 
 inline bool IsLeap(year_t year) {
   return (year % 4) == 0 && ((year % 100) != 0 || (year % 400) == 0);
@@ -735,68 +722,6 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
   return nullptr;
 }
 
-// A zoneinfo source for use inside Fuchsia components. This attempts to
-// read zoneinfo files from one of several known paths in a component's
-// incoming namespace. [Config data][1] is preferred, but package-specific
-// resources are also supported.
-//
-// Fuchsia's implementation supports `FileZoneInfoSource::Version()`.
-//
-// [1]: https://fuchsia.dev/fuchsia-src/development/components/data#using_config_data_in_your_component
-class FuchsiaZoneInfoSource : public FileZoneInfoSource {
- public:
-  static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
-  std::string Version() const override { return version_; }
-
- private:
-  explicit FuchsiaZoneInfoSource(FilePtr fp, std::string version)
-      : FileZoneInfoSource(std::move(fp)), version_(std::move(version)) {}
-  std::string version_;
-};
-
-std::unique_ptr<ZoneInfoSource> FuchsiaZoneInfoSource::Open(
-    const std::string& name) {
-  // Use of the "file:" prefix is intended for testing purposes only.
-  const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
-
-  // Prefixes where a Fuchsia component might find zoneinfo files,
-  // in descending order of preference.
-  const auto kTzdataPrefixes = {
-      "/config/data/tzdata/",
-      "/pkg/data/tzdata/",
-      "/data/tzdata/",
-  };
-  const auto kEmptyPrefix = {""};
-  const bool name_absolute = (pos != name.size() && name[pos] == '/');
-  const auto prefixes = name_absolute ? kEmptyPrefix : kTzdataPrefixes;
-
-  // Fuchsia builds place zoneinfo files at "<prefix><format><name>".
-  for (const std::string prefix : prefixes) {
-    std::string path = prefix;
-    if (!prefix.empty()) path += "zoneinfo/tzif2/";  // format
-    path.append(name, pos, std::string::npos);
-
-    auto fp = FOpen(path.c_str(), "rb");
-    if (fp.get() == nullptr) continue;
-
-    std::string version;
-    if (!prefix.empty()) {
-      // Fuchsia builds place the version in "<prefix>revision.txt".
-      std::ifstream version_stream(prefix + "revision.txt");
-      if (version_stream.is_open()) {
-        // revision.txt should contain no newlines, but to be
-        // defensive we read just the first line.
-        std::getline(version_stream, version);
-      }
-    }
-
-    return std::unique_ptr<ZoneInfoSource>(
-        new FuchsiaZoneInfoSource(std::move(fp), std::move(version)));
-  }
-
-  return nullptr;
-}
-
 }  // namespace
 
 bool TimeZoneInfo::Load(const std::string& name) {
@@ -813,12 +738,7 @@ bool TimeZoneInfo::Load(const std::string& name) {
   auto zip = cctz_extension::zone_info_source_factory(
       name, [](const std::string& n) -> std::unique_ptr<ZoneInfoSource> {
         if (auto z = FileZoneInfoSource::Open(n)) return z;
-        if (kIsAndroid) {
-          if (auto z = AndroidZoneInfoSource::Open(n)) return z;
-        }
-        if (kIsFuchsia) {
-          if (auto z = FuchsiaZoneInfoSource::Open(n)) return z;
-        }
+        if (auto z = AndroidZoneInfoSource::Open(n)) return z;
         return nullptr;
       });
   return zip != nullptr && Load(zip.get());
