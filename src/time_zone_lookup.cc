@@ -26,14 +26,6 @@
 #include <vector>
 #endif
 
-#if defined(__Fuchsia__)
-#include <fuchsia/intl/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/sys/cpp/component_context.h>
-#include <zircon/types.h>
-#endif
-
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -146,32 +138,6 @@ time_zone local_time_zone() {
     }
   }
   CFRelease(tz_default);
-#endif
-#if defined(__Fuchsia__)
-  std::string primary_tz;
-  {
-    const zx::duration kTimeout = zx::msec(500);
-
-    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-    std::unique_ptr<sys::ComponentContext> context =
-        sys::ComponentContext::Create();
-    // Note: We can't use the synchronous FIDL API here because it doesn't
-    // allow timeouts; if the FIDL call failed, local_time_zone() would never
-    // return.
-    auto intl_provider = context->svc()->Connect<fuchsia::intl::PropertyProvider>();
-    intl_provider->GetProfile(
-        [&loop, &primary_tz](fuchsia::intl::Profile profile) {
-          if (!profile.time_zones().empty()) {
-            primary_tz = profile.time_zones()[0].id;
-          }
-          loop.Quit();
-        });
-    loop.Run(zx::deadline_after(kTimeout));
-
-    if (!primary_tz.empty()) {
-      zone = primary_tz.c_str();
-    }
-  }
 #endif
 
   // Allow ${TZ} to override to default zone.
