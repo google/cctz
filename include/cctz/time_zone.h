@@ -421,8 +421,8 @@ bool join_seconds(
     count /= Num;
     count -= 1;
   }
-  if (count > std::numeric_limits<Rep>::max()) return false;
-  if (count < std::numeric_limits<Rep>::min()) return false;
+  if (count > (std::numeric_limits<Rep>::max)()) return false;
+  if (count < (std::numeric_limits<Rep>::min)()) return false;
   *tpp = time_point<D>() + D{static_cast<Rep>(count)};
   return true;
 }
@@ -433,8 +433,8 @@ bool join_seconds(
     time_point<std::chrono::duration<Rep, std::ratio<1, 1>>>* tpp) {
   using D = std::chrono::duration<Rep, std::ratio<1, 1>>;
   auto count = sec.time_since_epoch().count();
-  if (count > std::numeric_limits<Rep>::max()) return false;
-  if (count < std::numeric_limits<Rep>::min()) return false;
+  if (count > (std::numeric_limits<Rep>::max)()) return false;
+  if (count < (std::numeric_limits<Rep>::min)()) return false;
   *tpp = time_point<D>() + D{static_cast<Rep>(count)};
   return true;
 }
