@@ -14,19 +14,19 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 
-licenses(["notice"])  # Apache License
+licenses(["notice"])
 
 config_setting(
     name = "osx",
     constraint_values = [
-        "@bazel_tools//platforms:osx",
+        "@platforms//os:osx",
     ],
 )
 
 config_setting(
     name = "ios",
     constraint_values = [
-        "@bazel_tools//platforms:ios",
+        "@platforms//os:ios",
     ],
 )
 
@@ -82,6 +82,11 @@ cc_library(
 )
 
 ### tests
+
+test_suite(
+    name = "all_tests",
+    visibility = ["//visibility:public"],
+)
 
 cc_test(
     name = "civil_time_test",

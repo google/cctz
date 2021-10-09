@@ -37,9 +37,9 @@ using seconds = cctz::seconds;
 // parse() specifiers for command-line time arguments.
 const char* const kFormats[] = {
   "%Y   %m   %d   %H   %M   %E*S",
-  "%Y - %m - %d T %H : %M : %E*S",
+  "%Y - %m - %d %ET %H : %M : %E*S",
   "%Y - %m - %d %H : %M : %E*S",
-  "%Y - %m - %d T %H : %M",
+  "%Y - %m - %d %ET %H : %M",
   "%Y - %m - %d %H : %M",
   "%Y - %m - %d",
   "%a %b %d %H : %M : %E*S %Z %Y",
@@ -432,7 +432,9 @@ int main(int argc, const char** argv) {
   for (const std::string& tz : StrSplit(',', zones)) {
     std::cout << leader;
     cctz::time_zone zone;
-    if (!cctz::load_time_zone(tz, &zone)) {
+    if (tz == "localtime") {
+      zone = cctz::local_time_zone();
+    } else if (!cctz::load_time_zone(tz, &zone)) {
       std::cerr << tz << ": Unrecognized time zone\n";
       return 1;
     }
