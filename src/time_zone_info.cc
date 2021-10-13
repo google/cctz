@@ -54,18 +54,6 @@ namespace cctz {
 
 namespace {
 
-#if defined(__ANDROID__) || defined(ANDROID)
-const bool kIsAndroid = true;
-#else
-const bool kIsAndroid = false;
-#endif
-
-#if defined(__Fuchsia__)
-const bool kIsFuchsia = true;
-#else
-const bool kIsFuchsia = false;
-#endif
-
 inline bool IsLeap(year_t year) {
   return (year % 4) == 0 && ((year % 100) != 0 || (year % 400) == 0);
 }
@@ -813,12 +801,8 @@ bool TimeZoneInfo::Load(const std::string& name) {
   auto zip = cctz_extension::zone_info_source_factory(
       name, [](const std::string& n) -> std::unique_ptr<ZoneInfoSource> {
         if (auto z = FileZoneInfoSource::Open(n)) return z;
-        if (kIsAndroid) {
-          if (auto z = AndroidZoneInfoSource::Open(n)) return z;
-        }
-        if (kIsFuchsia) {
-          if (auto z = FuchsiaZoneInfoSource::Open(n)) return z;
-        }
+        if (auto z = AndroidZoneInfoSource::Open(n)) return z;
+        if (auto z = FuchsiaZoneInfoSource::Open(n)) return z;
         return nullptr;
       });
   return zip != nullptr && Load(zip.get());
