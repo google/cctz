@@ -18,17 +18,6 @@ http_archive(
     urls = ["https://github.com/google/benchmark/archive/v1.5.5.zip"],
 )
 
-# C++ rules for Bazel.
-http_archive(
-    name = "rules_cc",
-    sha256 = "fa42eade3cad9190c2a6286a6213f07f1a83d26d9f082d56f526d014c6ea7444",
-    strip_prefix = "rules_cc-02becfef8bc97bda4f9bb64e153f1b0671aec4ba",
-    urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_cc/archive/02becfef8bc97bda4f9bb64e153f1b0671aec4ba.zip",
-        "https://github.com/bazelbuild/rules_cc/archive/02becfef8bc97bda4f9bb64e153f1b0671aec4ba.zip",
-    ],
-)
-
 # Bazel platform rules.
 http_archive(
     name = "platforms",
