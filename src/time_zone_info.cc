@@ -664,7 +664,7 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
 
   // Open the zoneinfo file.
   auto fp = FOpen(path.c_str(), "rb");
-  if (fp.get() == nullptr) return nullptr;
+  if (fp == nullptr) return nullptr;
   return std::unique_ptr<ZoneInfoSource>(new FileZoneInfoSource(std::move(fp)));
 }
 
@@ -689,7 +689,7 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
   for (const char* tzdata : {"/data/misc/zoneinfo/current/tzdata",
                              "/system/usr/share/zoneinfo/tzdata"}) {
     auto fp = FOpen(tzdata, "rb");
-    if (fp.get() == nullptr) continue;
+    if (fp == nullptr) continue;
 
     char hbuf[24];  // covers header.zonetab_offset too
     if (fread(hbuf, 1, sizeof(hbuf), fp.get()) != sizeof(hbuf)) continue;
@@ -765,7 +765,7 @@ std::unique_ptr<ZoneInfoSource> FuchsiaZoneInfoSource::Open(
     path.append(name, pos, std::string::npos);
 
     auto fp = FOpen(path.c_str(), "rb");
-    if (fp.get() == nullptr) continue;
+    if (fp == nullptr) continue;
 
     std::string version;
     if (!prefix.empty()) {
