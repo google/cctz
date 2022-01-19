@@ -685,7 +685,14 @@ TEST(TimeZones, LoadZonesConcurrently) {
     }
   };
 
+#if defined(__Fuchsia__)
+  // On Fuchsia, the test will often timeout with the thread count set to 128.
+  // This lower thread count ensures the test passes consistently.
+  const std::size_t n_threads = 64;
+#else
   const std::size_t n_threads = 128;
+#endif
+
   std::vector<std::thread> threads;
   std::vector<std::set<std::string>> thread_failures(n_threads);
   for (std::size_t i = 0; i != n_threads; ++i) {
