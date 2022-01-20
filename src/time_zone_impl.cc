@@ -32,11 +32,14 @@ using TimeZoneImplByName =
     std::unordered_map<std::string, const time_zone::Impl*>;
 TimeZoneImplByName* time_zone_map = nullptr;
 
+typedef std::shared_lock<std::shared_mutex> ReadLock;
+typedef std::lock_guard<std::shared_mutex> WriteLock;
+
 // Mutual exclusion for time_zone_map.
-std::mutex& TimeZoneMutex() {
+std::shared_mutex& TimeZoneMutex() {
   // This mutex is intentionally "leaked" to avoid the static deinitialization
   // order fiasco (std::mutex's destructor is not trivial on many platforms).
-  static std::mutex* time_zone_mutex = new std::mutex;
+  static std::shared_mutex* time_zone_mutex = new std::shared_mutex;
   return *time_zone_mutex;
 }
 
@@ -58,7 +61,7 @@ bool time_zone::Impl::LoadTimeZone(const std::string& name, time_zone* tz) {
 
   // Check whether the time zone has already been loaded.
   {
-    std::lock_guard<std::mutex> lock(TimeZoneMutex());
+    ReadLock lock(TimeZoneMutex());
     if (time_zone_map != nullptr) {
       TimeZoneImplByName::const_iterator itr = time_zone_map->find(name);
       if (itr != time_zone_map->end()) {
@@ -72,7 +75,7 @@ bool time_zone::Impl::LoadTimeZone(const std::string& name, time_zone* tz) {
   std::unique_ptr<const Impl> new_impl(new Impl(name));
 
   // Add the new time zone to the map.
-  std::lock_guard<std::mutex> lock(TimeZoneMutex());
+  WriteLock lock(TimeZoneMutex());
   if (time_zone_map == nullptr) time_zone_map = new TimeZoneImplByName;
   const Impl*& impl = (*time_zone_map)[name];
   if (impl == nullptr) {  // this thread won any load race
@@ -83,7 +86,7 @@ bool time_zone::Impl::LoadTimeZone(const std::string& name, time_zone* tz) {
 }
 
 void time_zone::Impl::ClearTimeZoneMapTestOnly() {
-  std::lock_guard<std::mutex> lock(TimeZoneMutex());
+  ReadLock lock(TimeZoneMutex());
   if (time_zone_map != nullptr) {
     // Existing time_zone::Impl* entries are in the wild, so we can't delete
     // them. Instead, we move them to a private container, where they are
