@@ -20,6 +20,7 @@
 #include <cstring>
 #include <ctime>
 #include <iomanip>
+#include <ios>
 #include <iostream>
 #include <limits>
 #include <sstream>
