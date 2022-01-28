@@ -30,7 +30,7 @@
 # local configuration
 CXX ?= g++
 CXXFLAGS ?= -O3
-STD ?= c++11
+STD ?= c++17
 LDFLAGS ?= -O3
 PREFIX ?= /usr/local
 DESTDIR ?=
