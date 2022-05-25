@@ -20,6 +20,7 @@
 #include <cstring>
 #include <ctime>
 #include <iomanip>
+#include <ios>
 #include <iostream>
 #include <limits>
 #include <sstream>
@@ -60,7 +61,7 @@ const char* const kFormats[] = {
 
 bool ParseTimeSpec(const std::string& args, time_point<seconds>* when) {
   const cctz::time_zone ignored{};
-  for (const char* const* fmt = kFormats; *fmt != NULL; ++fmt) {
+  for (const char* const* fmt = kFormats; *fmt != nullptr; ++fmt) {
     const std::string format = std::string(*fmt) + " %E*z";
     time_point<seconds> tp;
     if (cctz::parse(format, args, ignored, &tp)) {
@@ -73,7 +74,7 @@ bool ParseTimeSpec(const std::string& args, time_point<seconds>* when) {
 
 bool ParseCivilSpec(const std::string& args, cctz::civil_second* when) {
   const cctz::time_zone utc = cctz::utc_time_zone();
-  for (const char* const* fmt = kFormats; *fmt != NULL; ++fmt) {
+  for (const char* const* fmt = kFormats; *fmt != nullptr; ++fmt) {
     time_point<seconds> tp;
     if (cctz::parse(*fmt, args, utc, &tp)) {
       *when = cctz::convert(tp, utc);
