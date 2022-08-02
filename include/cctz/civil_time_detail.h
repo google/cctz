@@ -424,14 +424,17 @@ class civil_time {
     return difference(T{}, lhs.f_, rhs.f_);
   }
 
+  // The designated constructor that all others eventually call.
+  // Does no normalization checks, use with extreme care in performance
+  // sensitive situations.
+  explicit CONSTEXPR_M civil_time(fields f) noexcept : f_(align(T{}, f)) {}
+
  private:
   // All instantiations of this template are allowed to call the following
   // private constructor and access the private fields member.
   template <typename U>
   friend class civil_time;
 
-  // The designated constructor that all others eventually call.
-  explicit CONSTEXPR_M civil_time(fields f) noexcept : f_(align(T{}, f)) {}
 
   fields f_;
 };
