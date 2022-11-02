@@ -15,13 +15,6 @@
 licenses(["notice"])
 
 config_setting(
-    name = "osx",
-    constraint_values = [
-        "@platforms//os:osx",
-    ],
-)
-
-config_setting(
     name = "ios",
     constraint_values = [
         "@platforms//os:ios",
