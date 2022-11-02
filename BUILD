@@ -67,9 +67,6 @@ cc_library(
     ],
     includes = ["include"],
     linkopts = select({
-        "//:osx": [
-            "-framework Foundation",
-        ],
         "//:ios": [
             "-framework Foundation",
         ],
