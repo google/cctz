@@ -52,10 +52,9 @@ cc_library(
         "include/cctz/zone_info_source.h",
     ],
     includes = ["include"],
-    # Note that OS X and iOS both have a dependency on CoreFoundation but it is
-    # no longer explicitly added as a linkopt as that causes problems
-    # cross-compiling android builds on OSX, and bazel will add it
-    # automatically.
+    # OS X and iOS no longer use `linkopts = ["-framework CoreFoundation"]`
+    # as (1) bazel adds it automatically, and (2) it caused problems when
+    # cross-compiling for Android.
     # See https://github.com/abseil/abseil-cpp/issues/326 for details.
     visibility = ["//visibility:public"],
     deps = [":civil_time"],
