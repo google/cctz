@@ -14,20 +14,6 @@
 
 licenses(["notice"])
 
-config_setting(
-    name = "osx",
-    constraint_values = [
-        "@platforms//os:osx",
-    ],
-)
-
-config_setting(
-    name = "ios",
-    constraint_values = [
-        "@platforms//os:ios",
-    ],
-)
-
 ### libraries
 
 cc_library(
@@ -66,15 +52,10 @@ cc_library(
         "include/cctz/zone_info_source.h",
     ],
     includes = ["include"],
-    linkopts = select({
-        "//:osx": [
-            "-framework Foundation",
-        ],
-        "//:ios": [
-            "-framework Foundation",
-        ],
-        "//conditions:default": [],
-    }),
+    # OS X and iOS no longer use `linkopts = ["-framework CoreFoundation"]`
+    # as (1) bazel adds it automatically, and (2) it caused problems when
+    # cross-compiling for Android.
+    # See https://github.com/abseil/abseil-cpp/issues/326 for details.
     visibility = ["//visibility:public"],
     deps = [":civil_time"],
 )
