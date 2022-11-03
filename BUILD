@@ -52,9 +52,10 @@ cc_library(
         "include/cctz/zone_info_source.h",
     ],
     includes = ["include"],
-    # Note that OS X and iOS both have an implicit dependency on Foundation but
-    # it is no longer explicitly added as a linkopt as bazel adds it
-    # automatically. See https://github.com/abseil/abseil-cpp/issues/326 for details.
+    # Note that OS X and iOS both have a dependency on Foundation but it is no
+    # longer explicitly added as a linkopt as that causes problems cross-compiling android
+    # builds on OSX, and bazel will add it automatically.
+    # See https://github.com/abseil/abseil-cpp/issues/326 for details.
     visibility = ["//visibility:public"],
     deps = [":civil_time"],
 )
