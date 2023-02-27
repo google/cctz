@@ -16,14 +16,17 @@ include(FeatureSummary)
 
 option(BUILD_TOOLS "Whether or not to build tools" ON)
 option(BUILD_EXAMPLES "Whether or not to build examples" ON)
+option(BUILD_BENCHMARK "Whether or not to build the benchmark application (has no effect if BUILD_TESTING is disabled)" ON)
 
 if (BUILD_TESTING)
-  find_package(benchmark)
-  set_package_properties(benchmark PROPERTIES
-    TYPE REQUIRED
-    DESCRIPTION "a microbenchmark support library"
-    URL "https://github.com/google/benchmark"
-  )
+  if (BUILD_BENCHMARK)
+    find_package(benchmark)
+    set_package_properties(benchmark PROPERTIES
+      TYPE REQUIRED
+      DESCRIPTION "a microbenchmark support library"
+      URL "https://github.com/google/benchmark"
+    )
+  endif()
 
   find_package(GMock)
   set_package_properties(GMock PROPERTIES
@@ -155,9 +158,11 @@ if (BUILD_TESTING)
       ENVIRONMENT "TZDIR=${CMAKE_CURRENT_SOURCE_DIR}/testdata/zoneinfo"
     )
 
-  add_executable(cctz_benchmark src/cctz_benchmark.cc)
-  cctz_target_set_cxx_standard(cctz_benchmark)
-  target_link_libraries(cctz_benchmark cctz::cctz benchmark::benchmark_main)
+  if (BUILD_BENCHMARK)
+    add_executable(cctz_benchmark src/cctz_benchmark.cc)
+    cctz_target_set_cxx_standard(cctz_benchmark)
+    target_link_libraries(cctz_benchmark cctz::cctz benchmark::benchmark_main)
+  endif()
 endif()
 
 # Install
