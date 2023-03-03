@@ -33,6 +33,16 @@
 #include <zircon/types.h>
 #endif
 
+#if defined(_WIN32)
+#include <roapi.h>
+#include <tchar.h>
+#include <wchar.h>
+#include <windows.globalization.h>
+#include <windows.h>
+
+#include <vector>
+#endif
+
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -42,8 +52,8 @@
 
 namespace cctz {
 
-#if defined(__ANDROID__) && defined(__ANDROID_API__) && __ANDROID_API__ >= 21
 namespace {
+#if defined(__ANDROID__) && defined(__ANDROID_API__) && __ANDROID_API__ >= 21
 // Android 'L' removes __system_property_get() from the NDK, however
 // it is still a hidden symbol in libc so we use dlsym() to access it.
 // See Chromium's base/sys_info_android.cc for a similar example.
@@ -67,9 +77,85 @@ int __system_property_get(const char* name, char* value) {
   static property_get_func system_property_get = LoadSystemPropertyGet();
   return system_property_get ? system_property_get(name, value) : -1;
 }
-
-}  // namespace
 #endif
+
+#if defined(_WIN32)
+// Calls the WinRT Calendar.GetTimeZone to obtain an IANA ID of the local time
+// zone. Returns an empty array in case of an error.
+std::vector<char> win32_local_time_zone(const HMODULE winrt_core,
+                                        const HMODULE winrt_string) {
+  std::vector<char> result;
+  const auto ro_activate_instance =
+      reinterpret_cast<decltype(&RoActivateInstance)>(
+          GetProcAddress(winrt_core, "RoActivateInstance"));
+  if (!ro_activate_instance) {
+    return result;
+  }
+  const auto windows_create_string_reference =
+      reinterpret_cast<decltype(&WindowsCreateStringReference)>(
+          GetProcAddress(winrt_string, "WindowsCreateStringReference"));
+  if (!windows_create_string_reference) {
+    return result;
+  }
+  const auto windows_delete_string =
+      reinterpret_cast<decltype(&WindowsDeleteString)>(
+          GetProcAddress(winrt_string, "WindowsDeleteString"));
+  if (!windows_delete_string) {
+    return result;
+  }
+  const auto windows_get_string_raw_buffer =
+      reinterpret_cast<decltype(&WindowsGetStringRawBuffer)>(
+          GetProcAddress(winrt_string, "WindowsGetStringRawBuffer"));
+  if (!windows_get_string_raw_buffer) {
+    return result;
+  }
+
+  // The returned string by WindowsCreateStringReference doesn't need to be
+  // deleted.
+  HSTRING calendar_class_id;
+  HSTRING_HEADER calendar_class_id_header;
+  HRESULT hr = windows_create_string_reference(
+      RuntimeClass_Windows_Globalization_Calendar,
+      sizeof(RuntimeClass_Windows_Globalization_Calendar) / sizeof(wchar_t) - 1,
+      &calendar_class_id_header, &calendar_class_id);
+  if (FAILED(hr)) {
+    return result;
+  }
+
+  IInspectable* calendar;
+  hr = ro_activate_instance(calendar_class_id, &calendar);
+  if (FAILED(hr)) {
+    return result;
+  }
+
+  ABI::Windows::Globalization::ITimeZoneOnCalendar* time_zone;
+  hr = calendar->QueryInterface(IID_PPV_ARGS(&time_zone));
+  if (FAILED(hr)) {
+    calendar->Release();
+    return result;
+  }
+
+  HSTRING tz_hstr;
+  hr = time_zone->GetTimeZone(&tz_hstr);
+  if (SUCCEEDED(hr)) {
+    UINT32 wlen;
+    const PCWSTR tz_wstr = windows_get_string_raw_buffer(tz_hstr, &wlen);
+    if (tz_wstr) {
+      const int size = WideCharToMultiByte(CP_UTF8, 0, tz_wstr, wlen, nullptr,
+                                           0, nullptr, nullptr);
+      result.resize(size + 1);
+      result[size] = 0;
+      WideCharToMultiByte(CP_UTF8, 0, tz_wstr, wlen, result.data(), size,
+                          nullptr, nullptr);
+    }
+    windows_delete_string(tz_hstr);
+  }
+  time_zone->Release();
+  calendar->Release();
+  return result;
+}
+#endif
+}  // namespace
 
 std::string time_zone::name() const {
   return effective_impl().Name();
@@ -187,6 +273,38 @@ time_zone local_time_zone() {
 
   if (!primary_tz.empty()) {
     zone = primary_tz.c_str();
+  }
+#endif
+
+#if defined(_WIN32)
+  // Use the WinRT Calendar class to get the local time zone. This feature is
+  // available on Windows 10 and later. The libraries are dynamically linked to
+  // maintain binary compatibility with earlier versions of Windows.
+  std::vector<char> winrt_tz;
+  const HMODULE winrt_core =
+      LoadLibrary(_T("api-ms-win-core-winrt-l1-1-0.dll"));
+  if (winrt_core) {
+    const HMODULE winrt_string =
+        LoadLibrary(_T("api-ms-win-core-winrt-string-l1-1-0"));
+    if (winrt_string) {
+      const auto ro_initialize = reinterpret_cast<decltype(&::RoInitialize)>(
+          GetProcAddress(winrt_core, "RoInitialize"));
+      const auto ro_uninitialize =
+          reinterpret_cast<decltype(&::RoUninitialize)>(
+              GetProcAddress(winrt_core, "RoUninitialize"));
+      if (ro_initialize && ro_uninitialize) {
+        const HRESULT hr = ro_initialize(RO_INIT_MULTITHREADED);
+        if (SUCCEEDED(hr)) {
+          winrt_tz = win32_local_time_zone(winrt_core, winrt_string);
+          ro_uninitialize();
+        }
+      }
+      FreeLibrary(winrt_string);
+    }
+    FreeLibrary(winrt_core);
+  }
+  if (!winrt_tz.empty()) {
+    zone = winrt_tz.data();
   }
 #endif
 
