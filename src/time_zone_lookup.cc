@@ -34,6 +34,10 @@
 #endif
 
 #if defined(_WIN32)
+#include <sdkddkver.h>
+// Include only when the SDK is for Windows 10 (and later), and the binary is
+// targeted for Windows XP and later.
+#if defined(_WIN32_WINNT_WIN10) && (_WIN32_WINNT >= _WIN32_WINNT_WINXP)
 #include <roapi.h>
 #include <tchar.h>
 #include <wchar.h>
@@ -41,6 +45,7 @@
 #include <windows.h>
 
 #include <vector>
+#endif
 #endif
 
 #include <cstdlib>
@@ -79,9 +84,9 @@ int __system_property_get(const char* name, char* value) {
 }
 #endif
 
-#if defined(_WIN32)
-// Calls the WinRT Calendar.GetTimeZone to obtain the IANA ID of the local time
-// zone. Returns an empty array in case of an error.
+#if defined(_WIN32_WINNT_WIN10) && (_WIN32_WINNT >= _WIN32_WINNT_WINXP)
+// Calls the WinRT Calendar.GetTimeZone method to obtain the IANA ID of the
+// local time zone. Returns an empty vector in case of an error.
 std::vector<char> win32_local_time_zone(const HMODULE combase) {
   std::vector<char> result;
   const auto ro_activate_instance =
@@ -275,10 +280,12 @@ time_zone local_time_zone() {
   }
 #endif
 
-#if defined(_WIN32)
+#if defined(_WIN32_WINNT_WIN10) && (_WIN32_WINNT >= _WIN32_WINNT_WINXP)
   // Use the WinRT Calendar class to get the local time zone. This feature is
-  // available on Windows 10 and later. The libraries are dynamically linked to
-  // maintain binary compatibility with earlier versions of Windows.
+  // available on Windows 10 and later. The library is dynamically linked to
+  // maintain binary compatibility with Windows XP - Windows 7. On Windows 8,
+  // The combase.dll API functions are available but the RoActivateInstance
+  // call will fail for the Calendar class.
   std::vector<char> winrt_tz;
   const HMODULE combase =
       LoadLibraryEx(_T("combase.dll"), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -290,8 +297,9 @@ time_zone local_time_zone() {
     if (ro_initialize && ro_uninitialize) {
       const HRESULT hr = ro_initialize(RO_INIT_MULTITHREADED);
       // RPC_E_CHANGED_MODE means that a previous RoInitialize call specified
-      // a  different concurrency model. It's an initialization failure, but
-      // WinRT should work.
+      // a different concurrency model. The WinRT runtime is initialized and
+      // should work for our purpose here, but we should *not* call
+      // RoUninitialize because it's a failure.
       if (SUCCEEDED(hr) || hr == RPC_E_CHANGED_MODE) {
         winrt_tz = win32_local_time_zone(combase);
         if (SUCCEEDED(hr)) {
