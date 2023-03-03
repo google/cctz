@@ -80,7 +80,7 @@ int __system_property_get(const char* name, char* value) {
 #endif
 
 #if defined(_WIN32)
-// Calls the WinRT Calendar.GetTimeZone to obtain an IANA ID of the local time
+// Calls the WinRT Calendar.GetTimeZone to obtain the IANA ID of the local time
 // zone. Returns an empty array in case of an error.
 std::vector<char> win32_local_time_zone(const HMODULE combase) {
   std::vector<char> result;
@@ -143,9 +143,9 @@ std::vector<char> win32_local_time_zone(const HMODULE combase) {
       const int size = WideCharToMultiByte(CP_UTF8, 0, tz_wstr, wlen, nullptr,
                                            0, nullptr, nullptr);
       result.resize(size + 1);
-      result[size] = 0;
       WideCharToMultiByte(CP_UTF8, 0, tz_wstr, wlen, result.data(), size,
                           nullptr, nullptr);
+      result[size] = 0;
     }
     windows_delete_string(tz_hstr);
   }
@@ -285,14 +285,18 @@ time_zone local_time_zone() {
   if (combase) {
     const auto ro_initialize = reinterpret_cast<decltype(&::RoInitialize)>(
         GetProcAddress(combase, "RoInitialize"));
-    const auto ro_uninitialize =
-        reinterpret_cast<decltype(&::RoUninitialize)>(
-            GetProcAddress(combase, "RoUninitialize"));
+    const auto ro_uninitialize = reinterpret_cast<decltype(&::RoUninitialize)>(
+        GetProcAddress(combase, "RoUninitialize"));
     if (ro_initialize && ro_uninitialize) {
       const HRESULT hr = ro_initialize(RO_INIT_MULTITHREADED);
-      if (SUCCEEDED(hr)) {
+      // RPC_E_CHANGED_MODE means that a previous RoInitialize call specified
+      // a  different concurrency model. It's an initialization failure, but
+      // WinRT should work.
+      if (SUCCEEDED(hr) || hr == RPC_E_CHANGED_MODE) {
         winrt_tz = win32_local_time_zone(combase);
-        ro_uninitialize();
+        if (SUCCEEDED(hr)) {
+          ro_uninitialize();
+        }
       }
     }
     FreeLibrary(combase);
