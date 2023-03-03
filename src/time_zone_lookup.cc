@@ -82,30 +82,29 @@ int __system_property_get(const char* name, char* value) {
 #if defined(_WIN32)
 // Calls the WinRT Calendar.GetTimeZone to obtain an IANA ID of the local time
 // zone. Returns an empty array in case of an error.
-std::vector<char> win32_local_time_zone(const HMODULE winrt_core,
-                                        const HMODULE winrt_string) {
+std::vector<char> win32_local_time_zone(const HMODULE combase) {
   std::vector<char> result;
   const auto ro_activate_instance =
       reinterpret_cast<decltype(&RoActivateInstance)>(
-          GetProcAddress(winrt_core, "RoActivateInstance"));
+          GetProcAddress(combase, "RoActivateInstance"));
   if (!ro_activate_instance) {
     return result;
   }
   const auto windows_create_string_reference =
       reinterpret_cast<decltype(&WindowsCreateStringReference)>(
-          GetProcAddress(winrt_string, "WindowsCreateStringReference"));
+          GetProcAddress(combase, "WindowsCreateStringReference"));
   if (!windows_create_string_reference) {
     return result;
   }
   const auto windows_delete_string =
       reinterpret_cast<decltype(&WindowsDeleteString)>(
-          GetProcAddress(winrt_string, "WindowsDeleteString"));
+          GetProcAddress(combase, "WindowsDeleteString"));
   if (!windows_delete_string) {
     return result;
   }
   const auto windows_get_string_raw_buffer =
       reinterpret_cast<decltype(&WindowsGetStringRawBuffer)>(
-          GetProcAddress(winrt_string, "WindowsGetStringRawBuffer"));
+          GetProcAddress(combase, "WindowsGetStringRawBuffer"));
   if (!windows_get_string_raw_buffer) {
     return result;
   }
@@ -281,27 +280,22 @@ time_zone local_time_zone() {
   // available on Windows 10 and later. The libraries are dynamically linked to
   // maintain binary compatibility with earlier versions of Windows.
   std::vector<char> winrt_tz;
-  const HMODULE winrt_core =
-      LoadLibrary(_T("api-ms-win-core-winrt-l1-1-0.dll"));
-  if (winrt_core) {
-    const HMODULE winrt_string =
-        LoadLibrary(_T("api-ms-win-core-winrt-string-l1-1-0"));
-    if (winrt_string) {
-      const auto ro_initialize = reinterpret_cast<decltype(&::RoInitialize)>(
-          GetProcAddress(winrt_core, "RoInitialize"));
-      const auto ro_uninitialize =
-          reinterpret_cast<decltype(&::RoUninitialize)>(
-              GetProcAddress(winrt_core, "RoUninitialize"));
-      if (ro_initialize && ro_uninitialize) {
-        const HRESULT hr = ro_initialize(RO_INIT_MULTITHREADED);
-        if (SUCCEEDED(hr)) {
-          winrt_tz = win32_local_time_zone(winrt_core, winrt_string);
-          ro_uninitialize();
-        }
+  const HMODULE combase =
+      LoadLibraryEx(_T("combase.dll"), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+  if (combase) {
+    const auto ro_initialize = reinterpret_cast<decltype(&::RoInitialize)>(
+        GetProcAddress(combase, "RoInitialize"));
+    const auto ro_uninitialize =
+        reinterpret_cast<decltype(&::RoUninitialize)>(
+            GetProcAddress(combase, "RoUninitialize"));
+    if (ro_initialize && ro_uninitialize) {
+      const HRESULT hr = ro_initialize(RO_INIT_MULTITHREADED);
+      if (SUCCEEDED(hr)) {
+        winrt_tz = win32_local_time_zone(combase);
+        ro_uninitialize();
       }
-      FreeLibrary(winrt_string);
     }
-    FreeLibrary(winrt_core);
+    FreeLibrary(combase);
   }
   if (!winrt_tz.empty()) {
     zone = winrt_tz.data();
