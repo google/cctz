@@ -43,7 +43,6 @@
 #include <wchar.h>
 #include <windows.globalization.h>
 #include <windows.h>
-
 #include <vector>
 #endif
 #endif
@@ -87,8 +86,8 @@ int __system_property_get(const char* name, char* value) {
 #if defined(_WIN32_WINNT_WIN10) && (_WIN32_WINNT >= _WIN32_WINNT_WINXP)
 // Calls the WinRT Calendar.GetTimeZone method to obtain the IANA ID of the
 // local time zone. Returns an empty vector in case of an error.
-std::vector<char> win32_local_time_zone(const HMODULE combase) {
-  std::vector<char> result;
+std::string win32_local_time_zone(const HMODULE combase) {
+  std::string result;
   const auto ro_activate_instance =
       reinterpret_cast<decltype(&RoActivateInstance)>(
           GetProcAddress(combase, "RoActivateInstance"));
@@ -114,7 +113,7 @@ std::vector<char> win32_local_time_zone(const HMODULE combase) {
     return result;
   }
 
-  // The returned string by WindowsCreateStringReference doesn't need to be
+  // The string returned by WindowsCreateStringReference doesn't need to be
   // deleted.
   HSTRING calendar_class_id;
   HSTRING_HEADER calendar_class_id_header;
@@ -147,10 +146,9 @@ std::vector<char> win32_local_time_zone(const HMODULE combase) {
     if (tz_wstr) {
       const int size = WideCharToMultiByte(CP_UTF8, 0, tz_wstr, wlen, nullptr,
                                            0, nullptr, nullptr);
-      result.resize(size + 1);
-      WideCharToMultiByte(CP_UTF8, 0, tz_wstr, wlen, result.data(), size,
+      result.resize(size);
+      WideCharToMultiByte(CP_UTF8, 0, tz_wstr, wlen, &result[0], size,
                           nullptr, nullptr);
-      result[size] = 0;
     }
     windows_delete_string(tz_hstr);
   }
@@ -279,14 +277,13 @@ time_zone local_time_zone() {
     zone = primary_tz.c_str();
   }
 #endif
-
 #if defined(_WIN32_WINNT_WIN10) && (_WIN32_WINNT >= _WIN32_WINNT_WINXP)
   // Use the WinRT Calendar class to get the local time zone. This feature is
   // available on Windows 10 and later. The library is dynamically linked to
   // maintain binary compatibility with Windows XP - Windows 7. On Windows 8,
   // The combase.dll API functions are available but the RoActivateInstance
   // call will fail for the Calendar class.
-  std::vector<char> winrt_tz;
+  std::string winrt_tz;
   const HMODULE combase =
       LoadLibraryEx(_T("combase.dll"), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
   if (combase) {
@@ -310,7 +307,7 @@ time_zone local_time_zone() {
     FreeLibrary(combase);
   }
   if (!winrt_tz.empty()) {
-    zone = winrt_tz.data();
+    zone = winrt_tz.c_str();
   }
 #endif
 
