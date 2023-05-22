@@ -208,7 +208,7 @@ TEST(Format, LocaleSpecific) {
   TestFormatSpecifier(tp, tz, "%B", "January");
 
   // %c should at least produce the numeric year and time-of-day.
-  const std::string s = format("%c", tp, utc_time_zone());
+  const std::string s = cctz::format("%c", tp, utc_time_zone());
   EXPECT_THAT(s, testing::HasSubstr("1970"));
   EXPECT_THAT(s, testing::HasSubstr("00:00:00"));
 
