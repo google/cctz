@@ -100,8 +100,12 @@ void time_zone::Impl::ClearTimeZoneMapTestOnly() {
 time_zone::Impl::Impl(const std::string& name)
     : name_(name), zone_(TimeZoneIf::Load(name_)) {}
 
+time_zone::Impl::Impl(const std::string& name, std::unique_ptr<TimeZoneIf> zone)
+    : name_(name), zone_(std::move(zone)) {}
+
 const time_zone::Impl* time_zone::Impl::UTCImpl() {
-  static const Impl* utc_impl = new Impl("UTC");  // never fails
+  static const Impl* utc_impl = new Impl(
+      "UTC", std::unique_ptr<TimeZoneIf>(new TimeZoneInfo(seconds::zero())));
   return utc_impl;
 }
 

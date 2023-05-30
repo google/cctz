@@ -808,6 +808,8 @@ std::unique_ptr<ZoneInfoSource> FuchsiaZoneInfoSource::Open(
 
 }  // namespace
 
+TimeZoneInfo::TimeZoneInfo(const seconds& offset) { ResetToBuiltinUTC(offset); }
+
 bool TimeZoneInfo::Load(const std::string& name) {
   // We can ensure that the loading of UTC or any other fixed-offset
   // zone never fails because the simple, fixed-offset state can be
