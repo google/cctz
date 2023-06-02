@@ -1029,7 +1029,7 @@ TEST(MakeTime, SysSecondsLimits) {
     const time_zone cut = LoadZone("libc:UTC");
     const year_t max_tm_year = year_t{std::numeric_limits<int>::max()} + 1900;
     tp = convert(civil_second(max_tm_year, 12, 31, 23, 59, 59), cut);
-#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__wasm__)
+#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__EMSCRIPTEN__)
     // Some gmtime_r() impls fail on extreme positive values.
 #else
     EXPECT_EQ("2147485547-12-31T23:59:59+00:00",
@@ -1037,7 +1037,7 @@ TEST(MakeTime, SysSecondsLimits) {
 #endif
     const year_t min_tm_year = year_t{std::numeric_limits<int>::min()} + 1900;
     tp = convert(civil_second(min_tm_year, 1, 1, 0, 0, 0), cut);
-#if defined(__Fuchsia__) || defined(__wasm__)
+#if defined(__Fuchsia__) || defined(__EMSCRIPTEN__)
     // Some gmtime_r() impls fail on extreme negative values (fxbug.dev/78527).
 #else
     EXPECT_EQ("-2147481748-01-01T00:00:00+00:00",
