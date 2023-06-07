@@ -264,10 +264,10 @@ time_zone::civil_lookup TimeZoneLibC::MakeTime(const civil_second& cs) const {
       return {time_zone::civil_lookup::UNIQUE, tp, tp, tp};
     }
 
-    int offset = tm_gmtoff(tm0);
+    int offset = static_cast<int>(tm_gmtoff(tm0));
     if (t0 < t1) {  // negative DST
       std::swap(t0, t1);
-      offset = tm_gmtoff(tm1);
+      offset = static_cast<int>(tm_gmtoff(tm1));
     }
 
     const std::time_t tt = find_trans(t1, t0, offset);
