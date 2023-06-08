@@ -67,6 +67,16 @@ auto tm_zone(const std::tm& tm) -> decltype(tzname[0]) {
   const bool is_dst = tm.tm_isdst > 0;
   return tzname[is_dst];
 }
+#elif defined(__VXWORKS__)
+// Uses the globals: 'timezone' and 'tzname'.
+auto tm_gmtoff(const std::tm& tm) -> decltype(timezone + 0) {
+  const bool is_dst = tm.tm_isdst > 0;
+  return timezone + (is_dst ? 60 * 60 : 0);
+}
+auto tm_zone(const std::tm& tm) -> decltype(tzname[0]) {
+  const bool is_dst = tm.tm_isdst > 0;
+  return tzname[is_dst];
+}
 #else
 // Adapt to different spellings of the struct std::tm extension fields.
 #if defined(tm_gmtoff)
