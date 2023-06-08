@@ -106,6 +106,7 @@ auto tm_zone(const T& tm) -> decltype(tm.__tm_zone) {
 }
 #endif  // tm_zone
 #endif
+using tm_gmtoff_t = decltype(tm_gmtoff(std::tm{}));
 
 inline std::tm* gm_time(const std::time_t *timep, std::tm *result) {
 #if defined(_WIN32) || defined(_WIN64)
@@ -152,7 +153,7 @@ bool make_time(const civil_second& cs, int is_dst, std::time_t* t,
 
 // Find the least time_t in [lo:hi] where local time matches offset, given:
 // (1) lo doesn't match, (2) hi does, and (3) there is only one transition.
-std::time_t find_trans(std::time_t lo, std::time_t hi, int offset) {
+std::time_t find_trans(std::time_t lo, std::time_t hi, tm_gmtoff_t offset) {
   std::tm tm;
   while (lo + 1 != hi) {
     const std::time_t mid = lo + (hi - lo) / 2;
@@ -264,7 +265,7 @@ time_zone::civil_lookup TimeZoneLibC::MakeTime(const civil_second& cs) const {
       return {time_zone::civil_lookup::UNIQUE, tp, tp, tp};
     }
 
-    int offset = tm_gmtoff(tm0);
+    tm_gmtoff_t offset = tm_gmtoff(tm0);
     if (t0 < t1) {  // negative DST
       std::swap(t0, t1);
       offset = tm_gmtoff(tm1);
