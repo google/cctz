@@ -13,8 +13,9 @@
 //   limitations under the License.
 
 #if !defined(HAS_STRPTIME)
-# if !defined(_MSC_VER) && !defined(__MINGW32__)
+# if !defined(_MSC_VER) && !defined(__MINGW32__) && !defined(__VXWORKS__)
 #  define HAS_STRPTIME 1  // assume everyone has strptime() except windows
+                          // and VxWorks
 # endif
 #endif
 
