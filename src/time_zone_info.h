@@ -62,8 +62,6 @@ struct TransitionType {
 class TimeZoneInfo : public TimeZoneIf {
  public:
   TimeZoneInfo() = default;
-  // Initialize as a fixed UTC offset.
-  explicit TimeZoneInfo(const seconds& offset);
   TimeZoneInfo(const TimeZoneInfo&) = delete;
   TimeZoneInfo& operator=(const TimeZoneInfo&) = delete;
 
