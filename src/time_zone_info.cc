@@ -406,6 +406,12 @@ bool TimeZoneInfo::ExtendTransitions() {
   return true;
 }
 
+std::unique_ptr<TimeZoneInfo> TimeZoneInfo::UTC() {
+  auto zone = std::unique_ptr<TimeZoneInfo>(new TimeZoneInfo);
+  zone->ResetToBuiltinUTC(seconds::zero());
+  return zone;
+}
+
 bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
   // Read and validate the header.
   tzhead tzh;
@@ -807,8 +813,6 @@ std::unique_ptr<ZoneInfoSource> FuchsiaZoneInfoSource::Open(
 }
 
 }  // namespace
-
-TimeZoneInfo::TimeZoneInfo(const seconds& offset) { ResetToBuiltinUTC(offset); }
 
 bool TimeZoneInfo::Load(const std::string& name) {
   // We can ensure that the loading of UTC or any other fixed-offset

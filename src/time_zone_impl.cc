@@ -42,9 +42,7 @@ std::mutex& TimeZoneMutex() {
 
 }  // namespace
 
-time_zone time_zone::Impl::UTC() {
-  return time_zone(UTCImpl());
-}
+time_zone time_zone::Impl::UTC() { return time_zone(UTCImpl()); }
 
 bool time_zone::Impl::LoadTimeZone(const std::string& name, time_zone* tz) {
   const Impl* const utc_impl = UTCImpl();
@@ -100,12 +98,10 @@ void time_zone::Impl::ClearTimeZoneMapTestOnly() {
 time_zone::Impl::Impl(const std::string& name)
     : name_(name), zone_(TimeZoneIf::Load(name_)) {}
 
-time_zone::Impl::Impl(const std::string& name, std::unique_ptr<TimeZoneIf> zone)
-    : name_(name), zone_(std::move(zone)) {}
+time_zone::Impl::Impl() : name_("UTC"), zone_(TimeZoneIf::UTC()) {}
 
 const time_zone::Impl* time_zone::Impl::UTCImpl() {
-  static const Impl* utc_impl = new Impl(
-      "UTC", std::unique_ptr<TimeZoneIf>(new TimeZoneInfo(seconds::zero())));
+  static const Impl* utc_impl = new Impl;  // never fails
   return utc_impl;
 }
 
