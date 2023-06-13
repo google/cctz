@@ -18,6 +18,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -63,6 +64,8 @@ class TimeZoneInfo : public TimeZoneIf {
   TimeZoneInfo() = default;
   TimeZoneInfo(const TimeZoneInfo&) = delete;
   TimeZoneInfo& operator=(const TimeZoneInfo&) = delete;
+
+  static std::unique_ptr<TimeZoneInfo> UTC();
 
   // Loads the zoneinfo for the given name, returning true if successful.
   bool Load(const std::string& name);

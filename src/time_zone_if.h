@@ -29,7 +29,8 @@ namespace cctz {
 // Subclasses implement the functions for civil-time conversions in the zone.
 class TimeZoneIf {
  public:
-  // A factory function for TimeZoneIf implementations.
+  // Factory functions for TimeZoneIf implementations.
+  static std::unique_ptr<TimeZoneIf> UTC();
   static std::unique_ptr<TimeZoneIf> Load(const std::string& name);
 
   virtual ~TimeZoneIf();
