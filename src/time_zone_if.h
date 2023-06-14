@@ -30,8 +30,8 @@ namespace cctz {
 class TimeZoneIf {
  public:
   // Factory functions for TimeZoneIf implementations.
-  static std::unique_ptr<TimeZoneIf> UTC();
-  static std::unique_ptr<TimeZoneIf> Load(const std::string& name);
+  static std::unique_ptr<TimeZoneIf> UTC();  // never fails
+  static std::unique_ptr<TimeZoneIf> Make(const std::string& name);
 
   virtual ~TimeZoneIf();
 
@@ -49,7 +49,9 @@ class TimeZoneIf {
   virtual std::string Description() const = 0;
 
  protected:
-  TimeZoneIf() {}
+  TimeZoneIf() = default;
+  TimeZoneIf(const TimeZoneIf&) = delete;
+  TimeZoneIf& operator=(const TimeZoneIf&) = delete;
 };
 
 // Convert between time_point<seconds> and a count of seconds since the

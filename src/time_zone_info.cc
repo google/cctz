@@ -130,6 +130,49 @@ std::int_fast64_t Decode64(const char* cp) {
   return static_cast<std::int_fast64_t>(v - s64maxU - 1) - s64max - 1;
 }
 
+struct Header {            // counts of:
+  std::size_t timecnt;     // transition times
+  std::size_t typecnt;     // transition types
+  std::size_t charcnt;     // zone abbreviation characters
+  std::size_t leapcnt;     // leap seconds (we expect none)
+  std::size_t ttisstdcnt;  // UTC/local indicators (unused)
+  std::size_t ttisutcnt;   // standard/wall indicators (unused)
+
+  bool Build(const tzhead& tzh);
+  std::size_t DataLength(std::size_t time_len) const;
+};
+
+// Builds the in-memory header using the raw bytes from the file.
+bool Header::Build(const tzhead& tzh) {
+  std::int_fast32_t v;
+  if ((v = Decode32(tzh.tzh_timecnt)) < 0) return false;
+  timecnt = static_cast<std::size_t>(v);
+  if ((v = Decode32(tzh.tzh_typecnt)) < 0) return false;
+  typecnt = static_cast<std::size_t>(v);
+  if ((v = Decode32(tzh.tzh_charcnt)) < 0) return false;
+  charcnt = static_cast<std::size_t>(v);
+  if ((v = Decode32(tzh.tzh_leapcnt)) < 0) return false;
+  leapcnt = static_cast<std::size_t>(v);
+  if ((v = Decode32(tzh.tzh_ttisstdcnt)) < 0) return false;
+  ttisstdcnt = static_cast<std::size_t>(v);
+  if ((v = Decode32(tzh.tzh_ttisutcnt)) < 0) return false;
+  ttisutcnt = static_cast<std::size_t>(v);
+  return true;
+}
+
+// How many bytes of data are associated with this header. The result
+// depends upon whether this is a section with 4-byte or 8-byte times.
+std::size_t Header::DataLength(std::size_t time_len) const {
+  std::size_t len = 0;
+  len += (time_len + 1) * timecnt;  // unix_time + type_index
+  len += (4 + 1 + 1) * typecnt;     // utc_offset + is_dst + abbr_index
+  len += 1 * charcnt;               // abbreviations
+  len += (time_len + 4) * leapcnt;  // leap-time + TAI-UTC
+  len += 1 * ttisstdcnt;            // UTC/local indicators
+  len += 1 * ttisutcnt;             // standard/wall indicators
+  return len;
+}
+
 // Does the rule for future transitions call for year-round daylight time?
 // See tz/zic.c:stringzone() for the details on how such rules are encoded.
 bool AllYearDST(const PosixTimeZone& posix) {
@@ -213,98 +256,6 @@ inline civil_second YearShift(const civil_second& cs, year_t shift) {
 
 }  // namespace
 
-// What (no leap-seconds) UTC+seconds zoneinfo would look like.
-bool TimeZoneInfo::ResetToBuiltinUTC(const seconds& offset) {
-  transition_types_.resize(1);
-  TransitionType& tt(transition_types_.back());
-  tt.utc_offset = static_cast<std::int_least32_t>(offset.count());
-  tt.is_dst = false;
-  tt.abbr_index = 0;
-
-  // We temporarily add some redundant, contemporary (2015 through 2025)
-  // transitions for performance reasons.  See TimeZoneInfo::LocalTime().
-  // TODO: Fix the performance issue and remove the extra transitions.
-  transitions_.clear();
-  transitions_.reserve(12);
-  for (const std::int_fast64_t unix_time : {
-           -(1LL << 59),  // a "first half" transition
-           1420070400LL,  // 2015-01-01T00:00:00+00:00
-           1451606400LL,  // 2016-01-01T00:00:00+00:00
-           1483228800LL,  // 2017-01-01T00:00:00+00:00
-           1514764800LL,  // 2018-01-01T00:00:00+00:00
-           1546300800LL,  // 2019-01-01T00:00:00+00:00
-           1577836800LL,  // 2020-01-01T00:00:00+00:00
-           1609459200LL,  // 2021-01-01T00:00:00+00:00
-           1640995200LL,  // 2022-01-01T00:00:00+00:00
-           1672531200LL,  // 2023-01-01T00:00:00+00:00
-           1704067200LL,  // 2024-01-01T00:00:00+00:00
-           1735689600LL,  // 2025-01-01T00:00:00+00:00
-       }) {
-    Transition& tr(*transitions_.emplace(transitions_.end()));
-    tr.unix_time = unix_time;
-    tr.type_index = 0;
-    tr.civil_sec = LocalTime(tr.unix_time, tt).cs;
-    tr.prev_civil_sec = tr.civil_sec - 1;
-  }
-
-  default_transition_type_ = 0;
-  abbreviations_ = FixedOffsetToAbbr(offset);
-  abbreviations_.append(1, '\0');
-  future_spec_.clear();  // never needed for a fixed-offset zone
-  extended_ = false;
-
-  tt.civil_max = LocalTime(seconds::max().count(), tt).cs;
-  tt.civil_min = LocalTime(seconds::min().count(), tt).cs;
-
-  transitions_.shrink_to_fit();
-  return true;
-}
-
-// Builds the in-memory header using the raw bytes from the file.
-bool TimeZoneInfo::Header::Build(const tzhead& tzh) {
-  std::int_fast32_t v;
-  if ((v = Decode32(tzh.tzh_timecnt)) < 0) return false;
-  timecnt = static_cast<std::size_t>(v);
-  if ((v = Decode32(tzh.tzh_typecnt)) < 0) return false;
-  typecnt = static_cast<std::size_t>(v);
-  if ((v = Decode32(tzh.tzh_charcnt)) < 0) return false;
-  charcnt = static_cast<std::size_t>(v);
-  if ((v = Decode32(tzh.tzh_leapcnt)) < 0) return false;
-  leapcnt = static_cast<std::size_t>(v);
-  if ((v = Decode32(tzh.tzh_ttisstdcnt)) < 0) return false;
-  ttisstdcnt = static_cast<std::size_t>(v);
-  if ((v = Decode32(tzh.tzh_ttisutcnt)) < 0) return false;
-  ttisutcnt = static_cast<std::size_t>(v);
-  return true;
-}
-
-// How many bytes of data are associated with this header. The result
-// depends upon whether this is a section with 4-byte or 8-byte times.
-std::size_t TimeZoneInfo::Header::DataLength(std::size_t time_len) const {
-  std::size_t len = 0;
-  len += (time_len + 1) * timecnt;  // unix_time + type_index
-  len += (4 + 1 + 1) * typecnt;     // utc_offset + is_dst + abbr_index
-  len += 1 * charcnt;               // abbreviations
-  len += (time_len + 4) * leapcnt;  // leap-time + TAI-UTC
-  len += 1 * ttisstdcnt;            // UTC/local indicators
-  len += 1 * ttisutcnt;             // standard/wall indicators
-  return len;
-}
-
-// zic(8) can generate no-op transitions when a zone changes rules at an
-// instant when there is actually no discontinuity.  So we check whether
-// two transitions have equivalent types (same offset/is_dst/abbr).
-bool TimeZoneInfo::EquivTransitions(std::uint_fast8_t tt1_index,
-                                    std::uint_fast8_t tt2_index) const {
-  if (tt1_index == tt2_index) return true;
-  const TransitionType& tt1(transition_types_[tt1_index]);
-  const TransitionType& tt2(transition_types_[tt2_index]);
-  if (tt1.utc_offset != tt2.utc_offset) return false;
-  if (tt1.is_dst != tt2.is_dst) return false;
-  if (tt1.abbr_index != tt2.abbr_index) return false;
-  return true;
-}
-
 // Find/make a transition type with these attributes.
 bool TimeZoneInfo::GetTransitionType(std::int_fast32_t utc_offset, bool is_dst,
                                      const std::string& abbr,
@@ -334,6 +285,20 @@ bool TimeZoneInfo::GetTransitionType(std::int_fast32_t utc_offset, bool is_dst,
     tt.abbr_index = static_cast<std::uint_least8_t>(abbr_index);
   }
   *index = static_cast<std::uint_least8_t>(type_index);
+  return true;
+}
+
+// zic(8) can generate no-op transitions when a zone changes rules at an
+// instant when there is actually no discontinuity.  So we check whether
+// two transitions have equivalent types (same offset/is_dst/abbr).
+bool TimeZoneInfo::EquivTransitions(std::uint_fast8_t tt1_index,
+                                    std::uint_fast8_t tt2_index) const {
+  if (tt1_index == tt2_index) return true;
+  const TransitionType& tt1(transition_types_[tt1_index]);
+  const TransitionType& tt2(transition_types_[tt2_index]);
+  if (tt1.utc_offset != tt2.utc_offset) return false;
+  if (tt1.is_dst != tt2.is_dst) return false;
+  if (tt1.abbr_index != tt2.abbr_index) return false;
   return true;
 }
 
@@ -403,6 +368,250 @@ bool TimeZoneInfo::ExtendTransitions() {
     leap_year = !leap_year && IsLeap(last_year_ + 1);
   }
 
+  return true;
+}
+
+namespace {
+
+using FilePtr = std::unique_ptr<FILE, int(*)(FILE*)>;
+
+// fopen(3) adaptor.
+inline FilePtr FOpen(const char* path, const char* mode) {
+#if defined(_MSC_VER)
+  FILE* fp;
+  if (fopen_s(&fp, path, mode) != 0) fp = nullptr;
+  return FilePtr(fp, fclose);
+#else
+  // TODO: Enable the close-on-exec flag.
+  return FilePtr(fopen(path, mode), fclose);
+#endif
+}
+
+// A stdio(3)-backed implementation of ZoneInfoSource.
+class FileZoneInfoSource : public ZoneInfoSource {
+ public:
+  static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
+
+  std::size_t Read(void* ptr, std::size_t size) override {
+    size = std::min(size, len_);
+    std::size_t nread = fread(ptr, 1, size, fp_.get());
+    len_ -= nread;
+    return nread;
+  }
+  int Skip(std::size_t offset) override {
+    offset = std::min(offset, len_);
+    int rc = fseek(fp_.get(), static_cast<long>(offset), SEEK_CUR);
+    if (rc == 0) len_ -= offset;
+    return rc;
+  }
+  std::string Version() const override {
+    // TODO: It would nice if the zoneinfo data included the tzdb version.
+    return std::string();
+  }
+
+ protected:
+  explicit FileZoneInfoSource(
+      FilePtr fp, std::size_t len = std::numeric_limits<std::size_t>::max())
+      : fp_(std::move(fp)), len_(len) {}
+
+ private:
+  FilePtr fp_;
+  std::size_t len_;
+};
+
+std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
+    const std::string& name) {
+  // Use of the "file:" prefix is intended for testing purposes only.
+  const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
+
+  // Map the time-zone name to a path name.
+  std::string path;
+  if (pos == name.size() || name[pos] != '/') {
+    const char* tzdir = "/usr/share/zoneinfo";
+    char* tzdir_env = nullptr;
+#if defined(_MSC_VER)
+    _dupenv_s(&tzdir_env, nullptr, "TZDIR");
+#else
+    tzdir_env = std::getenv("TZDIR");
+#endif
+    if (tzdir_env && *tzdir_env) tzdir = tzdir_env;
+    path += tzdir;
+    path += '/';
+#if defined(_MSC_VER)
+    free(tzdir_env);
+#endif
+  }
+  path.append(name, pos, std::string::npos);
+
+  // Open the zoneinfo file.
+  auto fp = FOpen(path.c_str(), "rb");
+  if (fp == nullptr) return nullptr;
+  return std::unique_ptr<ZoneInfoSource>(new FileZoneInfoSource(std::move(fp)));
+}
+
+class AndroidZoneInfoSource : public FileZoneInfoSource {
+ public:
+  static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
+  std::string Version() const override { return version_; }
+
+ private:
+  explicit AndroidZoneInfoSource(FilePtr fp, std::size_t len,
+                                 std::string version)
+      : FileZoneInfoSource(std::move(fp), len), version_(std::move(version)) {}
+  std::string version_;
+};
+
+std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
+    const std::string& name) {
+  // Use of the "file:" prefix is intended for testing purposes only.
+  const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
+
+  // See Android's libc/tzcode/bionic.cpp for additional information.
+  for (const char* tzdata : {"/data/misc/zoneinfo/current/tzdata",
+                             "/system/usr/share/zoneinfo/tzdata"}) {
+    auto fp = FOpen(tzdata, "rb");
+    if (fp == nullptr) continue;
+
+    char hbuf[24];  // covers header.zonetab_offset too
+    if (fread(hbuf, 1, sizeof(hbuf), fp.get()) != sizeof(hbuf)) continue;
+    if (strncmp(hbuf, "tzdata", 6) != 0) continue;
+    const char* vers = (hbuf[11] == '\0') ? hbuf + 6 : "";
+    const std::int_fast32_t index_offset = Decode32(hbuf + 12);
+    const std::int_fast32_t data_offset = Decode32(hbuf + 16);
+    if (index_offset < 0 || data_offset < index_offset) continue;
+    if (fseek(fp.get(), static_cast<long>(index_offset), SEEK_SET) != 0)
+      continue;
+
+    char ebuf[52];  // covers entry.unused too
+    const std::size_t index_size =
+        static_cast<std::size_t>(data_offset - index_offset);
+    const std::size_t zonecnt = index_size / sizeof(ebuf);
+    if (zonecnt * sizeof(ebuf) != index_size) continue;
+    for (std::size_t i = 0; i != zonecnt; ++i) {
+      if (fread(ebuf, 1, sizeof(ebuf), fp.get()) != sizeof(ebuf)) break;
+      const std::int_fast32_t start = data_offset + Decode32(ebuf + 40);
+      const std::int_fast32_t length = Decode32(ebuf + 44);
+      if (start < 0 || length < 0) break;
+      ebuf[40] = '\0';  // ensure zone name is NUL terminated
+      if (strcmp(name.c_str() + pos, ebuf) == 0) {
+        if (fseek(fp.get(), static_cast<long>(start), SEEK_SET) != 0) break;
+        return std::unique_ptr<ZoneInfoSource>(new AndroidZoneInfoSource(
+            std::move(fp), static_cast<std::size_t>(length), vers));
+      }
+    }
+  }
+
+  return nullptr;
+}
+
+// A zoneinfo source for use inside Fuchsia components. This attempts to
+// read zoneinfo files from one of several known paths in a component's
+// incoming namespace. [Config data][1] is preferred, but package-specific
+// resources are also supported.
+//
+// Fuchsia's implementation supports `FileZoneInfoSource::Version()`.
+//
+// [1]: https://fuchsia.dev/fuchsia-src/development/components/data#using_config_data_in_your_component
+class FuchsiaZoneInfoSource : public FileZoneInfoSource {
+ public:
+  static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
+  std::string Version() const override { return version_; }
+
+ private:
+  explicit FuchsiaZoneInfoSource(FilePtr fp, std::string version)
+      : FileZoneInfoSource(std::move(fp)), version_(std::move(version)) {}
+  std::string version_;
+};
+
+std::unique_ptr<ZoneInfoSource> FuchsiaZoneInfoSource::Open(
+    const std::string& name) {
+  // Use of the "file:" prefix is intended for testing purposes only.
+  const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
+
+  // Prefixes where a Fuchsia component might find zoneinfo files,
+  // in descending order of preference.
+  const auto kTzdataPrefixes = {
+      "/config/data/tzdata/",
+      "/pkg/data/tzdata/",
+      "/data/tzdata/",
+  };
+  const auto kEmptyPrefix = {""};
+  const bool name_absolute = (pos != name.size() && name[pos] == '/');
+  const auto prefixes = name_absolute ? kEmptyPrefix : kTzdataPrefixes;
+
+  // Fuchsia builds place zoneinfo files at "<prefix><format><name>".
+  for (const std::string prefix : prefixes) {
+    std::string path = prefix;
+    if (!prefix.empty()) path += "zoneinfo/tzif2/";  // format
+    path.append(name, pos, std::string::npos);
+
+    auto fp = FOpen(path.c_str(), "rb");
+    if (fp == nullptr) continue;
+
+    std::string version;
+    if (!prefix.empty()) {
+      // Fuchsia builds place the version in "<prefix>revision.txt".
+      std::ifstream version_stream(prefix + "revision.txt");
+      if (version_stream.is_open()) {
+        // revision.txt should contain no newlines, but to be
+        // defensive we read just the first line.
+        std::getline(version_stream, version);
+      }
+    }
+
+    return std::unique_ptr<ZoneInfoSource>(
+        new FuchsiaZoneInfoSource(std::move(fp), std::move(version)));
+  }
+
+  return nullptr;
+}
+
+}  // namespace
+
+// What (no leap-seconds) UTC+seconds zoneinfo would look like.
+bool TimeZoneInfo::ResetToBuiltinUTC(const seconds& offset) {
+  transition_types_.resize(1);
+  TransitionType& tt(transition_types_.back());
+  tt.utc_offset = static_cast<std::int_least32_t>(offset.count());
+  tt.is_dst = false;
+  tt.abbr_index = 0;
+
+  // We temporarily add some redundant, contemporary (2015 through 2025)
+  // transitions for performance reasons.  See TimeZoneInfo::LocalTime().
+  // TODO: Fix the performance issue and remove the extra transitions.
+  transitions_.clear();
+  transitions_.reserve(12);
+  for (const std::int_fast64_t unix_time : {
+           -(1LL << 59),  // a "first half" transition
+           1420070400LL,  // 2015-01-01T00:00:00+00:00
+           1451606400LL,  // 2016-01-01T00:00:00+00:00
+           1483228800LL,  // 2017-01-01T00:00:00+00:00
+           1514764800LL,  // 2018-01-01T00:00:00+00:00
+           1546300800LL,  // 2019-01-01T00:00:00+00:00
+           1577836800LL,  // 2020-01-01T00:00:00+00:00
+           1609459200LL,  // 2021-01-01T00:00:00+00:00
+           1640995200LL,  // 2022-01-01T00:00:00+00:00
+           1672531200LL,  // 2023-01-01T00:00:00+00:00
+           1704067200LL,  // 2024-01-01T00:00:00+00:00
+           1735689600LL,  // 2025-01-01T00:00:00+00:00
+       }) {
+    Transition& tr(*transitions_.emplace(transitions_.end()));
+    tr.unix_time = unix_time;
+    tr.type_index = 0;
+    tr.civil_sec = LocalTime(tr.unix_time, tt).cs;
+    tr.prev_civil_sec = tr.civil_sec - 1;
+  }
+
+  default_transition_type_ = 0;
+  abbreviations_ = FixedOffsetToAbbr(offset);
+  abbreviations_.append(1, '\0');
+  future_spec_.clear();  // never needed for a fixed-offset zone
+  extended_ = false;
+
+  tt.civil_max = LocalTime(seconds::max().count(), tt).cs;
+  tt.civil_min = LocalTime(seconds::min().count(), tt).cs;
+
+  transitions_.shrink_to_fit();
   return true;
 }
 
@@ -611,209 +820,6 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
   return true;
 }
 
-namespace {
-
-using FilePtr = std::unique_ptr<FILE, int(*)(FILE*)>;
-
-// fopen(3) adaptor.
-inline FilePtr FOpen(const char* path, const char* mode) {
-#if defined(_MSC_VER)
-  FILE* fp;
-  if (fopen_s(&fp, path, mode) != 0) fp = nullptr;
-  return FilePtr(fp, fclose);
-#else
-  // TODO: Enable the close-on-exec flag.
-  return FilePtr(fopen(path, mode), fclose);
-#endif
-}
-
-// A stdio(3)-backed implementation of ZoneInfoSource.
-class FileZoneInfoSource : public ZoneInfoSource {
- public:
-  static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
-
-  std::size_t Read(void* ptr, std::size_t size) override {
-    size = std::min(size, len_);
-    std::size_t nread = fread(ptr, 1, size, fp_.get());
-    len_ -= nread;
-    return nread;
-  }
-  int Skip(std::size_t offset) override {
-    offset = std::min(offset, len_);
-    int rc = fseek(fp_.get(), static_cast<long>(offset), SEEK_CUR);
-    if (rc == 0) len_ -= offset;
-    return rc;
-  }
-  std::string Version() const override {
-    // TODO: It would nice if the zoneinfo data included the tzdb version.
-    return std::string();
-  }
-
- protected:
-  explicit FileZoneInfoSource(
-      FilePtr fp, std::size_t len = std::numeric_limits<std::size_t>::max())
-      : fp_(std::move(fp)), len_(len) {}
-
- private:
-  FilePtr fp_;
-  std::size_t len_;
-};
-
-std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
-    const std::string& name) {
-  // Use of the "file:" prefix is intended for testing purposes only.
-  const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
-
-  // Map the time-zone name to a path name.
-  std::string path;
-  if (pos == name.size() || name[pos] != '/') {
-    const char* tzdir = "/usr/share/zoneinfo";
-    char* tzdir_env = nullptr;
-#if defined(_MSC_VER)
-    _dupenv_s(&tzdir_env, nullptr, "TZDIR");
-#else
-    tzdir_env = std::getenv("TZDIR");
-#endif
-    if (tzdir_env && *tzdir_env) tzdir = tzdir_env;
-    path += tzdir;
-    path += '/';
-#if defined(_MSC_VER)
-    free(tzdir_env);
-#endif
-  }
-  path.append(name, pos, std::string::npos);
-
-  // Open the zoneinfo file.
-  auto fp = FOpen(path.c_str(), "rb");
-  if (fp == nullptr) return nullptr;
-  return std::unique_ptr<ZoneInfoSource>(new FileZoneInfoSource(std::move(fp)));
-}
-
-class AndroidZoneInfoSource : public FileZoneInfoSource {
- public:
-  static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
-  std::string Version() const override { return version_; }
-
- private:
-  explicit AndroidZoneInfoSource(FilePtr fp, std::size_t len,
-                                 std::string version)
-      : FileZoneInfoSource(std::move(fp), len), version_(std::move(version)) {}
-  std::string version_;
-};
-
-std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
-    const std::string& name) {
-  // Use of the "file:" prefix is intended for testing purposes only.
-  const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
-
-  // See Android's libc/tzcode/bionic.cpp for additional information.
-  for (const char* tzdata : {"/data/misc/zoneinfo/current/tzdata",
-                             "/system/usr/share/zoneinfo/tzdata"}) {
-    auto fp = FOpen(tzdata, "rb");
-    if (fp == nullptr) continue;
-
-    char hbuf[24];  // covers header.zonetab_offset too
-    if (fread(hbuf, 1, sizeof(hbuf), fp.get()) != sizeof(hbuf)) continue;
-    if (strncmp(hbuf, "tzdata", 6) != 0) continue;
-    const char* vers = (hbuf[11] == '\0') ? hbuf + 6 : "";
-    const std::int_fast32_t index_offset = Decode32(hbuf + 12);
-    const std::int_fast32_t data_offset = Decode32(hbuf + 16);
-    if (index_offset < 0 || data_offset < index_offset) continue;
-    if (fseek(fp.get(), static_cast<long>(index_offset), SEEK_SET) != 0)
-      continue;
-
-    char ebuf[52];  // covers entry.unused too
-    const std::size_t index_size =
-        static_cast<std::size_t>(data_offset - index_offset);
-    const std::size_t zonecnt = index_size / sizeof(ebuf);
-    if (zonecnt * sizeof(ebuf) != index_size) continue;
-    for (std::size_t i = 0; i != zonecnt; ++i) {
-      if (fread(ebuf, 1, sizeof(ebuf), fp.get()) != sizeof(ebuf)) break;
-      const std::int_fast32_t start = data_offset + Decode32(ebuf + 40);
-      const std::int_fast32_t length = Decode32(ebuf + 44);
-      if (start < 0 || length < 0) break;
-      ebuf[40] = '\0';  // ensure zone name is NUL terminated
-      if (strcmp(name.c_str() + pos, ebuf) == 0) {
-        if (fseek(fp.get(), static_cast<long>(start), SEEK_SET) != 0) break;
-        return std::unique_ptr<ZoneInfoSource>(new AndroidZoneInfoSource(
-            std::move(fp), static_cast<std::size_t>(length), vers));
-      }
-    }
-  }
-
-  return nullptr;
-}
-
-// A zoneinfo source for use inside Fuchsia components. This attempts to
-// read zoneinfo files from one of several known paths in a component's
-// incoming namespace. [Config data][1] is preferred, but package-specific
-// resources are also supported.
-//
-// Fuchsia's implementation supports `FileZoneInfoSource::Version()`.
-//
-// [1]: https://fuchsia.dev/fuchsia-src/development/components/data#using_config_data_in_your_component
-class FuchsiaZoneInfoSource : public FileZoneInfoSource {
- public:
-  static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
-  std::string Version() const override { return version_; }
-
- private:
-  explicit FuchsiaZoneInfoSource(FilePtr fp, std::string version)
-      : FileZoneInfoSource(std::move(fp)), version_(std::move(version)) {}
-  std::string version_;
-};
-
-std::unique_ptr<ZoneInfoSource> FuchsiaZoneInfoSource::Open(
-    const std::string& name) {
-  // Use of the "file:" prefix is intended for testing purposes only.
-  const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
-
-  // Prefixes where a Fuchsia component might find zoneinfo files,
-  // in descending order of preference.
-  const auto kTzdataPrefixes = {
-      "/config/data/tzdata/",
-      "/pkg/data/tzdata/",
-      "/data/tzdata/",
-  };
-  const auto kEmptyPrefix = {""};
-  const bool name_absolute = (pos != name.size() && name[pos] == '/');
-  const auto prefixes = name_absolute ? kEmptyPrefix : kTzdataPrefixes;
-
-  // Fuchsia builds place zoneinfo files at "<prefix><format><name>".
-  for (const std::string prefix : prefixes) {
-    std::string path = prefix;
-    if (!prefix.empty()) path += "zoneinfo/tzif2/";  // format
-    path.append(name, pos, std::string::npos);
-
-    auto fp = FOpen(path.c_str(), "rb");
-    if (fp == nullptr) continue;
-
-    std::string version;
-    if (!prefix.empty()) {
-      // Fuchsia builds place the version in "<prefix>revision.txt".
-      std::ifstream version_stream(prefix + "revision.txt");
-      if (version_stream.is_open()) {
-        // revision.txt should contain no newlines, but to be
-        // defensive we read just the first line.
-        std::getline(version_stream, version);
-      }
-    }
-
-    return std::unique_ptr<ZoneInfoSource>(
-        new FuchsiaZoneInfoSource(std::move(fp), std::move(version)));
-  }
-
-  return nullptr;
-}
-
-}  // namespace
-
-std::unique_ptr<TimeZoneInfo> TimeZoneInfo::UTC() {
-  auto zone = std::unique_ptr<TimeZoneInfo>(new TimeZoneInfo);
-  zone->ResetToBuiltinUTC(seconds::zero());
-  return zone;
-}
-
 bool TimeZoneInfo::Load(const std::string& name) {
   // We can ensure that the loading of UTC or any other fixed-offset
   // zone never fails because the simple, fixed-offset state can be
@@ -833,6 +839,18 @@ bool TimeZoneInfo::Load(const std::string& name) {
         return nullptr;
       });
   return zip != nullptr && Load(zip.get());
+}
+
+std::unique_ptr<TimeZoneInfo> TimeZoneInfo::UTC() {
+  auto tz = std::unique_ptr<TimeZoneInfo>(new TimeZoneInfo);
+  tz->ResetToBuiltinUTC(seconds::zero());
+  return tz;
+}
+
+std::unique_ptr<TimeZoneInfo> TimeZoneInfo::Make(const std::string& name) {
+  auto tz = std::unique_ptr<TimeZoneInfo>(new TimeZoneInfo);
+  if (!tz->Load(name)) tz.reset();  // fallback to UTC
+  return tz;
 }
 
 // BreakTime() translation for a particular transition type.
