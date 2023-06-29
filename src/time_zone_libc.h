@@ -15,6 +15,7 @@
 #ifndef CCTZ_TIME_ZONE_LIBC_H_
 #define CCTZ_TIME_ZONE_LIBC_H_
 
+#include <memory>
 #include <string>
 
 #include "time_zone_if.h"
