@@ -45,6 +45,7 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "cctz/civil_time.h"
 #include "time_zone_fixed.h"
