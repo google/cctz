@@ -363,7 +363,7 @@ bool TimeZoneInfo::ExtendTransitions() {
       if (last_time < ta->unix_time) transitions_.push_back(*ta);
       transitions_.push_back(*tb);
     }
-    if (last_year_ == limit) break;
+    if (last_year_ > limit) break;
     jan1_time += kSecsPerYear[leap_year];
     jan1_weekday = (jan1_weekday + kDaysPerYear[leap_year]) % 7;
     leap_year = !leap_year && IsLeap(last_year_ + 1);
