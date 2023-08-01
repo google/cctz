@@ -338,7 +338,7 @@ bool TimeZoneInfo::ExtendTransitions() {
   // specification. Years beyond those can be handled by mapping back to
   // a cycle-equivalent year within that range. Note that we need 401
   // (well, at least the first transition in the 401st year) so that the
-  // end of the 400th year is mapped back to an extended year.) And first
+  // end of the 400th year is mapped back to an extended year. And first
   // we may also need two additional transitions for the current year.
   transitions_.reserve(transitions_.size() + 2 + 401 * 2);
   extended_ = true;
