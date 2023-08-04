@@ -37,7 +37,12 @@
 #include <sdkddkver.h>
 // Include only when the SDK is for Windows 10 (and later), and the binary is
 // targeted for Windows XP and later.
-#if defined(_WIN32_WINNT_WIN10) && (_WIN32_WINNT >= _WIN32_WINNT_WINXP)
+// Note: Windows SDK added windows.globalization.h file in 10.0.10240.0,
+//   but mingw added it in 10.0.22621.0, so the version is checked against
+//   10.0.22621.0 in mingw.
+#if ((defined(_WIN32_WINNT_WIN10) && !defined(__MINGW32__)) ||        \
+     (defined(NTDDI_WIN10_NI) && NTDDI_VERSION >= NTDDI_WIN10_NI)) && \
+    (_WIN32_WINNT >= _WIN32_WINNT_WINXP)
 #include <roapi.h>
 #include <tchar.h>
 #include <wchar.h>
@@ -82,7 +87,9 @@ int __system_property_get(const char* name, char* value) {
 }
 #endif
 
-#if defined(_WIN32_WINNT_WIN10) && (_WIN32_WINNT >= _WIN32_WINNT_WINXP)
+#if ((defined(_WIN32_WINNT_WIN10) && !defined(__MINGW32__)) ||        \
+     (defined(NTDDI_WIN10_NI) && NTDDI_VERSION >= NTDDI_WIN10_NI)) && \
+    (_WIN32_WINNT >= _WIN32_WINNT_WINXP)
 // Calls the WinRT Calendar.GetTimeZone method to obtain the IANA ID of the
 // local time zone. Returns an empty vector in case of an error.
 std::string win32_local_time_zone(const HMODULE combase) {
@@ -277,7 +284,9 @@ time_zone local_time_zone() {
     zone = primary_tz.c_str();
   }
 #endif
-#if defined(_WIN32_WINNT_WIN10) && (_WIN32_WINNT >= _WIN32_WINNT_WINXP)
+#if ((defined(_WIN32_WINNT_WIN10) && !defined(__MINGW32__)) ||        \
+     (defined(NTDDI_WIN10_NI) && NTDDI_VERSION >= NTDDI_WIN10_NI)) && \
+    (_WIN32_WINNT >= _WIN32_WINNT_WINXP)
   // Use the WinRT Calendar class to get the local time zone. This feature is
   // available on Windows 10 and later. The library is dynamically linked to
   // maintain binary compatibility with Windows XP - Windows 7. On Windows 8,
