@@ -534,9 +534,16 @@ std::unique_ptr<ZoneInfoSource> FuchsiaZoneInfoSource::Open(
   // Prefixes where a Fuchsia component might find zoneinfo files,
   // in descending order of preference.
   const auto kTzdataPrefixes = {
+      // The tzdata from `config-data`.
       "/config/data/tzdata/",
+      // The tzdata bundled in the component's package.
       "/pkg/data/tzdata/",
+      // General data storage.
       "/data/tzdata/",
+      // The recommended path for routed-in tzdata files.
+      // See for details:
+      // https://fuchsia.dev/fuchsia-src/concepts/process/namespaces?hl=en#typical_directory_structure
+      "/config/tzdata/",
   };
   const auto kEmptyPrefix = {""};
   const bool name_absolute = (pos != name.size() && name[pos] == '/');
