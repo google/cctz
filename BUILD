@@ -12,6 +12,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+package(
+    features = [
+        "header_modules",
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
 licenses(["notice"])
 
 ### libraries
@@ -74,6 +82,7 @@ cc_test(
     srcs = ["src/civil_time_test.cc"],
     deps = [
         ":civil_time",
+        "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -85,6 +94,7 @@ cc_test(
     deps = [
         ":civil_time",
         ":time_zone",
+        "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -96,6 +106,7 @@ cc_test(
     deps = [
         ":civil_time",
         ":time_zone",
+        "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
     ],
 )
