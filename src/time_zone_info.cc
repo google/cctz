@@ -470,7 +470,8 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
   const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
 
   // See Android's libc/tzcode/bionic.cpp for additional information.
-  for (const char* tzdata : {"/data/misc/zoneinfo/current/tzdata",
+  for (const char* tzdata : {"/apex/com.android.tzdata/etc/tz/tzdata",
+                             "/data/misc/zoneinfo/current/tzdata",
                              "/system/usr/share/zoneinfo/tzdata"}) {
     auto fp = FOpen(tzdata, "rb");
     if (fp == nullptr) continue;
