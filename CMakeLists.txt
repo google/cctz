@@ -18,6 +18,8 @@ option(BUILD_TOOLS "Whether or not to build tools" ON)
 option(BUILD_EXAMPLES "Whether or not to build examples" ON)
 option(BUILD_BENCHMARK "Whether or not to build the benchmark application (has no effect if BUILD_TESTING is disabled)" ON)
 
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ${BUILD_SHARED_LIBS})
+
 if (BUILD_TESTING)
   if (BUILD_BENCHMARK)
     find_package(benchmark)
@@ -170,7 +172,7 @@ include(GNUInstallDirs)
 install(TARGETS cctz
   EXPORT ${PROJECT_NAME}-targets
   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cctz
-  RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
