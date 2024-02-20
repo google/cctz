@@ -18,6 +18,8 @@ option(BUILD_TOOLS "Whether or not to build tools" ON)
 option(BUILD_EXAMPLES "Whether or not to build examples" ON)
 option(BUILD_BENCHMARK "Whether or not to build the benchmark application (has no effect if BUILD_TESTING is disabled)" ON)
 
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ${BUILD_SHARED_LIBS})
+
 if (BUILD_TESTING)
   if (BUILD_BENCHMARK)
     find_package(benchmark)
