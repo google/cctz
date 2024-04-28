@@ -312,6 +312,8 @@ TEST(CivilTime, NextWeekDay) {
   static_assert(next.year() == 2016, "NextWeekDay.year");
   static_assert(next.month() == 2, "NextWeekDay.month");
   static_assert(next.day() == 4, "NextWeekDay.day");
+
+  static_assert(static_cast<int>(weekday::monday) == 0, "Monday is not 0");
 }
 
 TEST(CivilTime, PrevWeekDay) {
@@ -320,6 +322,8 @@ TEST(CivilTime, PrevWeekDay) {
   static_assert(prev.year() == 2016, "PrevWeekDay.year");
   static_assert(prev.month() == 1, "PrevWeekDay.month");
   static_assert(prev.day() == 21, "PrevWeekDay.day");
+
+  static_assert(static_cast<int>(weekday::monday) == 0, "Monday is not 0");
 }
 
 TEST(CivilTime, YearDay) {
