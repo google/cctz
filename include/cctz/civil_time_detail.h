@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <limits>
 #include <ostream>
+#include <string>
 #include <type_traits>
 
 // Disable constexpr support unless we are in C++14 mode.
@@ -565,6 +566,198 @@ CONSTEXPR_F civil_day prev_weekday(civil_day cd, weekday wd) noexcept {
     }
   }
 }
+
+////////////////////////////////////////////////////////////////////////
+
+enum class weekstart
+{
+  monday_zero,
+  monday_one,
+  sunday_zero,
+  sunday_one,
+};
+
+CONSTEXPR_F int weekday_to_number(weekday wd, weekstart ws) noexcept {
+  switch(ws) {
+    case weekstart::monday_zero:
+      switch (wd) {
+        case weekday::monday:
+          return 0;
+        case weekday::tuesday:
+          return 1;
+        case weekday::wednesday:
+          return 2;
+        case weekday::thursday:
+          return 3;
+        case weekday::friday:
+          return 4;
+        case weekday::saturday:
+          return 5;
+        case weekday::sunday:
+          return 6;
+      }
+      break;
+    case weekstart::monday_one:
+      switch (wd) {
+        case weekday::monday:
+          return 1;
+        case weekday::tuesday:
+          return 2;
+        case weekday::wednesday:
+          return 3;
+        case weekday::thursday:
+          return 4;
+        case weekday::friday:
+          return 5;
+        case weekday::saturday:
+          return 6;
+        case weekday::sunday:
+          return 7;
+      }
+      break;
+    case weekstart::sunday_zero:
+      switch (wd) {
+        case weekday::sunday:
+          return 0;
+        case weekday::monday:
+          return 1;
+        case weekday::tuesday:
+          return 2;
+        case weekday::wednesday:
+          return 3;
+        case weekday::thursday:
+          return 4;
+        case weekday::friday:
+          return 5;
+        case weekday::saturday:
+          return 6;
+      }
+      break;
+    case weekstart::sunday_one:
+      switch (wd) {
+        case weekday::sunday:
+          return 1;
+        case weekday::monday:
+          return 2;
+        case weekday::tuesday:
+          return 3;
+        case weekday::wednesday:
+          return 4;
+        case weekday::thursday:
+          return 5;
+        case weekday::friday:
+          return 6;
+        case weekday::saturday:
+          return 7;
+      }
+      break;
+  }
+
+  // Undefined behavior.
+  return 0;
+}
+
+CONSTEXPR_F weekday number_to_weekday(int wd, weekstart ws, std::string* err = nullptr) noexcept {
+  const char invalid_weekday_err[] = "Invalid weekday number for weekday";
+
+  switch(ws) {
+    case weekstart::monday_zero:
+      switch (wd) {
+        case 0:
+          return weekday::monday;
+        case 1:
+          return weekday::tuesday;
+        case 2:
+          return weekday::wednesday;
+        case 3:
+          return weekday::thursday;
+        case 4:
+          return weekday::friday;
+        case 5:
+          return weekday::saturday;
+        case 6:
+          return weekday::sunday;
+        default:
+          if (err) {
+            *err = invalid_weekday_err;
+          }
+          return weekday::monday;
+      }
+      break;
+    case weekstart::monday_one:
+      switch (wd) {
+        case 1:
+          return weekday::monday;
+        case 2:
+          return weekday::tuesday;
+        case 3:
+          return weekday::wednesday;
+        case 4:
+          return weekday::thursday;
+        case 5:
+          return weekday::friday;
+        case 6:
+          return weekday::saturday;
+        case 7:
+          return weekday::sunday;
+        default:
+          if (err) {
+            *err = invalid_weekday_err;
+          }
+          return weekday::monday;
+      }
+      break;
+    case weekstart::sunday_zero:
+      switch (wd) {
+        case 0:
+          return weekday::sunday;
+        case 1:
+          return weekday::monday;
+        case 2:
+          return weekday::tuesday;
+        case 3:
+          return weekday::wednesday;
+        case 4:
+          return weekday::thursday;
+        case 5:
+          return weekday::friday;
+        case 6:
+          return weekday::saturday;
+        default:
+          if (err) {
+            *err = invalid_weekday_err;
+          }
+          return weekday::sunday;
+      }
+    case weekstart::sunday_one:
+      switch (wd) {
+        case 1:
+          return weekday::sunday;
+        case 2:
+          return weekday::monday;
+        case 3:
+          return weekday::tuesday;
+        case 4:
+          return weekday::wednesday;
+        case 5:
+          return weekday::thursday;
+        case 6:
+          return weekday::friday;
+        case 7:
+          return weekday::saturday;
+        default:
+          if (err) {
+            *err = invalid_weekday_err;
+          }
+          return weekday::sunday;
+      }
+  }
+
+  // Undefined behavior.
+  return weekday::monday;
+}
+
+////////////////////////////////////////////////////////////////////////
 
 CONSTEXPR_F int get_yearday(const civil_second& cs) noexcept {
   CONSTEXPR_D int k_month_offsets[1 + 12] = {

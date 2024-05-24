@@ -311,6 +311,34 @@ using detail::get_weekday;
 using detail::next_weekday;
 using detail::prev_weekday;
 
+// An enum class with members monday_zero, monday_one, sunday_zero, sunday_one.
+// These enum values can be used to specify the start of the week for the
+// weekday_to_number and number_to_weekday functions.
+//
+// monday_zero: monday == 0, ..., sunday == 6
+// monday_one:  monday == 1, ..., sunday == 7
+// sunday_zero: sunday == 0, ..., saturday == 6
+// sunday_one:  sunday == 1, ..., saturday == 7
+//
+using detail::weekstart;
+
+// Returns the number of weekday with given start of week.
+//
+//   civil_day a(2015, 8, 13); // thursday
+//   int wd = weekday_to_number(get_weekday(a), monday_zero);  // wd == 4
+//
+using detail::weekday_to_number;
+
+// Returns the weekday for the given number with given start of week.
+//   
+//   std::string err;  // Optional error message
+//   weekday wd = number_to_weekday(input, monday_zero, &err);
+//   if (!err.empty()) {
+//     // Handle error
+//   }
+//
+using detail::number_to_weekday;
+
 // Returns the day-of-year for the given civil-time value.
 //
 //   civil_day a(2015, 1, 1);
