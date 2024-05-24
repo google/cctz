@@ -81,27 +81,6 @@ const std::int_least32_t kSecsPerYear[2] = {
   366 * kSecsPerDay,
 };
 
-// Convert a cctz::weekday to a POSIX TZ weekday number (0==Sun, ..., 6=Sat).
-inline int ToPosixWeekday(weekday wd) {
-  switch (wd) {
-    case weekday::sunday:
-      return 0;
-    case weekday::monday:
-      return 1;
-    case weekday::tuesday:
-      return 2;
-    case weekday::wednesday:
-      return 3;
-    case weekday::thursday:
-      return 4;
-    case weekday::friday:
-      return 5;
-    case weekday::saturday:
-      return 6;
-  }
-  return 0; /*NOTREACHED*/
-}
-
 // Single-byte, unsigned numeric values are encoded directly.
 inline std::uint_fast8_t Decode8(const char* cp) {
   return static_cast<std::uint_fast8_t>(*cp) & 0xff;
@@ -350,7 +329,7 @@ bool TimeZoneInfo::ExtendTransitions() {
   bool leap_year = IsLeap(last_year_);
   const civil_second jan1(last_year_);
   std::int_fast64_t jan1_time = jan1 - civil_second();
-  int jan1_weekday = ToPosixWeekday(get_weekday(jan1));
+  int jan1_weekday = weekday_to_number(get_weekday(jan1), weekstart::sunday_zero);
 
   Transition dst = {0, dst_ti, civil_second(), civil_second()};
   Transition std = {0, std_ti, civil_second(), civil_second()};

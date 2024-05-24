@@ -63,48 +63,6 @@ char* strptime(const char* s, const char* fmt, std::tm* tm) {
 }
 #endif
 
-// Convert a cctz::weekday to a tm_wday value (0-6, Sunday = 0).
-int ToTmWday(weekday wd) {
-  switch (wd) {
-    case weekday::sunday:
-      return 0;
-    case weekday::monday:
-      return 1;
-    case weekday::tuesday:
-      return 2;
-    case weekday::wednesday:
-      return 3;
-    case weekday::thursday:
-      return 4;
-    case weekday::friday:
-      return 5;
-    case weekday::saturday:
-      return 6;
-  }
-  return 0; /*NOTREACHED*/
-}
-
-// Convert a tm_wday value (0-6, Sunday = 0) to a cctz::weekday.
-weekday FromTmWday(int tm_wday) {
-  switch (tm_wday) {
-    case 0:
-      return weekday::sunday;
-    case 1:
-      return weekday::monday;
-    case 2:
-      return weekday::tuesday;
-    case 3:
-      return weekday::wednesday;
-    case 4:
-      return weekday::thursday;
-    case 5:
-      return weekday::friday;
-    case 6:
-      return weekday::saturday;
-  }
-  return weekday::sunday; /*NOTREACHED*/
-}
-
 std::tm ToTM(const time_zone::absolute_lookup& al) {
   std::tm tm{};
   tm.tm_sec = al.cs.second();
@@ -122,7 +80,7 @@ std::tm ToTM(const time_zone::absolute_lookup& al) {
     tm.tm_year = static_cast<int>(al.cs.year() - 1900);
   }
 
-  tm.tm_wday = ToTmWday(get_weekday(al.cs));
+  tm.tm_wday = weekday_to_number(get_weekday(al.cs), weekstart::sunday_zero);
   tm.tm_yday = get_yearday(al.cs) - 1;
   tm.tm_isdst = al.is_dst ? 1 : 0;
   return tm;
@@ -654,7 +612,8 @@ const char* ParseTM(const char* dp, const char* fmt, std::tm* tm) {
 bool FromWeek(int week_num, weekday week_start, year_t* year, std::tm* tm) {
   const civil_year y(*year % 400);
   civil_day cd = prev_weekday(y, week_start);  // week 0
-  cd = next_weekday(cd - 1, FromTmWday(tm->tm_wday)) + (week_num * 7);
+  weekday wd = number_to_weekday(tm->tm_wday, weekstart::sunday_zero);
+  cd = next_weekday(cd - 1, wd) + (week_num * 7);
   if (const year_t shift = cd.year() - y.year()) {
     if (shift > 0) {
       if (*year > std::numeric_limits<year_t>::max() - shift) return false;
