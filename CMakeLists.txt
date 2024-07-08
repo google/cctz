@@ -20,7 +20,7 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ${BUILD_SHARED_LIBS})
 
 if (BUILD_TESTING)
   if (BUILD_BENCHMARK)
-    find_package(benchmark)
+    find_package(benchmark QUIET)
     set_package_properties(benchmark PROPERTIES
       TYPE REQUIRED
       DESCRIPTION "a microbenchmark support library"
