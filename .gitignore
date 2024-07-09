@@ -1,4 +1,5 @@
 # ignore all files in the bazel directories
 /bazel-*
+MODULE.bazel.lock
 # ignore non-bazel build products
 /build
