@@ -45,6 +45,7 @@
 #include <wchar.h>
 #include <windows.globalization.h>
 #include <windows.h>
+#include <winstring.h>
 #endif
 #endif
 
