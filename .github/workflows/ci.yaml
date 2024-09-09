@@ -1,0 +1,135 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+env:
+  BAZEL_CXXOPTS: -std=c++14
+
+jobs:
+  Linux-GCC:
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Tests
+      run: >
+        bazel test ...
+        --copt=-DGTEST_REMOVE_LEGACY_TEST_CASEAPI_=1
+        --copt=-Werror
+        --cxxopt=-Wall
+        --cxxopt=-Wextra
+        --cxxopt=-Wcast-qual
+        --cxxopt=-Wconversion-null
+        --cxxopt=-Wformat-security
+        --cxxopt=-Wmissing-declarations
+        --cxxopt=-Wnon-virtual-dtor
+        --cxxopt=-Woverlength-strings
+        --cxxopt=-Wpointer-arith
+        --cxxopt=-Wundef
+        --cxxopt=-Wunused-local-typedefs
+        --cxxopt=-Wunused-result
+        --cxxopt=-Wvarargs
+        --cxxopt=-Wvla
+        --cxxopt=-Wwrite-strings
+        --cxxopt=-Wno-missing-declarations
+        --cxxopt=-Wno-undef
+        --features=external_include_paths
+        --keep_going
+        --show_timestamps
+        --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
+        --test_output=errors
+        --test_tag_filters=-benchmark
+
+  Linux-Clang:
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Tests
+      run: >
+        bazel test ...
+        --action_env=CC=clang
+        --copt=-DGTEST_REMOVE_LEGACY_TEST_CASEAPI_=1
+        --copt=-Werror
+        --cxxopt=-Wall
+        --cxxopt=-Wextra
+        --cxxopt=-Wc++98-compat-extra-semi
+        --cxxopt=-Wcast-qual
+        --cxxopt=-Wconversion
+        --cxxopt=-Wdeprecated-pragma
+        --cxxopt=-Wfloat-overflow-conversion
+        --cxxopt=-Wfloat-zero-conversion
+        --cxxopt=-Wfor-loop-analysis
+        --cxxopt=-Wformat-security
+        --cxxopt=-Wgnu-redeclared-enum
+        --cxxopt=-Winfinite-recursion
+        --cxxopt=-Winvalid-constexpr
+        --cxxopt=-Wliteral-conversion
+        --cxxopt=-Wmissing-declarations
+        --cxxopt=-Woverlength-strings
+        --cxxopt=-Wpointer-arith
+        --cxxopt=-Wself-assign
+        --cxxopt=-Wshadow-all
+        --cxxopt=-Wshorten-64-to-32
+        --cxxopt=-Wsign-conversion
+        --cxxopt=-Wstring-conversion
+        --cxxopt=-Wtautological-overlap-compare
+        --cxxopt=-Wtautological-unsigned-zero-compare
+        --cxxopt=-Wuninitialized
+        --cxxopt=-Wunreachable-code
+        --cxxopt=-Wunused-comparison
+        --cxxopt=-Wunused-local-typedefs
+        --cxxopt=-Wunused-result
+        --cxxopt=-Wvla
+        --cxxopt=-Wwrite-strings
+        --cxxopt=-Wno-unknown-warning-option
+        --cxxopt=-Wno-undef
+        --features=external_include_paths
+        --keep_going
+        --show_timestamps
+        --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
+        --test_output=errors
+        --test_tag_filters=-benchmark
+
+  macOS:
+    runs-on: macos-latest
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Tests
+      run: >
+        bazel test ...
+        --features=external_include_paths
+        --keep_going
+        --show_timestamps
+        --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
+        --test_output=errors
+        --test_tag_filters=-benchmark
+
+  Windows:
+    runs-on: windows-latest
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Tests
+      run: >
+        bazel test ...
+        --keep_going
+        --show_timestamps
+        --test_env="TZDIR=$env:GITHUB_WORKSPACE\testdata\zoneinfo"
+        --test_output=errors
+        --test_tag_filters=-benchmark
