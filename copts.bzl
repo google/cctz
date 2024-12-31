@@ -1,0 +1,5 @@
+DEFAULT_COPTS = []
+
+DEFAULT_LINKOPTS = []
+
+TEST_COPTS = []

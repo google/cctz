@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+load(":copts.bzl", "DEFAULT_COPTS", "DEFAULT_LINKOPTS", "TEST_COPTS")
+
 package(
     features = [
         "header_modules",
@@ -30,7 +32,9 @@ cc_library(
     hdrs = [
         "include/cctz/civil_time.h",
     ],
+    copts = DEFAULT_COPTS,
     includes = ["include"],
+    linkopts = DEFAULT_LINKOPTS,
     textual_hdrs = ["include/cctz/civil_time_detail.h"],
     visibility = ["//visibility:public"],
 )
@@ -59,8 +63,9 @@ cc_library(
         "include/cctz/time_zone.h",
         "include/cctz/zone_info_source.h",
     ],
+    copts = DEFAULT_COPTS,
     includes = ["include"],
-    linkopts = select({
+    linkopts = DEFAULT_LINKOPTS + select({
         "@platforms//os:osx": ["-Wl,-framework,CoreFoundation"],
         "@platforms//os:ios": ["-Wl,-framework,CoreFoundation"],
         "//conditions:default": [],
@@ -80,6 +85,8 @@ cc_test(
     name = "civil_time_test",
     size = "small",
     srcs = ["src/civil_time_test.cc"],
+    copts = TEST_COPTS,
+    linkopts = DEFAULT_LINKOPTS,
     deps = [
         ":civil_time",
         "@com_google_googletest//:gtest",
@@ -91,6 +98,8 @@ cc_test(
     name = "time_zone_format_test",
     size = "small",
     srcs = ["src/time_zone_format_test.cc"],
+    copts = TEST_COPTS,
+    linkopts = DEFAULT_LINKOPTS,
     deps = [
         ":civil_time",
         ":time_zone",
@@ -103,6 +112,8 @@ cc_test(
     name = "time_zone_lookup_test",
     size = "small",
     srcs = ["src/time_zone_lookup_test.cc"],
+    copts = TEST_COPTS,
+    linkopts = DEFAULT_LINKOPTS,
     deps = [
         ":civil_time",
         ":time_zone",
@@ -122,6 +133,8 @@ cc_test(
         "src/time_zone_info.h",
         "src/tzfile.h",
     ],
+    copts = TEST_COPTS,
+    linkopts = DEFAULT_LINKOPTS,
     linkstatic = 1,
     tags = ["benchmark"],
     deps = [
@@ -136,16 +149,22 @@ cc_test(
 cc_binary(
     name = "classic",
     srcs = ["examples/classic.cc"],
+    copts = DEFAULT_COPTS,
+    linkopts = DEFAULT_LINKOPTS,
 )
 
 cc_binary(
     name = "epoch_shift",
     srcs = ["examples/epoch_shift.cc"],
+    copts = DEFAULT_COPTS,
+    linkopts = DEFAULT_LINKOPTS,
 )
 
 cc_binary(
     name = "example1",
     srcs = ["examples/example1.cc"],
+    copts = DEFAULT_COPTS,
+    linkopts = DEFAULT_LINKOPTS,
     deps = [
         ":civil_time",
         ":time_zone",
@@ -155,6 +174,8 @@ cc_binary(
 cc_binary(
     name = "example2",
     srcs = ["examples/example2.cc"],
+    copts = DEFAULT_COPTS,
+    linkopts = DEFAULT_LINKOPTS,
     deps = [":time_zone"],
 )
 
@@ -170,6 +191,8 @@ cc_binary(
 cc_binary(
     name = "example4",
     srcs = ["examples/example4.cc"],
+    copts = DEFAULT_COPTS,
+    linkopts = DEFAULT_LINKOPTS,
     deps = [
         ":civil_time",
         ":time_zone",
@@ -179,6 +202,8 @@ cc_binary(
 cc_binary(
     name = "hello",
     srcs = ["examples/hello.cc"],
+    copts = DEFAULT_COPTS,
+    linkopts = DEFAULT_LINKOPTS,
     deps = [
         ":civil_time",
         ":time_zone",
@@ -196,6 +221,8 @@ cc_binary(
         "src/time_zone_info.h",
         "src/tzfile.h",
     ],
+    copts = DEFAULT_COPTS,
+    linkopts = DEFAULT_LINKOPTS,
     deps = [
         ":civil_time",
         ":time_zone",
