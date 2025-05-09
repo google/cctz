@@ -37,13 +37,18 @@
 #if defined(__has_include)
 #if __has_include(<icu.h>)
 #define USE_WIN32_LOCAL_TIME_ZONE
-#pragma push_macro("NTDDI_VERSION")
-// ucal_getTimeZoneIDForWindowsID is available on Windows 10 RS3 and later.
-#define NTDDI_VERSION 0x0A000004  // == NTDDI_WIN10_RS3
 #include <windows.h>
+#pragma push_macro("_WIN32_WINNT")
+#pragma push_macro("NTDDI_VERSION")
+// Minimum _WIN32_WINNT and NTDDI_VERSION to use ucal_getTimeZoneIDForWindowsID
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x0A00  // == _WIN32_WINNT_WIN10
+#undef NTDDI_VERSION
+#define NTDDI_VERSION 0x0A000004  // == NTDDI_WIN10_RS3
 #include <icu.h>
-#include <timezoneapi.h>
 #pragma pop_macro("NTDDI_VERSION")
+#pragma pop_macro("_WIN32_WINNT")
+#include <timezoneapi.h>
 #include <atomic>
 #endif  // __has_include(<icu.h>)
 #endif  // __has_include
