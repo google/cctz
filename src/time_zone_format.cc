@@ -276,6 +276,26 @@ const char* ParseInt(const char* dp, int width, T min, T max, T* vp) {
   return dp;
 }
 
+template <typename T>
+const char* Parse02dInt(const char* dp, T min, T max, T* vp) {
+  if (dp == nullptr || !std::isdigit(*dp)) {
+    return nullptr;
+  }
+  T value = *dp - '0';
+  ++dp;
+  if (std::isdigit(*dp)) {
+    value *= 10;
+    value += *dp - '0';
+    ++dp;
+  }
+  if (min <= value && value <= max) {
+    *vp = value;
+  } else {
+    dp = nullptr;
+  }
+  return dp;
+}
+
 // The number of base-10 digits that can be represented by a signed 64-bit
 // integer.  That is, 10^kDigits10_64 <= 2^63 - 1 < 10^(kDigits10_64 + 1).
 const int kDigits10_64 = 18;
@@ -581,15 +601,15 @@ const char* ParseOffset(const char* dp, const char* mode, int* offset) {
       int hours = 0;
       int minutes = 0;
       int seconds = 0;
-      const char* ap = ParseInt(dp, 2, 0, 23, &hours);
+      const char* ap = Parse02dInt(dp, 0, 23, &hours);
       if (ap != nullptr && ap - dp == 2) {
         dp = ap;
         if (sep != '\0' && *ap == sep) ++ap;
-        const char* bp = ParseInt(ap, 2, 0, 59, &minutes);
+        const char* bp = Parse02dInt(ap, 0, 59, &minutes);
         if (bp != nullptr && bp - ap == 2) {
           dp = bp;
           if (sep != '\0' && *bp == sep) ++bp;
-          const char* cp = ParseInt(bp, 2, 0, 59, &seconds);
+          const char* cp = Parse02dInt(bp, 0, 59, &seconds);
           if (cp != nullptr && cp - bp == 2) dp = cp;
         }
         *offset = ((hours * 60 + minutes) * 60) + seconds;
@@ -755,13 +775,13 @@ bool parse(const std::string& format, const std::string& input,
         if (data != nullptr) saw_year = true;
         continue;
       case 'm':
-        data = ParseInt(data, 2, 1, 12, &tm.tm_mon);
+        data = Parse02dInt(data, 1, 12, &tm.tm_mon);
         if (data != nullptr) tm.tm_mon -= 1;
         week_num = -1;
         continue;
       case 'd':
       case 'e':
-        data = ParseInt(data, 2, 1, 31, &tm.tm_mday);
+        data = Parse02dInt(data, 1, 31, &tm.tm_mday);
         week_num = -1;
         continue;
       case 'F':
@@ -770,12 +790,12 @@ bool parse(const std::string& format, const std::string& input,
           saw_year = true;
           data = (*data == '-' ? data + 1 : nullptr);
         }
-        data = ParseInt(data, 2, 1, 12, &tm.tm_mon);
+        data = Parse02dInt(data, 1, 12, &tm.tm_mon);
         if (data != nullptr) {
           tm.tm_mon -= 1;
           data = (*data == '-' ? data + 1 : nullptr);
         }
-        data = ParseInt(data, 2, 1, 31, &tm.tm_mday);
+        data = Parse02dInt(data, 1, 31, &tm.tm_mday);
         week_num = -1;
         continue;
       case 'U':
@@ -794,22 +814,22 @@ bool parse(const std::string& format, const std::string& input,
         data = ParseInt(data, 0, 0, 6, &tm.tm_wday);
         continue;
       case 'H':
-        data = ParseInt(data, 2, 0, 23, &tm.tm_hour);
+        data = Parse02dInt(data, 0, 23, &tm.tm_hour);
         twelve_hour = false;
         continue;
       case 'M':
-        data = ParseInt(data, 2, 0, 59, &tm.tm_min);
+        data = Parse02dInt(data, 0, 59, &tm.tm_min);
         continue;
       case 'S':
-        data = ParseInt(data, 2, 0, 60, &tm.tm_sec);
+        data = Parse02dInt(data, 0, 60, &tm.tm_sec);
         continue;
       case 'T':
-        data = ParseInt(data, 2, 0, 23, &tm.tm_hour);
+        data = Parse02dInt(data, 0, 23, &tm.tm_hour);
         twelve_hour = false;
         data = (data != nullptr && *data == ':' ? data + 1 : nullptr);
-        data = ParseInt(data, 2, 0, 59, &tm.tm_min);
+        data = Parse02dInt(data, 0, 59, &tm.tm_min);
         data = (data != nullptr && *data == ':' ? data + 1 : nullptr);
-        data = ParseInt(data, 2, 0, 60, &tm.tm_sec);
+        data = Parse02dInt(data, 0, 60, &tm.tm_sec);
         continue;
       case 'I':
       case 'l':
@@ -865,7 +885,7 @@ bool parse(const std::string& format, const std::string& input,
           continue;
         }
         if (fmt[0] == '*' && fmt[1] == 'S') {
-          data = ParseInt(data, 2, 0, 60, &tm.tm_sec);
+          data = Parse02dInt(data, 0, 60, &tm.tm_sec);
           if (data != nullptr && *data == '.') {
             data = ParseSubSeconds(data + 1, &subseconds);
           }
@@ -896,7 +916,7 @@ bool parse(const std::string& format, const std::string& input,
           int n = 0;  // value ignored
           if (const char* np = ParseInt(fmt, 0, 0, 1024, &n)) {
             if (*np == 'S') {
-              data = ParseInt(data, 2, 0, 60, &tm.tm_sec);
+              data = Parse02dInt(data, 0, 60, &tm.tm_sec);
               if (data != nullptr && *data == '.') {
                 data = ParseSubSeconds(data + 1, &subseconds);
               }
