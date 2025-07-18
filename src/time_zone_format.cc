@@ -764,6 +764,20 @@ bool parse(const std::string& format, const std::string& input,
         data = ParseInt(data, 2, 1, 31, &tm.tm_mday);
         week_num = -1;
         continue;
+      case 'F':
+        data = ParseInt(data, 0, kyearmin, kyearmax, &year);
+        if (data != nullptr) {
+          saw_year = true;
+          data = (*data == '-' ? data + 1 : nullptr);
+        }
+        data = ParseInt(data, 2, 1, 12, &tm.tm_mon);
+        if (data != nullptr) {
+          tm.tm_mon -= 1;
+          data = (*data == '-' ? data + 1 : nullptr);
+        }
+        data = ParseInt(data, 2, 1, 31, &tm.tm_mday);
+        week_num = -1;
+        continue;
       case 'U':
         data = ParseInt(data, 0, 0, 53, &week_num);
         week_start = weekday::sunday;
@@ -789,13 +803,20 @@ bool parse(const std::string& format, const std::string& input,
       case 'S':
         data = ParseInt(data, 2, 0, 60, &tm.tm_sec);
         continue;
+      case 'T':
+        data = ParseInt(data, 2, 0, 23, &tm.tm_hour);
+        twelve_hour = false;
+        data = (data != nullptr && *data == ':' ? data + 1 : nullptr);
+        data = ParseInt(data, 2, 0, 59, &tm.tm_min);
+        data = (data != nullptr && *data == ':' ? data + 1 : nullptr);
+        data = ParseInt(data, 2, 0, 60, &tm.tm_sec);
+        continue;
       case 'I':
       case 'l':
       case 'r':  // probably uses %I
         twelve_hour = true;
         break;
       case 'R':  // uses %H
-      case 'T':  // uses %H
       case 'c':  // probably uses %H
       case 'X':  // probably uses %H
         twelve_hour = false;
