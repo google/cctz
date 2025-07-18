@@ -354,7 +354,7 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
   const std::tm tm = ToTM(al);
 
   // Scratch buffer for internal conversions.
-  char buf[3 + kDigits10_64];  // enough for longest conversion
+  char buf[7 + kDigits10_64];  // enough for longest conversion %F
   char* const ep = buf + sizeof(buf);
   char* bp;  // works back from ep
 
@@ -398,7 +398,7 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
     if (cur == end || (cur - percent) % 2 == 0) continue;
 
     // Simple specifiers that we handle ourselves.
-    if (strchr("YmdeUuWwHMSzZs%", *cur)) {
+    if (strchr("YmdFeUuWwHMSTzZs%", *cur)) {
       if (cur - 1 != pending) {
         FormatTM(&result, std::string(pending, cur - 1), tm);
       }
@@ -417,6 +417,14 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
         case 'e':
           bp = Format02d(ep, al.cs.day());
           if (*cur == 'e' && *bp == '0') *bp = ' ';  // for Windows
+          result.append(bp, static_cast<std::size_t>(ep - bp));
+          break;
+        case 'F':
+          bp = Format02d(ep, al.cs.day());
+          *--bp = '-';
+          bp = Format02d(bp, al.cs.month());
+          *--bp = '-';
+          bp = Format64(bp, 0, al.cs.year());
           result.append(bp, static_cast<std::size_t>(ep - bp));
           break;
         case 'U':
@@ -445,6 +453,14 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
           break;
         case 'S':
           bp = Format02d(ep, al.cs.second());
+          result.append(bp, static_cast<std::size_t>(ep - bp));
+          break;
+        case 'T':
+          bp = Format02d(ep, al.cs.second());
+          *--bp = ':';
+          bp = Format02d(bp, al.cs.minute());
+          *--bp = ':';
+          bp = Format02d(bp, al.cs.second());
           result.append(bp, static_cast<std::size_t>(ep - bp));
           break;
         case 'z':
