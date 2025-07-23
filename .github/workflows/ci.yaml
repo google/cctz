@@ -5,7 +5,7 @@ on:
   pull_request:
 
 env:
-  BAZEL_CXXOPTS: -std=c++14
+  BAZEL_CXXOPTS: -std=c++17
 
 jobs:
   Linux-GCC:
@@ -110,6 +110,7 @@ jobs:
     - name: Tests
       run: >
         bazel test ...
+        --cxxopt="-std=c++17"
         --features=external_include_paths
         --keep_going
         --show_timestamps
