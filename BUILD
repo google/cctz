@@ -12,6 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 package(
     features = [
         "header_modules",
@@ -82,8 +86,8 @@ cc_test(
     srcs = ["src/civil_time_test.cc"],
     deps = [
         ":civil_time",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -94,8 +98,8 @@ cc_test(
     deps = [
         ":civil_time",
         ":time_zone",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -106,8 +110,8 @@ cc_test(
     deps = [
         ":civil_time",
         ":time_zone",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -127,7 +131,7 @@ cc_test(
     deps = [
         ":civil_time",
         ":time_zone",
-        "@com_github_google_benchmark//:benchmark_main",
+        "@google_benchmark//:benchmark_main",
     ],
 )
 
