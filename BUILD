@@ -75,9 +75,12 @@ cc_library(
 
 ### tests
 
-test_suite(
-    name = "all_tests",
-    visibility = ["//visibility:public"],
+cc_library(
+    name = "time_zone_test_util",
+    testonly = True,
+    srcs = ["src/time_zone_test_util.cc"],
+    hdrs = ["src/time_zone_test_util.h"],
+    visibility = ["//visibility:private"],
 )
 
 cc_test(
@@ -110,8 +113,31 @@ cc_test(
     deps = [
         ":civil_time",
         ":time_zone",
+        ":time_zone_test_util",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "time_zone_fuzz_test",
+    srcs = [
+        "src/time_zone_fuzz_test.cc",
+        "src/time_zone_if.h",
+        "src/time_zone_impl.h",
+        "src/time_zone_info.h",
+        "src/tzfile.h",
+    ],
+    tags = [
+        "fuzztest",
+    ],
+    deps = [
+        ":civil_time",
+        ":time_zone",
+        ":time_zone_test_util",
+        "@fuzztest//fuzztest",
+        "@fuzztest//fuzztest:fuzztest_gtest_main",
+        "@googletest//:gtest",
     ],
 )
 

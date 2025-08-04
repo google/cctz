@@ -22,6 +22,10 @@ module(
 
 # Only direct dependencies need to be listed below.
 
+bazel_dep(name = "fuzztest",
+          version = "20250728.0",
+          dev_dependency = True)
+
 bazel_dep(name = "google_benchmark",
           version = "1.9.4",
           dev_dependency = True)
