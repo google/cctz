@@ -12,6 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 package(
     features = [
         "header_modules",
@@ -71,9 +75,12 @@ cc_library(
 
 ### tests
 
-test_suite(
-    name = "all_tests",
-    visibility = ["//visibility:public"],
+cc_library(
+    name = "test_time_zone_names",
+    testonly = True,
+    srcs = ["src/test_time_zone_names.cc"],
+    hdrs = ["src/test_time_zone_names.h"],
+    visibility = ["//visibility:private"],
 )
 
 cc_test(
@@ -82,8 +89,8 @@ cc_test(
     srcs = ["src/civil_time_test.cc"],
     deps = [
         ":civil_time",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -94,8 +101,8 @@ cc_test(
     deps = [
         ":civil_time",
         ":time_zone",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -105,9 +112,32 @@ cc_test(
     srcs = ["src/time_zone_lookup_test.cc"],
     deps = [
         ":civil_time",
+        ":test_time_zone_names",
         ":time_zone",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "time_zone_fuzz_test",
+    srcs = [
+        "src/time_zone_fuzz_test.cc",
+        "src/time_zone_if.h",
+        "src/time_zone_impl.h",
+        "src/time_zone_info.h",
+        "src/tzfile.h",
+    ],
+    tags = [
+        "fuzztest",
+    ],
+    deps = [
+        ":civil_time",
+        ":test_time_zone_names",
+        ":time_zone",
+        "@fuzztest//fuzztest",
+        "@fuzztest//fuzztest:fuzztest_gtest_main",
+        "@googletest//:gtest",
     ],
 )
 
@@ -126,8 +156,9 @@ cc_test(
     tags = ["benchmark"],
     deps = [
         ":civil_time",
+        ":test_time_zone_names",
         ":time_zone",
-        "@com_github_google_benchmark//:benchmark_main",
+        "@google_benchmark//:benchmark_main",
     ],
 )
 

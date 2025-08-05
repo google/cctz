@@ -5,7 +5,7 @@ on:
   pull_request:
 
 env:
-  BAZEL_CXXOPTS: -std=c++14
+  BAZEL_CXXOPTS: -std=c++17
 
 jobs:
   Linux-GCC:
@@ -19,6 +19,7 @@ jobs:
     - name: Tests
       run: >
         bazel test ...
+        --build_tag_filters=-fuzztest
         --copt=-DGTEST_REMOVE_LEGACY_TEST_CASEAPI_=1
         --copt=-Werror
         --cxxopt=-Wall
@@ -43,7 +44,7 @@ jobs:
         --show_timestamps
         --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
         --test_output=errors
-        --test_tag_filters=-benchmark
+        --test_tag_filters=-benchmark,-fuzztest
 
   Linux-Clang:
     runs-on: ubuntu-latest
@@ -57,6 +58,7 @@ jobs:
       run: >
         bazel test ...
         --action_env=CC=clang
+        --build_tag_filters=-fuzztest
         --copt=-DGTEST_REMOVE_LEGACY_TEST_CASEAPI_=1
         --copt=-Werror
         --cxxopt=-Wall
@@ -97,7 +99,33 @@ jobs:
         --show_timestamps
         --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
         --test_output=errors
-        --test_tag_filters=-benchmark
+        --test_tag_filters=-benchmark,-fuzztest
+
+  Linux-FuzzTest:
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Configure Fuzztest
+      run: bazel run @fuzztest//bazel:setup_configs > fuzztest.bazelrc
+    - name: Fuzz
+      run: >
+        bazel --bazelrc=fuzztest.bazelrc test ...
+        --action_env=CC=clang
+        --build_tag_filters=fuzztest
+        --config=fuzztest
+        --copt=-DGTEST_REMOVE_LEGACY_TEST_CASEAPI_=1
+        --define=absl=1
+        --features=external_include_paths
+        --keep_going
+        --show_timestamps
+        --test_arg=--fuzz_for=30s
+        --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
+        --test_output=errors
+        --test_tag_filters=fuzztest
 
   macOS:
     runs-on: macos-latest
@@ -110,12 +138,14 @@ jobs:
     - name: Tests
       run: >
         bazel test ...
+        --build_tag_filters=-fuzztest
+        --cxxopt="-std=c++17"
         --features=external_include_paths
         --keep_going
         --show_timestamps
         --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
         --test_output=errors
-        --test_tag_filters=-benchmark
+        --test_tag_filters=-benchmark,-fuzztest
 
   Windows:
     runs-on: windows-latest
@@ -128,8 +158,9 @@ jobs:
     - name: Tests
       run: >
         bazel test ...
+        --build_tag_filters="-fuzztest"
         --keep_going
         --show_timestamps
         --test_env="TZDIR=$env:GITHUB_WORKSPACE\testdata\zoneinfo"
         --test_output=errors
-        --test_tag_filters=-benchmark
+        --test_tag_filters="-benchmark,-fuzztest"

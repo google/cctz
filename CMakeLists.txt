@@ -111,6 +111,11 @@ if (BUILD_EXAMPLES)
 endif()
 
 if (BUILD_TESTING)
+  add_library(test_time_zone_names
+    "src/test_time_zone_names.cc"
+    "src/test_time_zone_names.h"
+    )
+
   add_executable(civil_time_test src/civil_time_test.cc)
   cctz_target_set_cxx_standard(civil_time_test)
   target_include_directories(civil_time_test PRIVATE ${GTEST_INCLUDE_DIRS})
@@ -126,6 +131,7 @@ if (BUILD_TESTING)
   target_include_directories(time_zone_lookup_test PRIVATE ${GTEST_INCLUDE_DIRS})
   target_link_libraries(time_zone_lookup_test
     cctz::cctz
+    test_time_zone_names
     ${GTEST_BOTH_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
     )
@@ -153,7 +159,11 @@ if (BUILD_TESTING)
   if (BUILD_BENCHMARK)
     add_executable(cctz_benchmark src/cctz_benchmark.cc)
     cctz_target_set_cxx_standard(cctz_benchmark)
-    target_link_libraries(cctz_benchmark cctz::cctz benchmark::benchmark_main)
+    target_link_libraries(cctz_benchmark
+      cctz::cctz
+      test_time_zone_names
+      benchmark::benchmark_main
+      )
   endif()
 endif()
 
