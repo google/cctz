@@ -28,7 +28,7 @@
 
 #include "cctz/civil_time.h"
 #include "gtest/gtest.h"
-#include "time_zone_test_util.h"
+#include "test_time_zone_names.h"
 
 namespace chrono = std::chrono;
 

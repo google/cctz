@@ -23,8 +23,8 @@
 #include "benchmark/benchmark.h"
 #include "cctz/civil_time.h"
 #include "cctz/time_zone.h"
+#include "test_time_zone_names.h"
 #include "time_zone_impl.h"
-#include "time_zone_test_util.h"
 
 namespace {
 

@@ -76,10 +76,10 @@ cc_library(
 ### tests
 
 cc_library(
-    name = "time_zone_test_util",
+    name = "test_time_zone_names",
     testonly = True,
-    srcs = ["src/time_zone_test_util.cc"],
-    hdrs = ["src/time_zone_test_util.h"],
+    srcs = ["src/test_time_zone_names.cc"],
+    hdrs = ["src/test_time_zone_names.h"],
     visibility = ["//visibility:private"],
 )
 
@@ -112,8 +112,8 @@ cc_test(
     srcs = ["src/time_zone_lookup_test.cc"],
     deps = [
         ":civil_time",
+        ":test_time_zone_names",
         ":time_zone",
-        ":time_zone_test_util",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],
@@ -133,8 +133,8 @@ cc_test(
     ],
     deps = [
         ":civil_time",
+        ":test_time_zone_names",
         ":time_zone",
-        ":time_zone_test_util",
         "@fuzztest//fuzztest",
         "@fuzztest//fuzztest:fuzztest_gtest_main",
         "@googletest//:gtest",
@@ -156,8 +156,8 @@ cc_test(
     tags = ["benchmark"],
     deps = [
         ":civil_time",
+        ":test_time_zone_names",
         ":time_zone",
-        ":time_zone_test_util",
         "@google_benchmark//:benchmark_main",
     ],
 )

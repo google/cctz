@@ -12,8 +12,8 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#ifndef CCTZ_TIME_ZONE_TEST_UTIL_H_
-#define CCTZ_TIME_ZONE_TEST_UTIL_H_
+#ifndef CCTZ_TEST_TIME_ZONE_NAMES_H_
+#define CCTZ_TEST_TIME_ZONE_NAMES_H_
 
 namespace cctz {
 
@@ -22,4 +22,4 @@ extern const char* const kTimeZoneNames[];
 
 }  // namespace cctz
 
-#endif  // CCTZ_TIME_ZONE_TEST_UTIL_H_
+#endif  // CCTZ_TEST_TIME_ZONE_NAMES_H_

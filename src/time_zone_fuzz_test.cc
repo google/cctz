@@ -22,8 +22,8 @@
 #include "cctz/time_zone.h"
 #include "fuzztest/fuzztest.h"
 #include "gtest/gtest.h"
+#include "test_time_zone_names.h"
 #include "time_zone_impl.h"
-#include "time_zone_test_util.h"
 
 namespace cctz {
 

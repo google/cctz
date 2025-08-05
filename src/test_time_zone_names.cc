@@ -12,7 +12,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#include "time_zone_test_util.h"
+#include "test_time_zone_names.h"
 
 namespace cctz {
 
