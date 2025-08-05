@@ -22,5 +22,4 @@ extern const char* const kTimeZoneNames[];
 
 }  // namespace cctz
 
-
 #endif  // CCTZ_TIME_ZONE_TEST_UTIL_H_

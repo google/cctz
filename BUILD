@@ -157,6 +157,7 @@ cc_test(
     deps = [
         ":civil_time",
         ":time_zone",
+        ":time_zone_test_util",
         "@google_benchmark//:benchmark_main",
     ],
 )

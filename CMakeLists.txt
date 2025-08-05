@@ -159,7 +159,11 @@ if (BUILD_TESTING)
   if (BUILD_BENCHMARK)
     add_executable(cctz_benchmark src/cctz_benchmark.cc)
     cctz_target_set_cxx_standard(cctz_benchmark)
-    target_link_libraries(cctz_benchmark cctz::cctz benchmark::benchmark_main)
+    target_link_libraries(cctz_benchmark
+      cctz::cctz
+      time_zone_test_util
+      benchmark::benchmark_main
+      )
   endif()
 endif()
 
