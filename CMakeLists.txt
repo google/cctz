@@ -85,6 +85,8 @@ add_library(cctz
   src/time_zone_posix.h
   src/tzfile.h
   src/zone_info_source.cc
+  $<$<PLATFORM_ID:Windows>:src/time_zone_name_win.cc>
+  $<$<PLATFORM_ID:Windows>:src/time_zone_name_win.h>
   ${CCTZ_HDRS}
   )
 cctz_target_set_cxx_standard(cctz)
