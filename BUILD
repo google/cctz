@@ -56,12 +56,16 @@ cc_library(
         "src/time_zone_lookup.cc",
         "src/time_zone_posix.cc",
         "src/time_zone_posix.h",
+        "src/time_zone_win.cc",
+        "src/time_zone_win.h",
         "src/tzfile.h",
         "src/zone_info_source.cc",
     ] + select({
         "@platforms//os:windows": [
             "src/time_zone_name_win.cc",
             "src/time_zone_name_win.h",
+            "src/time_zone_win_loader.cc",
+            "src/time_zone_win_loader.h",
         ],
         "//conditions:default": [],
     }),
@@ -73,6 +77,7 @@ cc_library(
     linkopts = select({
         "@platforms//os:osx": ["-Wl,-framework,CoreFoundation"],
         "@platforms//os:ios": ["-Wl,-framework,CoreFoundation"],
+        "@platforms//os:windows": ["advapi32.lib"],
         "//conditions:default": [],
     }),
     visibility = ["//visibility:public"],
@@ -144,6 +149,18 @@ cc_test(
         "@fuzztest//fuzztest",
         "@fuzztest//fuzztest:fuzztest_gtest_main",
         "@googletest//:gtest",
+    ],
+)
+
+cc_test(
+    name = "time_zone_win_test",
+    size = "small",
+    srcs = ["src/time_zone_win_test.cc"],
+    deps = [
+        ":civil_time",
+        ":time_zone",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
