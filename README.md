@@ -18,10 +18,11 @@ zones in a simple and correct manner. The libraries in CCTZ are:
 These libraries are currently known to work on **Linux**, **Mac OS X**, and
 **Android**.
 
-They will also work on **Windows** if you install the zoneinfo files. We are
-interested, though, in an implementation of the cctz::TimeZoneIf interface that
-calls the Windows time APIs instead. Please contact us if you're interested in
-contributing.
+They will also work on **Windows** if you install the zoneinfo files. You can
+also specify a built-time macro `CCTZ_USE_WIN_REGISTRY_FALLBACK` to let CCTZ
+fall back to time zone information stored in the Windows
+[registry](https://learn.microsoft.com/en-us/windows/win32/api/timezoneapi/ns-timezoneapi-dynamic_time_zone_information#remarks)
+when the zoneinfo files are not available.
 
 # Getting Started
 

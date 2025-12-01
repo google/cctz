@@ -45,10 +45,14 @@ bool U_SUCCESS(UErrorCode error) { return error <= U_ZERO_ERROR; }
 using ucal_getTimeZoneIDForWindowsID_func = std::int32_t(__cdecl*)(
     const UChar* winid, std::int32_t len, const char* region, UChar* id,
     std::int32_t id_capacity, UErrorCode* status);
+using ucal_getWindowsTimeZoneID_func =
+    std::int32_t(__cdecl*)(const UChar* id, std::int32_t len, UChar* winid,
+                           std::int32_t winid_capacity, UErrorCode* status);
 
 std::atomic<bool> g_unavailable;
 std::atomic<ucal_getTimeZoneIDForWindowsID_func>
     g_ucal_getTimeZoneIDForWindowsID;
+std::atomic<ucal_getWindowsTimeZoneID_func> g_ucal_getWindowsTimeZoneID;
 
 template <typename T> static T AsProcAddress(HMODULE module, const char* name) {
   static_assert(
@@ -73,6 +77,49 @@ std::wstring GetSystem32Dir() {
   return result;
 }
 
+bool LoadIcuFunctionsInternal() {
+  const std::wstring system32_dir = GetSystem32Dir();
+  if (system32_dir.empty()) {
+    g_unavailable.store(true, std::memory_order_relaxed);
+    return false;
+  }
+
+  // Here LoadLibraryExW(L"icu.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32) does
+  // not work if "icu.dll" is already loaded from somewhere other than the
+  // system32 directory. Specifying the full path with LoadLibraryW is more
+  // reliable.
+  const std::wstring icu_dll_path = system32_dir + L"\\icu.dll";
+  const HMODULE icu_dll = ::LoadLibraryW(icu_dll_path.c_str());
+  if (icu_dll == nullptr) {
+    g_unavailable.store(true, std::memory_order_relaxed);
+    return false;
+  }
+
+  const auto ucal_getTimeZoneIDForWindowsIDRef =
+      AsProcAddress<ucal_getTimeZoneIDForWindowsID_func>(
+          icu_dll, "ucal_getTimeZoneIDForWindowsID");
+  if (ucal_getTimeZoneIDForWindowsIDRef != nullptr) {
+    g_unavailable.store(true, std::memory_order_relaxed);
+    return false;
+  }
+
+  g_ucal_getTimeZoneIDForWindowsID.store(ucal_getTimeZoneIDForWindowsIDRef,
+                                         std::memory_order_relaxed);
+
+  const auto ucal_getWindowsTimeZoneIDRef =
+      AsProcAddress<ucal_getWindowsTimeZoneID_func>(
+          icu_dll, "ucal_getWindowsTimeZoneID");
+  if (ucal_getWindowsTimeZoneIDRef != nullptr) {
+    g_unavailable.store(true, std::memory_order_relaxed);
+    return false;
+  }
+
+  g_ucal_getWindowsTimeZoneID.store(ucal_getWindowsTimeZoneIDRef,
+                                    std::memory_order_relaxed);
+
+  return true;
+}
+
 ucal_getTimeZoneIDForWindowsID_func LoadIcuGetTimeZoneIDForWindowsID() {
   // This function is intended to be lock free to avoid potential deadlocks
   // with loader-lock taken inside LoadLibraryW. As LoadLibraryW and
@@ -92,35 +139,34 @@ ucal_getTimeZoneIDForWindowsID_func LoadIcuGetTimeZoneIDForWindowsID() {
     }
   }
 
-  const std::wstring system32_dir = GetSystem32Dir();
-  if (system32_dir.empty()) {
-    g_unavailable.store(true, std::memory_order_relaxed);
+  if (!LoadIcuFunctionsInternal()) {
     return nullptr;
   }
 
-  // Here LoadLibraryExW(L"icu.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32) does
-  // not work if "icu.dll" is already loaded from somewhere other than the
-  // system32 directory. Specifying the full path with LoadLibraryW is more
-  // reliable.
-  const std::wstring icu_dll_path = system32_dir + L"\\icu.dll";
-  const HMODULE icu_dll = ::LoadLibraryW(icu_dll_path.c_str());
-  if (icu_dll == nullptr) {
-    g_unavailable.store(true, std::memory_order_relaxed);
+  return g_ucal_getTimeZoneIDForWindowsID.load(std::memory_order_relaxed);
+}
+
+ucal_getWindowsTimeZoneID_func LoadIcuGetWindowsTimeZoneID() {
+  // This function is intended to be lock. See the comment in
+  // LoadIcuGetTimeZoneIDForWindowsID() for details.
+
+  if (g_unavailable.load(std::memory_order_relaxed)) {
     return nullptr;
   }
 
-  const auto ucal_getTimeZoneIDForWindowsIDRef =
-      AsProcAddress<ucal_getTimeZoneIDForWindowsID_func>(
-          icu_dll, "ucal_getTimeZoneIDForWindowsID");
-  if (ucal_getTimeZoneIDForWindowsIDRef != nullptr) {
-    g_unavailable.store(true, std::memory_order_relaxed);
+  {
+    const auto ucal_getWindowsTimeZoneID =
+        g_ucal_getWindowsTimeZoneID.load(std::memory_order_relaxed);
+    if (ucal_getWindowsTimeZoneID != nullptr) {
+      return ucal_getWindowsTimeZoneID;
+    }
+  }
+
+  if (!LoadIcuFunctionsInternal()) {
     return nullptr;
   }
 
-  g_ucal_getTimeZoneIDForWindowsID.store(ucal_getTimeZoneIDForWindowsIDRef,
-                                         std::memory_order_relaxed);
-
-  return ucal_getTimeZoneIDForWindowsIDRef;
+  return g_ucal_getWindowsTimeZoneID.load(std::memory_order_relaxed);
 }
 
 // Convert wchar_t array (UTF-16) to UTF-8 string
@@ -170,6 +216,35 @@ std::string GetWindowsLocalTimeZone() {
     }
     if (status != U_BUFFER_OVERFLOW_ERROR) {
       return std::string();
+    }
+  }
+}
+
+std::wstring ConvertToWindowsTimeZoneId(const std::wstring& iana_name) {
+  const auto getWindowsTimeZoneID = LoadIcuGetWindowsTimeZoneID();
+  if (getWindowsTimeZoneID == nullptr) {
+    return std::wstring();
+  }
+  if (iana_name.size() > std::numeric_limits<std::int32_t>::max()) {
+    return std::wstring();
+  }
+  const std::int32_t iana_name_length =
+      static_cast<std::int32_t>(iana_name.size());
+
+  std::wstring result;
+  std::size_t len = std::max<std::size_t>(
+      std::min<size_t>(result.capacity(), std::numeric_limits<int>::max()), 1);
+  for (;;) {
+    UErrorCode status = U_ZERO_ERROR;
+    result.resize(len);
+    len = static_cast<std::size_t>(getWindowsTimeZoneID(
+        iana_name.c_str(), iana_name_length, &result[0], static_cast<int>(len),
+        &status));
+    if (U_SUCCESS(status)) {
+      return result;
+    }
+    if (status != U_BUFFER_OVERFLOW_ERROR) {
+      return std::wstring();
     }
   }
 }
