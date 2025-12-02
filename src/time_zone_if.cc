@@ -16,6 +16,11 @@
 #include "time_zone_info.h"
 #include "time_zone_libc.h"
 
+#if defined(_WIN32) && defined(CCTZ_USE_WIN_REGISTRY_FALLBACK)
+#include "time_zone_win.h"
+#include "time_zone_win_loader.h"
+#endif  // defined(_WIN32) && defined(CCTZ_USE_WIN_REGISTRY_FALLBACK)
+
 namespace cctz {
 
 std::unique_ptr<TimeZoneIf> TimeZoneIf::UTC() {
@@ -31,8 +36,17 @@ std::unique_ptr<TimeZoneIf> TimeZoneIf::Make(const std::string& name) {
     return TimeZoneLibC::Make(name.substr(5));
   }
 
-  // Otherwise use the "zoneinfo" implementation.
-  return TimeZoneInfo::Make(name);
+  // Attempt to use the "zoneinfo" implementation.
+  std::unique_ptr<TimeZoneIf> zone_info = TimeZoneInfo::Make(name);
+
+  #if defined(_WIN32) && defined(CCTZ_USE_WIN_REGISTRY_FALLBACK)
+  if (!zone_info) {
+    // Attempt to fall back to Win32 Registry Implementation.
+    zone_info = MakeTimeZoneFromWinRegistry(LoadWinTimeZoneRegistry(name));
+  }
+  #endif  // defined(_WIN32) && defined(CCTZ_USE_WIN_REGISTRY_FALLBACK)
+
+  return zone_info;
 }
 
 // Defined out-of-line to avoid emitting a weak vtable in all TUs.
