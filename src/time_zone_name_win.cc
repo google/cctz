@@ -12,6 +12,8 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
+#if defined(_WIN32)
+
 #include "time_zone_name_win.h"
 
 #if !defined(NOMINMAX)
@@ -175,3 +177,5 @@ std::string GetWindowsLocalTimeZone() {
 }
 
 }  // namespace cctz
+
+#endif
