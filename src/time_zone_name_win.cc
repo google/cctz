@@ -135,7 +135,7 @@ std::string Utf16ToUtf8(const wchar_t* ptr, size_t size) {
   do {
     result.resize(len);
     len = static_cast<std::size_t>(::WideCharToMultiByte(
-        CP_UTF8, WC_ERR_INVALID_CHARS, ptr, chars_len, result.data(),
+        CP_UTF8, WC_ERR_INVALID_CHARS, ptr, chars_len, &result[0],
         static_cast<int>(len), nullptr, nullptr));
   } while (len > result.size());
   result.resize(len);
