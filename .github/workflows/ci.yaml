@@ -6,6 +6,7 @@ on:
 
 env:
   BAZEL_CXXOPTS: -std=c++17
+  USE_BAZEL_VERSION: 8.5.1
 
 jobs:
   Linux-GCC:
@@ -57,7 +58,6 @@ jobs:
     - name: Tests
       run: >
         bazel test ...
-        --action_env=CC=clang
         --build_tag_filters=-fuzztest
         --copt=-DGTEST_REMOVE_LEGACY_TEST_CASEAPI_=1
         --copt=-Werror
@@ -96,6 +96,7 @@ jobs:
         --cxxopt=-Wno-undef
         --features=external_include_paths
         --keep_going
+        --repo_env=CC=clang
         --show_timestamps
         --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
         --test_output=errors
@@ -114,13 +115,13 @@ jobs:
     - name: Fuzz
       run: >
         bazel --bazelrc=fuzztest.bazelrc test ...
-        --action_env=CC=clang
         --build_tag_filters=fuzztest
         --config=fuzztest
         --copt=-DGTEST_REMOVE_LEGACY_TEST_CASEAPI_=1
         --define=absl=1
         --features=external_include_paths
         --keep_going
+        --repo_env=CC=clang
         --show_timestamps
         --test_arg=--fuzz_for=30s
         --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
