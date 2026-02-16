@@ -12,23 +12,19 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#ifndef CCTZ_TIME_ZONE_NAME_WIN_H_
-#define CCTZ_TIME_ZONE_NAME_WIN_H_
+#ifndef CCTZ_TIME_ZONE_WIN_LOADER_H_
+#define CCTZ_TIME_ZONE_WIN_LOADER_H_
 
+#if defined(_WIN32)
 #include <string>
+
+#include "time_zone_win.h"
 
 namespace cctz {
 
-// Returns the local time zone ID in IANA format (e.g. "America/Los_Angeles"),
-// or the empty string on failure. Not supported on Windows 10 1809 and earlier,
-// where "icu.dll" is not available in the System32 directory.
-std::string GetWindowsLocalTimeZone();
-
-// Converts IANA time zone name to Windows time zone ID, or the empty string on
-// failure. Not supported on Windows 10 1809 and earlier, where "icu.dll" is not
-// available in the System32 directory.
-std::wstring ConvertToWindowsTimeZoneId(const std::wstring& iana_name);
+WinTimeZoneRegistryInfo LoadWinTimeZoneRegistry(const std::string& name);
 
 }  // namespace cctz
 
-#endif  // CCTZ_TIME_ZONE_NAME_WIN_H_
+#endif  // defined(_WIN32)
+#endif  // CCTZ_TIME_ZONE_WIN_LOADER_H_
