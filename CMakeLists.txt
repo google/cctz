@@ -127,6 +127,7 @@ if (BUILD_TESTING)
     ${CMAKE_THREAD_LIBS_INIT}
     )
   add_test(civil_time_test civil_time_test)
+  list(APPEND CCTZ_TESTS civil_time_test)
 
   add_executable(time_zone_lookup_test src/time_zone_lookup_test.cc)
   cctz_target_set_cxx_standard(time_zone_lookup_test)
@@ -138,6 +139,7 @@ if (BUILD_TESTING)
     ${CMAKE_THREAD_LIBS_INIT}
     )
   add_test(time_zone_lookup_test time_zone_lookup_test)
+  list(APPEND CCTZ_TESTS time_zone_lookup_test)
 
   add_executable(time_zone_format_test src/time_zone_format_test.cc)
   cctz_target_set_cxx_standard(time_zone_format_test)
@@ -147,13 +149,25 @@ if (BUILD_TESTING)
     GMock::Main
     )
   add_test(time_zone_format_test time_zone_format_test)
+  list(APPEND CCTZ_TESTS time_zone_format_test)
+
+  if(WIN32)
+    add_executable(time_zone_name_win_test src/time_zone_name_win_test.cc)
+    cctz_target_set_cxx_standard(time_zone_name_win_test)
+    target_include_directories(time_zone_name_win_test PRIVATE ${GTEST_INCLUDE_DIRS})
+    target_link_libraries(time_zone_name_win_test
+      cctz::cctz
+      ${GTEST_BOTH_LIBRARIES}
+      ${CMAKE_THREAD_LIBS_INIT}
+      )
+    add_test(time_zone_name_win_test time_zone_name_win_test)
+    list(APPEND CCTZ_TESTS time_zone_name_win_test)
+  endif()
 
   # tests runs on testdata
   set_property(
     TEST
-      civil_time_test
-      time_zone_format_test
-      time_zone_lookup_test
+      ${CCTZ_TESTS}
     PROPERTY
       ENVIRONMENT "TZDIR=${CMAKE_CURRENT_SOURCE_DIR}/testdata/zoneinfo"
     )
