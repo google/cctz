@@ -451,6 +451,32 @@ TEST(MakeTime, SysSecondsLimits) {
   }
 }
 
+TEST(MakeTime, LookupKind) {
+  const time_zone tz = LoadZone("America/Los_Angeles");
+
+  // Spring 1:59:59 -> 3:00:00
+  auto lookup = tz.lookup(civil_second(2013, 3, 10, 1, 59, 59));
+  EXPECT_EQ(lookup.kind, time_zone::civil_lookup::UNIQUE);
+  lookup = tz.lookup(civil_second(2013, 3, 10, 2, 0, 0));
+  EXPECT_EQ(lookup.kind, time_zone::civil_lookup::SKIPPED);
+  lookup = tz.lookup(civil_second(2013, 3, 10, 2, 15, 0));
+  EXPECT_EQ(lookup.kind, time_zone::civil_lookup::SKIPPED);
+  lookup = tz.lookup(cctz::civil_second(2013, 6, 1, 3, 0, 0));
+  EXPECT_EQ(lookup.kind, time_zone::civil_lookup::UNIQUE);
+
+  // Fall 1:59:59 -> 1:00:00
+  lookup = tz.lookup(cctz::civil_second(2013, 11, 3, 0, 59, 59));
+  EXPECT_EQ(lookup.kind, time_zone::civil_lookup::UNIQUE);
+  lookup = tz.lookup(cctz::civil_second(2013, 11, 3, 1, 0, 0));
+  EXPECT_EQ(lookup.kind, time_zone::civil_lookup::REPEATED);
+  lookup = tz.lookup(cctz::civil_second(2013, 11, 3, 1, 30, 0));
+  EXPECT_EQ(lookup.kind, time_zone::civil_lookup::REPEATED);
+  lookup = tz.lookup(cctz::civil_second(2013, 11, 3, 1, 59, 59));
+  EXPECT_EQ(lookup.kind, time_zone::civil_lookup::REPEATED);
+  lookup = tz.lookup(cctz::civil_second(2013, 11, 3, 2, 0, 0));
+  EXPECT_EQ(lookup.kind, time_zone::civil_lookup::UNIQUE);
+}
+
 TEST(MakeTime, LocalTimeLibC) {
   // Checks that cctz and libc agree on transition points in [1970:2037].
   //
