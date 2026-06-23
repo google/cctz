@@ -126,6 +126,18 @@ cc_test(
 )
 
 cc_test(
+    name = "time_zone_name_win_test",
+    size = "small",
+    srcs = ["src/time_zone_name_win_test.cc"],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = [
+        ":time_zone",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "time_zone_fuzz_test",
     srcs = [
         "src/time_zone_fuzz_test.cc",
