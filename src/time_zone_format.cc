@@ -25,6 +25,7 @@
      !defined(__APPLE__)
 #  define _XOPEN_SOURCE 500  // Exposes definitions for SUSv2 (UNIX 98).
 # endif
+#endif
 
 #include "cctz/time_zone.h"
 
