@@ -13,7 +13,7 @@ jobs:
         run: brew install gcc@15
       - name: Configure
         run: |
-          mkdir -p build && cd build
+          mkdir -p cmakebuild && cd cmakebuild
           cmake .. -DCMAKE_CXX_COMPILER=g++-15 -DCMAKE_C_COMPILER=gcc-15
       - name: Build
-        run: cmake --build build
+        run: cmake --build cmakebuild
