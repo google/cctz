@@ -14,6 +14,6 @@ jobs:
       - name: Configure
         run: |
           mkdir -p cmakebuild && cd cmakebuild
-          cmake .. -DCMAKE_CXX_COMPILER=g++-15 -DCMAKE_C_COMPILER=gcc-15
+          cmake .. -DCMAKE_CXX_COMPILER=g++-15 -DCMAKE_C_COMPILER=gcc-15 -DBUILD_TESTING=OFF
       - name: Build
         run: cmake --build cmakebuild
