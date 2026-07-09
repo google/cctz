@@ -666,6 +666,15 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
   if (hdr.ttisutcnt != 0 && hdr.ttisutcnt != hdr.typecnt)
     return false;
 
+  // Bound the header counts before sizing tbuf so that a hostile TZif blob
+  // cannot force a very large zero-filled allocation from a tiny input.
+  if (hdr.timecnt > TZ_MAX_TIMES)
+    return false;
+  if (hdr.typecnt > TZ_MAX_TYPES)
+    return false;
+  if (hdr.charcnt > TZ_MAX_CHARS)
+    return false;
+
   // Read the data into a local buffer.
   std::size_t len = hdr.DataLength(time_len);
   std::vector<char> tbuf(len);
