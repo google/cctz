@@ -151,6 +151,16 @@ if (BUILD_TESTING)
   add_test(time_zone_format_test time_zone_format_test)
   list(APPEND CCTZ_TESTS time_zone_format_test)
 
+  add_executable(time_zone_posix_test src/time_zone_posix_test.cc)
+  cctz_target_set_cxx_standard(time_zone_posix_test)
+  target_link_libraries(time_zone_posix_test
+    cctz::cctz
+    ${CMAKE_THREAD_LIBS_INIT}
+    GMock::Main
+    )
+  add_test(time_zone_posix_test time_zone_posix_test)
+  list(APPEND CCTZ_TESTS time_zone_posix_test)
+
   if(WIN32)
     add_executable(time_zone_name_win_test src/time_zone_name_win_test.cc)
     cctz_target_set_cxx_standard(time_zone_name_win_test)
