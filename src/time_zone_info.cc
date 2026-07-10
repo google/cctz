@@ -50,6 +50,7 @@
 #include "cctz/civil_time.h"
 #include "time_zone_fixed.h"
 #include "time_zone_posix.h"
+#include "tzfile.h"
 
 namespace cctz {
 
@@ -150,6 +151,7 @@ bool Header::Build(const tzhead& tzh) {
   timecnt = static_cast<std::size_t>(v);
   if ((v = Decode32(tzh.tzh_typecnt)) < 0) return false;
   typecnt = static_cast<std::size_t>(v);
+  if (typecnt > TZ_MAX_TYPES) return false;
   if ((v = Decode32(tzh.tzh_charcnt)) < 0) return false;
   charcnt = static_cast<std::size_t>(v);
   if ((v = Decode32(tzh.tzh_leapcnt)) < 0) return false;
@@ -722,7 +724,7 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
   // Determine the before-first-transition type.
   default_transition_type_ = 0;
   if (seen_type_0 && hdr.timecnt != 0) {
-    std::uint_fast8_t index = 0;
+    std::size_t index = 0;
     if (transition_types_[0].is_dst) {
       index = transitions_[0].type_index;
       while (index != 0 && transition_types_[index].is_dst)
@@ -731,7 +733,7 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
     while (index != hdr.typecnt && transition_types_[index].is_dst)
       ++index;
     if (index != hdr.typecnt)
-      default_transition_type_ = index;
+      default_transition_type_ = static_cast<std::uint_fast8_t>(index);
   }
 
   // Copy all the abbreviations.
