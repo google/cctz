@@ -151,7 +151,6 @@ bool Header::Build(const tzhead& tzh) {
   timecnt = static_cast<std::size_t>(v);
   if ((v = Decode32(tzh.tzh_typecnt)) < 0) return false;
   typecnt = static_cast<std::size_t>(v);
-  if (typecnt > TZ_MAX_TYPES) return false;
   if ((v = Decode32(tzh.tzh_charcnt)) < 0) return false;
   charcnt = static_cast<std::size_t>(v);
   if ((v = Decode32(tzh.tzh_leapcnt)) < 0) return false;
