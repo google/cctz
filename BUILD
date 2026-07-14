@@ -159,6 +159,21 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "time_zone_posix_test",
+    size = "small",
+    srcs = [
+      "src/time_zone_posix_test.cc",
+      "src/time_zone_posix.h",
+    ],
+    deps = [
+        ":civil_time",
+        ":time_zone",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
 ### benchmarks
 
 cc_test(

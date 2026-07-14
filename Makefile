@@ -36,7 +36,7 @@ PREFIX ?= /usr/local
 DESTDIR ?=
 
 # possible support for googletest
-## TESTS = civil_time_test time_zone_lookup_test time_zone_format_test
+## TESTS = civil_time_test time_zone_lookup_test time_zone_format_test time_zone_posix_test
 ## TEST_FLAGS = ...
 ## TEST_LIBS = ...
 
