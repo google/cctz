@@ -239,9 +239,11 @@ const char* Basename(const char* p) {
 
 // std::regex doesn't work before gcc 4.9.
 bool LooksLikeNegOffset(const char* s) {
-  if (s[0] == '-' && std::isdigit(s[1]) && std::isdigit(s[2])) {
+  if (s[0] == '-' && std::isdigit(static_cast<unsigned char>(s[1])) &&
+      std::isdigit(static_cast<unsigned char>(s[2]))) {
     int i = (s[3] == ':') ? 4 : 3;
-    if (std::isdigit(s[i]) && std::isdigit(s[i + 1])) {
+    if (std::isdigit(static_cast<unsigned char>(s[i])) &&
+        std::isdigit(static_cast<unsigned char>(s[i + 1]))) {
       return s[i + 2] == '\0';
     }
   }
@@ -270,7 +272,8 @@ bool ParseYearRange(bool zdump, const std::string& args,
                     cctz::year_t* lo_year, cctz::year_t* hi_year) {
   std::size_t pos = 0;
   std::size_t digit_pos = pos + (args[pos] == '-' ? 1 : 0);
-  if (digit_pos >= args.size() || !std::isdigit(args[digit_pos])) {
+  if (digit_pos >= args.size() ||
+      !std::isdigit(static_cast<unsigned char>(args[digit_pos]))) {
     return false;
   }
   const cctz::year_t first = std::stoll(args, &pos);
@@ -284,7 +287,8 @@ bool ParseYearRange(bool zdump, const std::string& args,
     return false;
   }
   digit_pos = pos + (args[pos] == '-' ? 1 : 0);
-  if (digit_pos >= args.size() || !std::isdigit(args[digit_pos])) {
+  if (digit_pos >= args.size() ||
+      !std::isdigit(static_cast<unsigned char>(args[digit_pos]))) {
     return false;
   }
   const std::string rem = args.substr(pos);
@@ -417,8 +421,10 @@ int main(int argc, const char** argv) {
   bool have_time = ParseTimeSpec(args, &tp);
   if (!have_time && !args.empty()) {
     std::string spec = args.substr((args[0] == '@') ? 1 : 0);
-    if ((spec.size() > 0 && std::isdigit(spec[0])) ||
-        (spec.size() > 1 && spec[0] == '-' && std::isdigit(spec[1]))) {
+    if ((spec.size() > 0 &&
+         std::isdigit(static_cast<unsigned char>(spec[0]))) ||
+        (spec.size() > 1 && spec[0] == '-' &&
+         std::isdigit(static_cast<unsigned char>(spec[1])))) {
       std::size_t end;
       const time_t t = std::stoll(spec, &end);
       if (end == spec.size()) {
