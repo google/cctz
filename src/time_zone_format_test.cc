@@ -1613,52 +1613,84 @@ TEST(Parse, MaxRange) {
 TEST(Parse, TimePointOverflow) {
   const time_zone utc = utc_time_zone();
 
+  // Test with nanosecond resolution (typical 64-bit time_point).
   using D = chrono::duration<std::int64_t, std::nano>;
   time_point<D> tp;
 
+  // Max representable time_point<D> is 2262-04-11T23:47:16.854775807 UTC.
   EXPECT_TRUE(
       parse(RFC3339_full, "2262-04-11T23:47:16.8547758079+00:00", utc, &tp));
   EXPECT_EQ(tp, time_point<D>::max());
   EXPECT_EQ("2262-04-11T23:47:16.854775807+00:00",
             cctz::format(RFC3339_full, tp, utc));
-#if 0
-  // TODO(#199): Will fail until cctz::parse() properly detects overflow.
+  
+  // 1 nanosecond beyond max should fail.
   EXPECT_FALSE(
       parse(RFC3339_full, "2262-04-11T23:47:16.8547758080+00:00", utc, &tp));
+
+  // Min representable time_point<D> is 1677-09-21T00:12:43.145224192 UTC.
   EXPECT_TRUE(
       parse(RFC3339_full, "1677-09-21T00:12:43.1452241920+00:00", utc, &tp));
   EXPECT_EQ(tp, time_point<D>::min());
   EXPECT_EQ("1677-09-21T00:12:43.145224192+00:00",
             cctz::format(RFC3339_full, tp, utc));
+
+  // 1 nanosecond below min should fail.
   EXPECT_FALSE(
       parse(RFC3339_full, "1677-09-21T00:12:43.1452241919+00:00", utc, &tp));
-#endif
 
+  // Test with 1-second resolution using int8_t (very narrow range: [-128, 127] seconds).
   using DS = chrono::duration<std::int8_t, chrono::seconds::period>;
   time_point<DS> stp;
 
+  // Max: 127 seconds.
   EXPECT_TRUE(parse(RFC3339_full, "1970-01-01T00:02:07.9+00:00", utc, &stp));
   EXPECT_EQ(stp, time_point<DS>::max());
   EXPECT_EQ("1970-01-01T00:02:07+00:00", cctz::format(RFC3339_full, stp, utc));
+  // 128 seconds should fail.
   EXPECT_FALSE(parse(RFC3339_full, "1970-01-01T00:02:08+00:00", utc, &stp));
 
+  // Min: -128 seconds.
   EXPECT_TRUE(parse(RFC3339_full, "1969-12-31T23:57:52+00:00", utc, &stp));
   EXPECT_EQ(stp, time_point<DS>::min());
   EXPECT_EQ("1969-12-31T23:57:52+00:00", cctz::format(RFC3339_full, stp, utc));
+  // -129 seconds should fail.
   EXPECT_FALSE(parse(RFC3339_full, "1969-12-31T23:57:51.9+00:00", utc, &stp));
 
+  // Test with 1-minute resolution using int8_t (range: [-128, 127] minutes).
   using DM = chrono::duration<std::int8_t, chrono::minutes::period>;
   time_point<DM> mtp;
 
+  // Max: 127 minutes (02:07).
   EXPECT_TRUE(parse(RFC3339_full, "1970-01-01T02:07:59+00:00", utc, &mtp));
   EXPECT_EQ(mtp, time_point<DM>::max());
   EXPECT_EQ("1970-01-01T02:07:00+00:00", cctz::format(RFC3339_full, mtp, utc));
+  // 128 minutes (02:08) should fail.
   EXPECT_FALSE(parse(RFC3339_full, "1970-01-01T02:08:00+00:00", utc, &mtp));
 
+  // Min: -128 minutes (21:52).
   EXPECT_TRUE(parse(RFC3339_full, "1969-12-31T21:52:00+00:00", utc, &mtp));
   EXPECT_EQ(mtp, time_point<DM>::min());
   EXPECT_EQ("1969-12-31T21:52:00+00:00", cctz::format(RFC3339_full, mtp, utc));
+  // -129 minutes (21:51:59) should fail.
   EXPECT_FALSE(parse(RFC3339_full, "1969-12-31T21:51:59+00:00", utc, &mtp));
+
+  // Test with millisecond resolution using int8_t (range: [-128, 127] milliseconds).
+  // This tests the case where Denom (1000) is larger than Rep max/min (127/-128).
+  using D_milli_int8 = chrono::duration<std::int8_t, std::milli>;
+  time_point<D_milli_int8> milli_stp;
+
+  // Max: 127 milliseconds.
+  EXPECT_TRUE(parse(RFC3339_full, "1970-01-01T00:00:00.127+00:00", utc, &milli_stp));
+  EXPECT_EQ(milli_stp.time_since_epoch().count(), 127);
+  // 128 milliseconds should fail (tests sub > max check).
+  EXPECT_FALSE(parse(RFC3339_full, "1970-01-01T00:00:00.128+00:00", utc, &milli_stp));
+
+  // Min: -128 milliseconds (1969-12-31T23:59:59.872 is -128ms).
+  EXPECT_TRUE(parse(RFC3339_full, "1969-12-31T23:59:59.872+00:00", utc, &milli_stp));
+  EXPECT_EQ(milli_stp.time_since_epoch().count(), -128);
+  // -129 milliseconds should fail (tests min boundary with Denom > -min).
+  EXPECT_FALSE(parse(RFC3339_full, "1969-12-31T23:59:59.871+00:00", utc, &milli_stp));
 }
 
 TEST(Parse, TimePointOverflowFloor) {
