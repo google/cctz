@@ -32,6 +32,12 @@
 
 #include "time_zone_info.h"
 
+#if !defined(_MSC_VER)
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
+
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -386,8 +392,24 @@ inline FilePtr FOpen(const char* path, const char* mode) {
   if (fopen_s(&fp, path, mode) != 0) fp = nullptr;
   return FilePtr(fp, fclose);
 #else
-  // TODO: Enable the close-on-exec flag.
-  return FilePtr(fopen(path, mode), fclose);
+  // Open non-blocking and verify the target is a regular file before handing it
+  // to stdio. Zone names are potentially attacker-controlled, and a plain
+  // fopen() on a FIFO or device node (reachable via the "file:" prefix or an
+  // absolute path) would block indefinitely or read unbounded data.
+  const int fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+  if (fd < 0) {
+    return FilePtr(nullptr, fclose);
+  }
+  struct stat st;
+  if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode)) {
+    close(fd);
+    return FilePtr(nullptr, fclose);
+  }
+  FILE* fp = fdopen(fd, mode);
+  if (fp == nullptr) {
+    close(fd);
+  }
+  return FilePtr(fp, fclose);
 #endif
 }
 
@@ -427,6 +449,12 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
     const std::string& name) {
   // Use of the "file:" prefix is intended for testing purposes only.
   const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
+
+  // Reject path-traversal components so that a relative zone name cannot
+  // escape the zoneinfo directory (e.g., "../../etc/passwd").
+  if (name.find("..", pos) != std::string::npos) {
+    return nullptr;
+  }
 
   // Map the time-zone name to a path name.
   std::string path;
