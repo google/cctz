@@ -692,8 +692,8 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
     // A valid zoneinfo file keeps transition times far from the int64 limits.
     // A hostile one can place them at the extremes, where the reverse-conversion
     // arithmetic in MakeTime() (tr.unix_time +/- a sub-day civil delta, see
-    // MakeSkipped()/MakeRepeated()) overflows. Bound them to the -(1<<59)
-    // sentinel horizon used below.
+    // MakeSkipped()/MakeRepeated()) overflows. Bound them to +/-(1<<59), the
+    // times used by the no-op transitions added below.
     if (transitions_[i].unix_time < -(1LL << 59) ||
         transitions_[i].unix_time > (1LL << 59))
       return false;  // out of range
