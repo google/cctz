@@ -409,16 +409,16 @@ inline FilePtr FOpen(const char* path) {
 #endif
 }
 
-// Returns true if the zone name contains a ".." path-traversal component.
-inline bool HasPathTraversal(const std::string& name, std::size_t pos) {
-  // Exact match: ".."
+// Returns true if the zone name starting at pos contains an unsafe path.
+inline bool UnsafePath(const std::string& name, std::size_t pos) {
+  // Path traversal: exact match ".."
   if (name.compare(pos, std::string::npos, "..") == 0) return true;
-  // Leading component: "../"
+  // Path traversal: leading component "../"
   if (name.compare(pos, 3, "../") == 0) return true;
-  // Interior component: "/../"
+  // Path traversal: interior component "/../"
   if (name.find("/../", pos) != std::string::npos) return true;
-  // Trailing component: "/.."
-  if (name.size() >= pos + 3 &&
+  // Path traversal: trailing component "/.."
+  if (name.size() - pos >= 3 &&
       name.compare(name.size() - 3, 3, "/..") == 0) {
     return true;
   }
@@ -462,9 +462,8 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
   // Use of the "file:" prefix is intended for testing purposes only.
   const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
 
-  // Reject path-traversal components so that a relative zone name cannot
-  // escape the zoneinfo directory (e.g., "../../etc/passwd").
-  if (HasPathTraversal(name, pos)) {
+  // Reject unsafe paths (e.g., "../../etc/passwd").
+  if (UnsafePath(name, pos)) {
     return nullptr;
   }
 
