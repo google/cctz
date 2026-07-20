@@ -175,18 +175,14 @@ TEST(TimeZone, Failures) {
             convert(civil_second(1970, 1, 1, 0, 0, 0), tz));  // UTC
 
   // Reject path-traversal components.
-  tz = LoadZone("America/Los_Angeles");
   EXPECT_FALSE(load_time_zone("file:../etc/passwd", &tz));
   EXPECT_FALSE(load_time_zone("file:../../etc/passwd", &tz));
   EXPECT_FALSE(load_time_zone("file:/../etc/passwd", &tz));
+  EXPECT_FALSE(load_time_zone("file:America/../America/Los_Angeles", &tz));
 
-  // Reject non-regular files.
-  tz = LoadZone("America/Los_Angeles");
+  // Reject non-regular files and directories.
   EXPECT_FALSE(load_time_zone("file:/dev/null", &tz));
   EXPECT_FALSE(load_time_zone("file:/dev/stdin", &tz));
-
-  // Reject directories.
-  tz = LoadZone("America/Los_Angeles");
   EXPECT_FALSE(load_time_zone("file:/tmp", &tz));
 }
 

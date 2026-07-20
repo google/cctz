@@ -385,11 +385,11 @@ namespace {
 
 using FilePtr = std::unique_ptr<FILE, int(*)(FILE*)>;
 
-// fopen(3) adaptor.
-inline FilePtr FOpen(const char* path, const char* mode) {
+// fopen(3) adaptor for reading zoneinfo files (read-only binary mode).
+inline FilePtr FOpen(const char* path) {
 #if defined(_MSC_VER)
   FILE* fp;
-  if (fopen_s(&fp, path, mode) != 0) fp = nullptr;
+  if (fopen_s(&fp, path, "rb") != 0) fp = nullptr;
   return FilePtr(fp, fclose);
 #else
   // Open non-blocking and verify the target is a regular file before handing it
@@ -397,20 +397,32 @@ inline FilePtr FOpen(const char* path, const char* mode) {
   // fopen() on a FIFO or device node (reachable via the "file:" prefix or an
   // absolute path) would block indefinitely or read unbounded data.
   const int fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
-  if (fd < 0) {
-    return FilePtr(nullptr, fclose);
-  }
-  struct stat st;
-  if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode)) {
-    close(fd);
-    return FilePtr(nullptr, fclose);
-  }
-  FILE* fp = fdopen(fd, mode);
-  if (fp == nullptr) {
+  if (fd >= 0) {
+    struct stat st;
+    if (fstat(fd, &st) == 0 && S_ISREG(st.st_mode)) {
+      FILE* fp = fdopen(fd, "rb");
+      if (fp != nullptr) return FilePtr(fp, fclose);
+    }
     close(fd);
   }
-  return FilePtr(fp, fclose);
+  return FilePtr(nullptr, fclose);
 #endif
+}
+
+// Returns true if the zone name contains a ".." path-traversal component.
+inline bool HasPathTraversal(const std::string& name, std::size_t pos) {
+  // Exact match: ".."
+  if (name.compare(pos, std::string::npos, "..") == 0) return true;
+  // Leading component: "../"
+  if (name.compare(pos, 3, "../") == 0) return true;
+  // Interior component: "/../"
+  if (name.find("/../", pos) != std::string::npos) return true;
+  // Trailing component: "/.."
+  if (name.size() >= pos + 3 &&
+      name.compare(name.size() - 3, 3, "/..") == 0) {
+    return true;
+  }
+  return false;
 }
 
 // A stdio(3)-backed implementation of ZoneInfoSource.
@@ -452,7 +464,7 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
 
   // Reject path-traversal components so that a relative zone name cannot
   // escape the zoneinfo directory (e.g., "../../etc/passwd").
-  if (name.find("..", pos) != std::string::npos) {
+  if (HasPathTraversal(name, pos)) {
     return nullptr;
   }
 
@@ -476,7 +488,7 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
   path.append(name, pos, std::string::npos);
 
   // Open the zoneinfo file.
-  auto fp = FOpen(path.c_str(), "rb");
+  auto fp = FOpen(path.c_str());
   if (fp == nullptr) return nullptr;
   return std::unique_ptr<ZoneInfoSource>(new FileZoneInfoSource(std::move(fp)));
 }
@@ -502,7 +514,7 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
   for (const char* tzdata : {"/apex/com.android.tzdata/etc/tz/tzdata",
                              "/data/misc/zoneinfo/current/tzdata",
                              "/system/usr/share/zoneinfo/tzdata"}) {
-    auto fp = FOpen(tzdata, "rb");
+    auto fp = FOpen(tzdata);
     if (fp == nullptr) continue;
 
     char hbuf[24];  // covers header.zonetab_offset too
@@ -585,7 +597,7 @@ std::unique_ptr<ZoneInfoSource> FuchsiaZoneInfoSource::Open(
     if (!prefix.empty()) path += "zoneinfo/tzif2/";  // format
     path.append(name, pos, std::string::npos);
 
-    auto fp = FOpen(path.c_str(), "rb");
+    auto fp = FOpen(path.c_str());
     if (fp == nullptr) continue;
 
     std::string version;
