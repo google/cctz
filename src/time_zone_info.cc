@@ -689,6 +689,14 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
   for (std::size_t i = 0; i != hdr.timecnt; ++i) {
     transitions_[i].unix_time = (time_len == 4) ? Decode32(bp) : Decode64(bp);
     bp += time_len;
+    // A valid zoneinfo file keeps transition times far from the int64 limits.
+    // A hostile one can place them at the extremes, where the reverse-conversion
+    // arithmetic in MakeTime() (tr.unix_time +/- a sub-day civil delta, see
+    // MakeSkipped()/MakeRepeated()) overflows. Bound them to +/-(1<<59), the
+    // times used by the no-op transitions added below.
+    if (transitions_[i].unix_time < -(1LL << 59) ||
+        transitions_[i].unix_time > (1LL << 59))
+      return false;  // out of range
     if (i != 0) {
       // Check that the transitions are ordered by time (as zic guarantees).
       if (!Transition::ByUnixTime()(transitions_[i - 1], transitions_[i]))
