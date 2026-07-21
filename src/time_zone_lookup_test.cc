@@ -17,16 +17,21 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <future>
 #include <limits>
+#include <memory>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
+
 #if defined(__linux__)
 #include <features.h>
 #endif
 
 #include "cctz/civil_time.h"
+#include "cctz/zone_info_source.h"
 #include "gtest/gtest.h"
 #include "test_time_zone_names.h"
 
@@ -903,6 +908,125 @@ TEST(TimeZoneEdgeCase, UTC5DigitYear) {
   ExpectTime(tp, tz, 9999, 12, 31, 23, 59, 59, 0 * 3600, false, "UTC");
   tp += cctz::seconds(1);
   ExpectTime(tp, tz, 10000, 1, 1, 0, 0, 0, 0 * 3600, false, "UTC");
+}
+
+// A ZoneInfoSource implementation backed by an in-memory string buffer.
+class StringZoneInfoSource : public ZoneInfoSource {
+ public:
+  explicit StringZoneInfoSource(std::string data)
+      : data_(std::move(data)), offset_(0) {}
+
+  std::size_t Read(void* ptr, std::size_t size) override {
+    if (offset_ >= data_.size())
+      return 0;
+    std::size_t n = (std::min)(size, data_.size() - offset_);
+    std::memcpy(ptr, data_.data() + offset_, n);
+    offset_ += n;
+    return n;
+  }
+
+  int Skip(std::size_t offset) override {
+    if (offset > data_.size() - offset_)
+      return -1;
+    offset_ += offset;
+    return 0;
+  }
+
+ private:
+  std::string data_;
+  std::size_t offset_;
+};
+
+// Constructs a minimal valid TZif2 string with a single negative-epoch 64-bit
+// transition and a future POSIX DST footer ("EST5EDT,M3.2.0,M11.1.0").
+std::string MakeNegativeEpochTzif() {
+  std::string s;
+  auto append32 = [&s](std::uint32_t v) {
+    for (int i = 3; i >= 0; --i) {
+      s.push_back(static_cast<char>((v >> (i * 8)) & 0xff));
+    }
+  };
+  auto append64 = [&s](std::uint64_t v) {
+    for (int i = 7; i >= 0; --i) {
+      s.push_back(static_cast<char>((v >> (i * 8)) & 0xff));
+    }
+  };
+
+  // 32-bit header
+  s.append("TZif2", 5);
+  s.append(15, '\0');  // tzh_reserved
+  append32(0);         // tzh_ttisutcnt
+  append32(0);         // tzh_ttisstdcnt
+  append32(0);         // tzh_leapcnt
+  append32(0);         // tzh_timecnt (0 32-bit transitions)
+  append32(1);         // tzh_typecnt (1 ttinfo record)
+  append32(4);         // tzh_charcnt (4 bytes for "EST\0")
+
+  // 32-bit data block
+  append32(static_cast<std::uint32_t>(-18000));  // tt_utoff (-5 hours)
+  s.push_back(0);                                // tt_isdst (standard time)
+  s.push_back(0);                                // tt_desigidx ("EST\0")
+  s.append("EST\0", 4);                          // string table
+
+  // 64-bit header
+  s.append("TZif2", 5);
+  s.append(15, '\0');  // tzh_reserved
+  append32(0);         // tzh_ttisutcnt
+  append32(0);         // tzh_ttisstdcnt
+  append32(0);         // tzh_leapcnt
+  append32(1);         // tzh_timecnt (1 64-bit transition)
+  append32(1);         // tzh_typecnt (1 ttinfo record)
+  append32(4);         // tzh_charcnt (4 bytes for "EST\0")
+
+  // 64-bit data block
+  append64(static_cast<std::uint64_t>(
+      std::int64_t{-100000000000}));             // unix_time (year -1201)
+  s.push_back(0);                                // type index for transition
+  append32(static_cast<std::uint32_t>(-18000));  // tt_utoff (-5 hours)
+  s.push_back(0);                                // tt_isdst (standard time)
+  s.push_back(0);                                // tt_desigidx ("EST\0")
+  s.append("EST\0", 4);                          // string table
+
+  // POSIX footer
+  s.append("\nEST5EDT,M3.2.0,M11.1.0\n");
+  return s;
+}
+
+std::unique_ptr<ZoneInfoSource> NegativeEpochTestFactory(
+    const std::string& name,
+    const std::function<std::unique_ptr<ZoneInfoSource>(const std::string&)>&
+        fallback) {
+  if (name == "test:negative_epoch_dst") {
+    return std::unique_ptr<ZoneInfoSource>(
+        new StringZoneInfoSource(MakeNegativeEpochTzif()));
+  }
+  return fallback(name);
+}
+
+// Tests loading a TZif file whose explicit transitions end in negative epoch
+// with a POSIX DST footer string. Verifies that querying far-future time_points
+// does not cause signed integer overflow, and that lookups for modern dates use
+// the correct POSIX DST transition rules.
+TEST(TimeZoneEdgeCase, NegativeEpochExtended) {
+  auto prev_factory = cctz_extension::zone_info_source_factory;
+  cctz_extension::zone_info_source_factory = NegativeEpochTestFactory;
+  time_zone tz;
+  ASSERT_TRUE(load_time_zone("test:negative_epoch_dst", &tz));
+  cctz_extension::zone_info_source_factory = prev_factory;
+
+  // Far-future lookup must not trigger signed integer overflow.
+  // A sanitizer like UBSAN may flag the following line on overflow.
+  static_cast<void>(tz.lookup(time_point<seconds>::max()));
+
+  // Summer (July) must use the POSIX DST rule (EDT, UTC-4).
+  auto tp_july = convert(civil_second(2026, 7, 20, 12, 0, 0), tz);
+  ExpectTime(tp_july, tz, 2026, 7, 20, 12, 0, 0, -4 * 3600, true, "EDT");
+  EXPECT_EQ("EDT", std::string(tz.lookup(tp_july).abbr));
+
+  // Winter (January) must use EST (UTC-5).
+  auto tp_jan = convert(civil_second(2026, 1, 20, 12, 0, 0), tz);
+  ExpectTime(tp_jan, tz, 2026, 1, 20, 12, 0, 0, -5 * 3600, false, "EST");
+  EXPECT_EQ("EST", std::string(tz.lookup(tp_jan).abbr));
 }
 
 }  // namespace cctz
