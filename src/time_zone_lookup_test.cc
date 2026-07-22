@@ -929,8 +929,6 @@ class StringZoneInfoSource : public ZoneInfoSource {
       : data_(std::move(data)), offset_(0) {}
 
   std::size_t Read(void* ptr, std::size_t size) override {
-    if (offset_ >= data_.size())
-      return 0;
     std::size_t n = (std::min)(size, data_.size() - offset_);
     std::memcpy(ptr, data_.data() + offset_, n);
     offset_ += n;
@@ -1000,7 +998,7 @@ std::string MakeExtendedTzif(std::int_fast64_t unix_time,
   append32(utc_offset);               // tt_utoff
   s.push_back(0);                     // tt_isdst (standard time)
   s.push_back(0);                     // tt_desigidx
-  s.append(abbr.data(), charcnt);     // abbreviation table
+  s.append(abbr.c_str(), charcnt);    // abbreviation table
 
   // 64-bit header
   s.append(TZ_MAGIC, 4);
@@ -1019,7 +1017,7 @@ std::string MakeExtendedTzif(std::int_fast64_t unix_time,
   append32(utc_offset);               // tt_utoff
   s.push_back(0);                     // tt_isdst (standard time)
   s.push_back(0);                     // tt_desigidx
-  s.append(abbr.data(), charcnt);     // abbreviation table
+  s.append(abbr.c_str(), charcnt);  // abbreviation table
 
   // POSIX footer
   s.push_back('\n');
