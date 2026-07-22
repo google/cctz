@@ -572,6 +572,11 @@ std::unique_ptr<ZoneInfoSource> FuchsiaZoneInfoSource::Open(
   // Use of the "file:" prefix is intended for testing purposes only.
   const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
 
+  // Reject unsafe paths (e.g., "../../etc/passwd").
+  if (UnsafePath(name, pos)) {
+    return nullptr;
+  }
+
   // Prefixes where a Fuchsia component might find zoneinfo files,
   // in descending order of preference.
   const auto kTzdataPrefixes = {
