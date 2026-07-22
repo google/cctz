@@ -536,7 +536,8 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
       const std::int_fast64_t start =
           static_cast<std::int_fast64_t>(data_offset) + Decode32(ebuf + 40);
       const std::int_fast32_t length = Decode32(ebuf + 44);
-      if (start < 0 || length < 0) break;
+      if (start < 0 || start > std::numeric_limits<long>::max() || length < 0)
+        break;  // fseek() takes a long
       ebuf[40] = '\0';  // ensure zone name is NUL terminated
       if (strcmp(name.c_str() + pos, ebuf) == 0) {
         if (fseek(fp.get(), static_cast<long>(start), SEEK_SET) != 0) break;
