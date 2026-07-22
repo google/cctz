@@ -950,8 +950,11 @@ class StringZoneInfoSource : public ZoneInfoSource {
 };
 
 // Constructs a minimal valid TZif2 string with a single 64-bit transition
-// at the given unix_time and a future POSIX DST footer ("EST5EDT,M3.2.0,M11.1.0").
-std::string MakeNegativeEpochTzif(std::int_fast64_t unix_time) {
+// at the given transition time and a future POSIX rule.
+std::string MakeExtendedTzif(std::int_fast64_t unix_time,
+                             std::int_fast32_t utc_offset,
+                             const std::string& abbr,
+                             const std::string& future_spec) {
   std::string s;
   auto append32 = [&s](std::int_fast32_t v) {
     const std::int_fast32_t s32max = 0x7fffffff;
@@ -980,86 +983,94 @@ std::string MakeNegativeEpochTzif(std::int_fast64_t unix_time) {
     }
   };
 
+  const std::size_t charcnt = abbr.size() + 1;
+
   // 32-bit header
   s.append(TZ_MAGIC, 4);
-  s.push_back('2');
+  s.push_back('2');    // tzh_version
   s.append(15, '\0');  // tzh_reserved
   append32(0);         // tzh_ttisutcnt
   append32(0);         // tzh_ttisstdcnt
   append32(0);         // tzh_leapcnt
   append32(0);         // tzh_timecnt (0 32-bit transitions)
   append32(1);         // tzh_typecnt (1 ttinfo record)
-  append32(4);         // tzh_charcnt (4 bytes for "EST\0")
+  append32(static_cast<std::int_fast32_t>(charcnt));  // tzh_charcnt
 
   // 32-bit data block
-  append32(-18000);      // tt_utoff (-5 hours)
-  s.push_back(0);        // tt_isdst (standard time)
-  s.push_back(0);        // tt_desigidx ("EST\0")
-  s.append("EST\0", 4);  // string table
+  append32(utc_offset);               // tt_utoff
+  s.push_back(0);                     // tt_isdst (standard time)
+  s.push_back(0);                     // tt_desigidx
+  s.append(abbr.data(), charcnt);     // abbreviation table
 
   // 64-bit header
   s.append(TZ_MAGIC, 4);
-  s.push_back('2');
+  s.push_back('2');    // tzh_version
   s.append(15, '\0');  // tzh_reserved
   append32(0);         // tzh_ttisutcnt
   append32(0);         // tzh_ttisstdcnt
   append32(0);         // tzh_leapcnt
   append32(1);         // tzh_timecnt (1 64-bit transition)
   append32(1);         // tzh_typecnt (1 ttinfo record)
-  append32(4);         // tzh_charcnt (4 bytes for "EST\0")
+  append32(static_cast<std::int_fast32_t>(charcnt));  // tzh_charcnt
 
   // 64-bit data block
-  append64(unix_time);   // unix_time
-  s.push_back(0);        // type index for transition
-  append32(-18000);      // tt_utoff (-5 hours)
-  s.push_back(0);        // tt_isdst (standard time)
-  s.push_back(0);        // tt_desigidx ("EST\0")
-  s.append("EST\0", 4);  // string table
+  append64(unix_time);                // transition time
+  s.push_back(0);                     // type index for transition
+  append32(utc_offset);               // tt_utoff
+  s.push_back(0);                     // tt_isdst (standard time)
+  s.push_back(0);                     // tt_desigidx
+  s.append(abbr.data(), charcnt);     // abbreviation table
 
   // POSIX footer
-  s.append("\nEST5EDT,M3.2.0,M11.1.0\n");
+  s.push_back('\n');
+  s.append(future_spec);
+  s.push_back('\n');
   return s;
 }
 
-std::unique_ptr<ZoneInfoSource> NegativeEpochTestFactory(
+std::unique_ptr<ZoneInfoSource> ExtendedTestFactory(
     const std::string& name,
     const std::function<std::unique_ptr<ZoneInfoSource>(const std::string&)>&
         fallback) {
-  if (name == "test:negative_epoch_dst") {
-    // 1900-01-01T00:00:00Z (-2208988800) is in negative epoch, but extending
-    // 401 years reaches 2301 AD in the positive unix_time space.
-    return std::unique_ptr<ZoneInfoSource>(
-        new StringZoneInfoSource(MakeNegativeEpochTzif(-2208988800LL)));
+  if (name == "test:extended_dst") {
+    // 1900-01-01T00:00:00Z (-2208988800) is before epoch, but extending
+    // 401 years reaches 2301 AD in the positive unix time space.
+    return std::unique_ptr<ZoneInfoSource>(new StringZoneInfoSource(
+        MakeExtendedTzif(-2208988800LL, -5 * 3600, "EST",
+                         "EST5EDT,M3.2.0,M11.1.0")));
   }
-  if (name == "test:negative_epoch_dst_too_far") {
-    // Year -1201 (-100000000000) is so far in the negative epoch that extending
-    // 401 years still leaves the last transition before 1970 (<0).
-    return std::unique_ptr<ZoneInfoSource>(
-        new StringZoneInfoSource(MakeNegativeEpochTzif(-100000000000LL)));
+  if (name == "test:extended_dst_too_far") {
+    // Year -1201 (-100000000000) is so far before epoch that extending
+    // 401 years still leaves the last transition in the negative unix time space.
+    return std::unique_ptr<ZoneInfoSource>(new StringZoneInfoSource(
+        MakeExtendedTzif(-100000000000LL, -5 * 3600, "EST",
+                         "EST5EDT,M3.2.0,M11.1.0")));
   }
   return fallback(name);
 }
 
-// Tests loading a TZif file whose explicit transitions end in negative epoch
+// Tests loading a TZif file whose explicit transitions end before epoch
 // with a POSIX DST footer string.
-TEST(TimeZoneEdgeCase, NegativeEpochExtended) {
+TEST(TimeZoneEdgeCase, ExtendedBeforeEpoch) {
   auto prev_factory = cctz_extension::zone_info_source_factory;
-  cctz_extension::zone_info_source_factory = NegativeEpochTestFactory;
-  time_zone tz;
-  ASSERT_TRUE(load_time_zone("test:negative_epoch_dst", &tz));
+  cctz_extension::zone_info_source_factory = ExtendedTestFactory;
 
-  // Summer (July) must use the POSIX DST rule (EDT, UTC-4).
+  time_zone tz;
+  ASSERT_TRUE(load_time_zone("test:extended_dst", &tz));
+
+  // July matches the future rule for EDT (UTC-4).
   auto tp_july = convert(civil_second(2026, 7, 20, 12, 0, 0), tz);
   ExpectTime(tp_july, tz, 2026, 7, 20, 12, 0, 0, -4 * 3600, true, "EDT");
   EXPECT_STREQ("EDT", tz.lookup(tp_july).abbr);
 
-  // Winter (January) must use EST (UTC-5).
+  // January matches the future rule for EST (UTC-5).
   auto tp_jan = convert(civil_second(2026, 1, 20, 12, 0, 0), tz);
   ExpectTime(tp_jan, tz, 2026, 1, 20, 12, 0, 0, -5 * 3600, false, "EST");
   EXPECT_STREQ("EST", tz.lookup(tp_jan).abbr);
 
-  // Extended zones that do not reach non-negative unix_time are rejected.
-  EXPECT_FALSE(load_time_zone("test:negative_epoch_dst_too_far", &tz));
+  // Extended zones that do not reach non-negative unix time are rejected.
+  EXPECT_FALSE(load_time_zone("test:extended_dst_too_far", &tz));
+
   cctz_extension::zone_info_source_factory = prev_factory;
 }
 
