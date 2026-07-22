@@ -963,11 +963,14 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
     // future_spec_, shift back to a supported year using the 400-year
     // cycle of calendaric equivalence and then compensate accordingly.
     if (extended_) {
-      const std::int_fast64_t diff =
-          unix_time - transitions_[timecnt - 1].unix_time;
+      const std::int_fast64_t last_time = transitions_[timecnt - 1].unix_time;
+      const std::int_fast64_t diff = unix_time - last_time;
       const year_t shift = diff / kSecsPer400Years + 1;
-      const auto d = seconds(shift * kSecsPer400Years);
-      time_zone::absolute_lookup al = BreakTime(tp - d);
+      // shift * kSecsPer400Years can be beyond the int64 range, so derive
+      // the shifted time from the remainder rather than the product.
+      const std::int_fast64_t shifted =
+          last_time - kSecsPer400Years + diff % kSecsPer400Years;
+      time_zone::absolute_lookup al = BreakTime(FromUnixSeconds(shifted));
       al.cs = YearShift(al.cs, shift * 400);
       return al;
     }
