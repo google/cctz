@@ -32,6 +32,12 @@
 
 #include "time_zone_info.h"
 
+#if !defined(_MSC_VER)
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
+
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -379,16 +385,44 @@ namespace {
 
 using FilePtr = std::unique_ptr<FILE, int(*)(FILE*)>;
 
-// fopen(3) adaptor.
-inline FilePtr FOpen(const char* path, const char* mode) {
+// fopen(3) adaptor for reading zoneinfo files (read-only binary mode).
+inline FilePtr FOpen(const char* path) {
 #if defined(_MSC_VER)
   FILE* fp;
-  if (fopen_s(&fp, path, mode) != 0) fp = nullptr;
+  if (fopen_s(&fp, path, "rb") != 0) fp = nullptr;
   return FilePtr(fp, fclose);
 #else
-  // TODO: Enable the close-on-exec flag.
-  return FilePtr(fopen(path, mode), fclose);
+  // Open non-blocking and verify the target is a regular file before handing it
+  // to stdio. Zone names are potentially attacker-controlled, and a plain
+  // fopen() on a FIFO or device node (reachable via the "file:" prefix or an
+  // absolute path) would block indefinitely or read unbounded data.
+  const int fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+  if (fd >= 0) {
+    struct stat st;
+    if (fstat(fd, &st) == 0 && S_ISREG(st.st_mode)) {
+      FILE* fp = fdopen(fd, "rb");
+      if (fp != nullptr) return FilePtr(fp, fclose);
+    }
+    close(fd);
+  }
+  return FilePtr(nullptr, fclose);
 #endif
+}
+
+// Returns true if the zone name starting at pos contains an unsafe path.
+inline bool UnsafePath(const std::string& name, std::size_t pos) {
+  // Path traversal: exact match ".."
+  if (name.compare(pos, std::string::npos, "..") == 0) return true;
+  // Path traversal: leading component "../"
+  if (name.compare(pos, 3, "../") == 0) return true;
+  // Path traversal: interior component "/../"
+  if (name.find("/../", pos) != std::string::npos) return true;
+  // Path traversal: trailing component "/.."
+  if (name.size() - pos >= 3 &&
+      name.compare(name.size() - 3, 3, "/..") == 0) {
+    return true;
+  }
+  return false;
 }
 
 // A stdio(3)-backed implementation of ZoneInfoSource.
@@ -428,6 +462,11 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
   // Use of the "file:" prefix is intended for testing purposes only.
   const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
 
+  // Reject unsafe paths (e.g., "../../etc/passwd").
+  if (UnsafePath(name, pos)) {
+    return nullptr;
+  }
+
   // Map the time-zone name to a path name.
   std::string path;
   if (pos == name.size() || name[pos] != '/') {
@@ -448,7 +487,7 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
   path.append(name, pos, std::string::npos);
 
   // Open the zoneinfo file.
-  auto fp = FOpen(path.c_str(), "rb");
+  auto fp = FOpen(path.c_str());
   if (fp == nullptr) return nullptr;
   return std::unique_ptr<ZoneInfoSource>(new FileZoneInfoSource(std::move(fp)));
 }
@@ -474,7 +513,7 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
   for (const char* tzdata : {"/apex/com.android.tzdata/etc/tz/tzdata",
                              "/data/misc/zoneinfo/current/tzdata",
                              "/system/usr/share/zoneinfo/tzdata"}) {
-    auto fp = FOpen(tzdata, "rb");
+    auto fp = FOpen(tzdata);
     if (fp == nullptr) continue;
 
     char hbuf[24];  // covers header.zonetab_offset too
@@ -557,7 +596,7 @@ std::unique_ptr<ZoneInfoSource> FuchsiaZoneInfoSource::Open(
     if (!prefix.empty()) path += "zoneinfo/tzif2/";  // format
     path.append(name, pos, std::string::npos);
 
-    auto fp = FOpen(path.c_str(), "rb");
+    auto fp = FOpen(path.c_str());
     if (fp == nullptr) continue;
 
     std::string version;
