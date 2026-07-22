@@ -800,17 +800,13 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
   // time line (the first half is handled above) so that the signed
   // difference between a civil_second and the civil_second of its
   // previous transition is always representable, without overflow.
-  // Note: For zones extended with a future POSIX spec (extended_ == true),
-  // future times are handled by 400-year cycle shifting. Appending a static
-  // transition would corrupt the extended transition table.
-  if (!extended_) {
-    const Transition& last(transitions_.back());
-    if (last.unix_time < 0) {
-      const std::uint_fast8_t type_index = last.type_index;
-      Transition& tr(*transitions_.emplace(transitions_.end()));
-      tr.unix_time = 2147483647;  // 2038-01-19T03:14:07+00:00
-      tr.type_index = type_index;
-    }
+  const Transition& last(transitions_.back());
+  if (last.unix_time < 0) {
+    if (extended_) return false;
+    const std::uint_fast8_t type_index = last.type_index;
+    Transition& tr(*transitions_.emplace(transitions_.end()));
+    tr.unix_time = 2147483647;  // 2038-01-19T03:14:07+00:00
+    tr.type_index = type_index;
   }
 
   // Compute the local civil time for each transition and the preceding
@@ -929,17 +925,9 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
     // future_spec_, shift back to a supported year using the 400-year
     // cycle of calendaric equivalence and then compensate accordingly.
     if (extended_) {
-      // Use unsigned 64-bit subtraction to avoid signed overflow when
-      // unix_time > 0 and the last transition's unix_time is negative.
-      const std::uint_fast64_t diff =
-          static_cast<std::uint_fast64_t>(unix_time) -
-          static_cast<std::uint_fast64_t>(transitions_[timecnt - 1].unix_time);
-      year_t shift = static_cast<year_t>(diff / kSecsPer400Years + 1);
-      // Clamp shift to prevent shift * kSecsPer400Years from overflowing
-      // seconds when querying far-future timestamps (e.g. seconds::max()).
-      if (shift > seconds::max().count() / kSecsPer400Years) {
-        shift = seconds::max().count() / kSecsPer400Years;
-      }
+      const std::int_fast64_t diff =
+          unix_time - transitions_[timecnt - 1].unix_time;
+      const year_t shift = diff / kSecsPer400Years + 1;
       const auto d = seconds(shift * kSecsPer400Years);
       time_zone::absolute_lookup al = BreakTime(tp - d);
       al.cs = YearShift(al.cs, shift * 400);
@@ -1012,19 +1000,8 @@ time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
       // future_spec_, shift back to a supported year using the 400-year
       // cycle of calendaric equivalence and then compensate accordingly.
       if (extended_ && cs.year() > last_year_) {
-        // Use unsigned 64-bit arithmetic to safely compute the year difference
-        // and avoid signed overflow when last_year_ is negative.
-        const std::uint_fast64_t diff =
-            static_cast<std::uint_fast64_t>(cs.year()) -
-            static_cast<std::uint_fast64_t>(last_year_ + 1);
-        const year_t shift = static_cast<year_t>(diff / 400 + 1);
-        // Map cs.year() to the 400-year cycle in (last_year_ - 400, last_year_]
-        // without intermediate multiplications that could overflow year_t.
-        const year_t shifted_year =
-            last_year_ - 399 + static_cast<year_t>(diff % 400);
-        const civil_second shifted_cs(shifted_year, cs.month(), cs.day(),
-                                      cs.hour(), cs.minute(), cs.second());
-        return TimeLocal(shifted_cs, shift);
+        const year_t shift = (cs.year() - last_year_ - 1) / 400 + 1;
+        return TimeLocal(YearShift(cs, shift * -400), shift);
       }
       const TransitionType& tt(transition_types_[tr->type_index]);
       if (cs > tt.civil_max) return MakeUnique(time_point<seconds>::max());
