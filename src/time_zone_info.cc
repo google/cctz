@@ -846,6 +846,7 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
   // previous transition is always representable, without overflow.
   const Transition& last(transitions_.back());
   if (last.unix_time < 0) {
+    if (extended_) return false;
     const std::uint_fast8_t type_index = last.type_index;
     Transition& tr(*transitions_.emplace(transitions_.end()));
     tr.unix_time = 2147483647;  // 2038-01-19T03:14:07+00:00
