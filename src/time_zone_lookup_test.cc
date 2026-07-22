@@ -34,6 +34,7 @@
 #include "cctz/zone_info_source.h"
 #include "gtest/gtest.h"
 #include "test_time_zone_names.h"
+#include "tzfile.h"
 
 namespace chrono = std::chrono;
 
