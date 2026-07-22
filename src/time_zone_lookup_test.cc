@@ -983,7 +983,7 @@ std::string MakeExtendedTzif(std::int_fast64_t unix_time,
     }
   };
 
-  const std::size_t charcnt = abbr.size() + 1;
+  const std::size_t charcnt = abbr.size() + 1;  // includes the trailing '\0'
 
   // 32-bit header
   s.append(TZ_MAGIC, 4);
