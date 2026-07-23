@@ -47,6 +47,7 @@
 #include <cstring>
 #include <fstream>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -534,10 +535,11 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
     for (std::size_t i = 0; i != zonecnt; ++i) {
       if (fread(ebuf, 1, sizeof(ebuf), fp.get()) != sizeof(ebuf)) break;
       const std::int_fast64_t start =
-          static_cast<std::int_fast64_t>(data_offset) + Decode32(ebuf + 40);
+          std::int_fast64_t{data_offset} + Decode32(ebuf + 40);
       const std::int_fast32_t length = Decode32(ebuf + 44);
-      if (start < 0 || start > std::numeric_limits<long>::max() || length < 0)
-        break;  // fseek() takes a long
+      if (start < 0 || length < 0) break;
+      // fseek() takes a long
+      if (start > std::numeric_limits<long>::max()) break;
       ebuf[40] = '\0';  // ensure zone name is NUL terminated
       if (strcmp(name.c_str() + pos, ebuf) == 0) {
         if (fseek(fp.get(), static_cast<long>(start), SEEK_SET) != 0) break;
