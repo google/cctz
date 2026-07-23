@@ -115,7 +115,10 @@ cc_test(
 cc_test(
     name = "time_zone_lookup_test",
     size = "small",
-    srcs = ["src/time_zone_lookup_test.cc"],
+    srcs = [
+        "src/time_zone_lookup_test.cc",
+        "src/tzfile.h",
+    ],
     deps = [
         ":civil_time",
         ":test_time_zone_names",
@@ -163,8 +166,8 @@ cc_test(
     name = "time_zone_posix_test",
     size = "small",
     srcs = [
-      "src/time_zone_posix_test.cc",
-      "src/time_zone_posix.h",
+        "src/time_zone_posix.h",
+        "src/time_zone_posix_test.cc",
     ],
     deps = [
         ":civil_time",
