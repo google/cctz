@@ -404,9 +404,36 @@ bool join_seconds(
     const time_point<seconds>& sec, const femtoseconds& fs,
     time_point<std::chrono::duration<Rep, std::ratio<1, Denom>>>* tpp) {
   using D = std::chrono::duration<Rep, std::ratio<1, Denom>>;
-  // TODO(#199): Return false if result unrepresentable as a time_point<D>.
-  *tpp = std::chrono::time_point_cast<D>(sec);
-  *tpp += std::chrono::duration_cast<D>(fs);
+  // Use a 64-bit representation for intermediate subsecond calculations
+  // to avoid premature overflow if Rep is a smaller type (e.g., int8_t).
+  using D_check = std::chrono::duration<std::int64_t, std::ratio<1, Denom>>;
+  auto count = sec.time_since_epoch().count();
+  auto sub = std::chrono::duration_cast<D_check>(fs).count();  // [0, Denom)
+
+  // Check for overflow.
+  if (sub > (std::numeric_limits<Rep>::max)()) {
+    // If subseconds alone exceed the max representable value, any non-negative
+    // seconds count will cause overflow. Negative seconds might bring it back
+    // into range, which is handled by the underflow check below.
+    if (count >= 0) return false;
+  } else {
+    // Equivalent to: count * Denom + sub > max, but safe from overflow.
+    if (count > ((std::numeric_limits<Rep>::max)() - sub) / Denom) return false;
+  }
+
+  // Check for underflow.
+  // Equivalent to: count * Denom + sub < min, but safe from underflow.
+  // We cannot use "min - sub" directly as it would underflow.
+  const auto min_div = (std::numeric_limits<Rep>::min)() / Denom;
+  if (count < min_div) {
+    // If count is less than min_div - 1, it's definitely underflow.
+    if (count < min_div - 1) return false;
+    // If count is exactly min_div - 1, we must check if subseconds are
+    // sufficient to bring the total value back above min.
+    const auto min_mod = (std::numeric_limits<Rep>::min)() % Denom;
+    if (sub < Denom + min_mod) return false;
+  }
+  *tpp = time_point<D>() + D{static_cast<Rep>(count * Denom + sub)};
   return true;
 }
 
