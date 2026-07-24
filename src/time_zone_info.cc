@@ -975,7 +975,11 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
     if (extended_) {
       const std::int_fast64_t diff =
           unix_time - transitions_[timecnt - 1].unix_time;
-      const year_t shift = diff / kSecsPer400Years + 1;
+      // Bound the number of 400-year cycles so that shift * kSecsPer400Years
+      // stays representable (mirrors the clamp in TimeLocal()). A cycle spans
+      // exactly 400 years, so the recursive call folds in any residual shift.
+      const year_t shift = std::min<year_t>(
+          diff / kSecsPer400Years + 1, seconds::max().count() / kSecsPer400Years);
       const auto d = seconds(shift * kSecsPer400Years);
       time_zone::absolute_lookup al = BreakTime(tp - d);
       al.cs = YearShift(al.cs, shift * 400);

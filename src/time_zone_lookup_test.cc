@@ -1044,6 +1044,14 @@ std::unique_ptr<ZoneInfoSource> ExtendedTestFactory(
         MakeExtendedTzif(-100000000000LL, -5 * 3600, "EST",
                          "EST5EDT,M3.2.0,M11.1.0")));
   }
+  if (name == "test:extended_dst_far_future") {
+    // 1700-01-01T00:00:00Z (-8520336000) extends 401 years to 2101, so the
+    // last transition sits low enough in positive unix time that a lookup at
+    // the maximum time needs a very large 400-year shift in BreakTime().
+    return std::unique_ptr<ZoneInfoSource>(new StringZoneInfoSource(
+        MakeExtendedTzif(-8520336000LL, -5 * 3600, "EST",
+                         "EST5EDT,M3.2.0,M11.1.0")));
+  }
   return fallback(name);
 }
 
@@ -1068,6 +1076,25 @@ TEST(TimeZoneEdgeCase, ExtendedBeforeEpoch) {
 
   // Extended zones that do not reach non-negative unix time are rejected.
   EXPECT_FALSE(load_time_zone("test:extended_dst_too_far", &tz));
+
+  cctz_extension::zone_info_source_factory = prev_factory;
+}
+
+// Looking up the maximum time in an extended zone must fold back through the
+// 400-year cycle without overflowing when BreakTime() computes the shift.
+TEST(TimeZoneEdgeCase, ExtendedFarFuture) {
+  auto prev_factory = cctz_extension::zone_info_source_factory;
+  cctz_extension::zone_info_source_factory = ExtendedTestFactory;
+
+  time_zone tz;
+  ASSERT_TRUE(load_time_zone("test:extended_dst_far_future", &tz));
+
+  // The maximum representable instant lands in December, which the future
+  // rule (EST5EDT,M3.2.0,M11.1.0) resolves to standard time.
+  const auto al = tz.lookup(time_point<cctz::seconds>::max());
+  EXPECT_EQ(-5 * 3600, al.offset);
+  EXPECT_FALSE(al.is_dst);
+  EXPECT_STREQ("EST", al.abbr);
 
   cctz_extension::zone_info_source_factory = prev_factory;
 }
