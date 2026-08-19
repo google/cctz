@@ -417,9 +417,9 @@ inline FilePtr FOpen(const char* path) {
     // Reason API (NSPrivacyAccessedAPICategoryFileTimestamp) scanner.
     auto is_regular = [](int) { return true; };
 #else
-    auto is_regular = [](int fd) {
+    auto is_regular = [](int stat_fd) {
       struct stat st;
-      return fstat(fd, &st) == 0 && S_ISREG(st.st_mode);
+      return fstat(stat_fd, &st) == 0 && S_ISREG(st.st_mode);
     };
 #endif
     if (is_regular(fd)) {
