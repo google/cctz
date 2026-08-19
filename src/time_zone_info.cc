@@ -34,7 +34,9 @@
 
 #if !defined(_MSC_VER)
 #include <fcntl.h>
+#if !defined(__APPLE__)
 #include <sys/stat.h>
+#endif
 #include <unistd.h>
 #endif
 
@@ -410,8 +412,17 @@ inline FilePtr FOpen(const char* path) {
 #endif
   const int fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
   if (fd >= 0) {
-    struct stat st;
-    if (fstat(fd, &st) == 0 && S_ISREG(st.st_mode)) {
+#if defined(__APPLE__)
+    // On Apple platforms, avoid fstat() to prevent triggering Apple's Required
+    // Reason API (NSPrivacyAccessedAPICategoryFileTimestamp) scanner.
+    auto is_regular = [](int) { return true; };
+#else
+    auto is_regular = [](int fd) {
+      struct stat st;
+      return fstat(fd, &st) == 0 && S_ISREG(st.st_mode);
+    };
+#endif
+    if (is_regular(fd)) {
       FILE* fp = fdopen(fd, "rb");
       if (fp != nullptr) return FilePtr(fp, fclose);
     }
