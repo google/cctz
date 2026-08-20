@@ -250,6 +250,16 @@ TEST(Format, LocaleSpecific) {
 #endif
 }
 
+TEST(Format, TwelveHour) {
+  const time_zone tz = utc_time_zone();
+
+  // %I renders midnight and noon as 12, with %p disambiguating them.
+  auto tp = convert(civil_second(1970, 1, 1, 0, 0, 0), tz);
+  EXPECT_EQ("12 AM", cctz::format("%I %p", tp, tz));
+  tp = convert(civil_second(1970, 1, 1, 12, 0, 0), tz);
+  EXPECT_EQ("12 PM", cctz::format("%I %p", tp, tz));
+}
+
 TEST(Format, Escaping) {
   const time_zone tz = utc_time_zone();
   auto tp = chrono::system_clock::from_time_t(0);
@@ -1187,6 +1197,32 @@ TEST(Parse, LocaleSpecific) {
   EXPECT_TRUE(parse("%Oy", "04", tz, &tp));
   EXPECT_EQ(2004, convert(tp, tz).year());
 #endif
+#endif
+}
+
+TEST(Parse, TwelveHour) {
+  const time_zone tz = utc_time_zone();
+  time_point<chrono::nanoseconds> tp;
+
+  // %I maps 12 to 0 and a following %p shifts the afternoon, so "12 AM" is
+  // midnight and "12 PM" is noon. These boundary values are the 12-hour cases
+  // most prone to cross-platform bugs (see, e.g., newlib's handling of %I).
+  EXPECT_TRUE(parse("%I %p", "12 AM", tz, &tp));
+  EXPECT_EQ(0, convert(tp, tz).hour());
+  EXPECT_TRUE(parse("%I %p", "12 PM", tz, &tp));
+  EXPECT_EQ(12, convert(tp, tz).hour());
+  EXPECT_TRUE(parse("%I %p", "01 AM", tz, &tp));
+  EXPECT_EQ(1, convert(tp, tz).hour());
+  EXPECT_TRUE(parse("%I %p", "11 PM", tz, &tp));
+  EXPECT_EQ(23, convert(tp, tz).hour());
+
+#if defined(__linux__)
+  // %r is the locale's full 12-hour time; it must land on the correct side of
+  // the AM/PM boundary too.
+  EXPECT_TRUE(parse("%r", "12:00:00 AM", tz, &tp));
+  EXPECT_EQ(0, convert(tp, tz).hour());
+  EXPECT_TRUE(parse("%r", "12:00:00 PM", tz, &tp));
+  EXPECT_EQ(12, convert(tp, tz).hour());
 #endif
 }
 
