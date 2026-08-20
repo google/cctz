@@ -415,6 +415,12 @@ inline FilePtr FOpen(const char* path) {
 #if defined(__APPLE__)
     // On Apple platforms, avoid fstat() to prevent triggering Apple's Required
     // Reason API (NSPrivacyAccessedAPICategoryFileTimestamp) scanner.
+    // Security implications of skipping this check on Apple platforms:
+    //   - FIFO hangs are mitigated by O_NONBLOCK
+    //   - Path traversal is handled by UnsafePath()
+    //   - /usr/share/zoneinfo is a read-only system volume on iOS
+    // On general POSIX operating systems, the check remains as
+    // defense-in-depth.
     auto is_regular = [](int) { return true; };
 #else
     auto is_regular = [](int stat_fd) {
