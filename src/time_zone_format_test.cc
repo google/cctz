@@ -1206,7 +1206,7 @@ TEST(Parse, TwelveHour) {
 
   // %I maps 12 to 0 and a following %p shifts the afternoon, so "12 AM" is
   // midnight and "12 PM" is noon. These boundary values are the 12-hour cases
-  // most prone to cross-platform bugs (see, e.g., newlib's handling of %I).
+  // most prone to bugs.
   EXPECT_TRUE(parse("%I %p", "12 AM", tz, &tp));
   EXPECT_EQ(0, convert(tp, tz).hour());
   EXPECT_TRUE(parse("%I %p", "12 PM", tz, &tp));
