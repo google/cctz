@@ -962,23 +962,13 @@ bool parse(const std::string& format, const std::string& input,
     // If we successfully parsed %p we need to remember whether the result
     // was AM or PM so that we can adjust tm_hour before time_zone::lookup().
     // So reparse the input with a known AM hour, and check if it is shifted
-    // to a PM hour.  If that check is inconclusive (some strptime()
-    // implementations, notably the std::get_time()-based fallback used on
-    // Windows, cannot parse "%I%p" together), determine AM/PM from the
-    // matched %p text instead.
+    // to a PM hour.
     if (spec == "%p" && data != nullptr) {
       std::string test_input = "1";
       test_input.append(orig_data, data);
       std::tm tmp{};
       ParseTM(test_input.c_str(), "%I%p", &tmp);
       afternoon = (tmp.tm_hour == 13);
-      if (!afternoon) {
-        // The matched text is the platform's AM/PM indicator; a leading
-        // 'p' (case-insensitively) denotes afternoon.
-        const char* begin = orig_data;
-        while (begin != data && isspace(*begin)) ++begin;
-        afternoon = (begin != data && (*begin == 'p' || *begin == 'P'));
-      }
     }
   }
 
