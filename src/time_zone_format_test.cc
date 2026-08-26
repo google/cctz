@@ -217,6 +217,10 @@ TEST(Format, LocaleSpecific) {
   TestFormatSpecifier(tp, tz, "%x", "01/01/70");
   TestFormatSpecifier(tp, tz, "%X", "00:00:00");
 
+  // %I renders midnight and noon as 12, with %p disambiguating them.
+  TestFormatSpecifier(tp, tz, "%I %p", "12 AM");
+  TestFormatSpecifier(tp + chrono::hours(12), tz, "%I %p", "12 PM");
+
 #if defined(__linux__)
   // SU/C99/TZ extensions
   TestFormatSpecifier(tp, tz, "%h", "Jan");  // Same as %b
@@ -248,16 +252,6 @@ TEST(Format, LocaleSpecific) {
   TestFormatSpecifier(tp, tz, "%OW", "00");
   TestFormatSpecifier(tp, tz, "%Oy", "70");
 #endif
-}
-
-TEST(Format, TwelveHour) {
-  const time_zone tz = utc_time_zone();
-
-  // %I renders midnight and noon as 12, with %p disambiguating them.
-  auto tp = convert(civil_second(1970, 1, 1, 0, 0, 0), tz);
-  EXPECT_EQ("12 AM", cctz::format("%I %p", tp, tz));
-  tp = convert(civil_second(1970, 1, 1, 12, 0, 0), tz);
-  EXPECT_EQ("12 PM", cctz::format("%I %p", tp, tz));
 }
 
 TEST(Format, Escaping) {
@@ -1090,6 +1084,22 @@ TEST(Parse, LocaleSpecific) {
   EXPECT_TRUE(parse("%I %p", "5 PM", tz, &tp));
   EXPECT_EQ(17, convert(tp, tz).hour());
 
+  // %I maps 12 to 0 and a following %p shifts to the afternoon,
+  // so "12 AM" is midnight and "12 PM" is noon.
+  tp = reset;
+  EXPECT_TRUE(parse("%I %p", "12 AM", tz, &tp));
+  EXPECT_EQ(0, convert(tp, tz).hour());
+  tp = reset;
+  EXPECT_TRUE(parse("%I %p", "12 PM", tz, &tp));
+  EXPECT_EQ(12, convert(tp, tz).hour());
+
+  tp = reset;
+  EXPECT_TRUE(parse("%I %p", "01 AM", tz, &tp));
+  EXPECT_EQ(1, convert(tp, tz).hour());
+  tp = reset;
+  EXPECT_TRUE(parse("%I %p", "11 PM", tz, &tp));
+  EXPECT_EQ(23, convert(tp, tz).hour());
+
   tp = reset;
   EXPECT_TRUE(parse("%x", "02/03/04", tz, &tp));
   if (convert(tp, tz).month() == 2) {
@@ -1124,6 +1134,19 @@ TEST(Parse, LocaleSpecific) {
   EXPECT_EQ(15, convert(tp, tz).hour());
   EXPECT_EQ(44, convert(tp, tz).minute());
   EXPECT_EQ(55, convert(tp, tz).second());
+
+  // %r must land on the correct side of the AM/PM boundary too.
+  tp = reset;
+  EXPECT_TRUE(parse("%r", "12:00:00 AM", tz, &tp));
+  EXPECT_EQ(0, convert(tp, tz).hour());
+  EXPECT_EQ(0, convert(tp, tz).minute());
+  EXPECT_EQ(0, convert(tp, tz).second());
+
+  tp = reset;
+  EXPECT_TRUE(parse("%r", "12:00:00 PM", tz, &tp));
+  EXPECT_EQ(12, convert(tp, tz).hour());
+  EXPECT_EQ(0, convert(tp, tz).minute());
+  EXPECT_EQ(0, convert(tp, tz).second());
 
 #if defined(__GLIBC__)
   tp = reset;
@@ -1197,32 +1220,6 @@ TEST(Parse, LocaleSpecific) {
   EXPECT_TRUE(parse("%Oy", "04", tz, &tp));
   EXPECT_EQ(2004, convert(tp, tz).year());
 #endif
-#endif
-}
-
-TEST(Parse, TwelveHour) {
-  const time_zone tz = utc_time_zone();
-  time_point<chrono::nanoseconds> tp;
-
-  // %I maps 12 to 0 and a following %p shifts the afternoon, so "12 AM" is
-  // midnight and "12 PM" is noon. These boundary values are the 12-hour cases
-  // most prone to bugs.
-  EXPECT_TRUE(parse("%I %p", "12 AM", tz, &tp));
-  EXPECT_EQ(0, convert(tp, tz).hour());
-  EXPECT_TRUE(parse("%I %p", "12 PM", tz, &tp));
-  EXPECT_EQ(12, convert(tp, tz).hour());
-  EXPECT_TRUE(parse("%I %p", "01 AM", tz, &tp));
-  EXPECT_EQ(1, convert(tp, tz).hour());
-  EXPECT_TRUE(parse("%I %p", "11 PM", tz, &tp));
-  EXPECT_EQ(23, convert(tp, tz).hour());
-
-#if defined(__linux__)
-  // %r is the locale's full 12-hour time; it must land on the correct side of
-  // the AM/PM boundary too.
-  EXPECT_TRUE(parse("%r", "12:00:00 AM", tz, &tp));
-  EXPECT_EQ(0, convert(tp, tz).hour());
-  EXPECT_TRUE(parse("%r", "12:00:00 PM", tz, &tp));
-  EXPECT_EQ(12, convert(tp, tz).hour());
 #endif
 }
 
