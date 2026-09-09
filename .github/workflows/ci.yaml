@@ -8,12 +8,16 @@ env:
   BAZEL_CXXOPTS: -std=c++17
   USE_BAZEL_VERSION: 8.5.1
 
+permissions:
+  contents: read
+
 jobs:
+
   Linux-GCC:
     runs-on: ubuntu-latest
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         fetch-depth: 0
 
@@ -47,11 +51,11 @@ jobs:
         --test_output=errors
         --test_tag_filters=-benchmark,-fuzztest
 
-  Linux-Clang:
+  Linux-Clang-libstdcxx:
     runs-on: ubuntu-latest
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         fetch-depth: 0
 
@@ -61,6 +65,7 @@ jobs:
         --build_tag_filters=-fuzztest
         --copt=-DGTEST_REMOVE_LEGACY_TEST_CASEAPI_=1
         --copt=-Werror
+        --cxxopt=-stdlib=libstdc++
         --cxxopt=-Wall
         --cxxopt=-Wextra
         --cxxopt=-Wc++98-compat-extra-semi
@@ -102,11 +107,77 @@ jobs:
         --test_output=errors
         --test_tag_filters=-benchmark,-fuzztest
 
+  Linux-Clang-libcxx:
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        fetch-depth: 0
+
+    - name: Install libcxx
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libc++1 libc++-dev libc++abi-dev
+
+    - name: Tests
+      run: >
+        bazel test ...
+        --build_tag_filters=-fuzztest
+        --copt=-DGTEST_REMOVE_LEGACY_TEST_CASEAPI_=1
+        --copt=-fsanitize=address,undefined
+        --copt=-fno-sanitize-recover=all
+        --copt=-Werror
+        --cxxopt=-stdlib=libc++
+        --cxxopt=-Wall
+        --cxxopt=-Wextra
+        --cxxopt=-Wc++98-compat-extra-semi
+        --cxxopt=-Wcast-qual
+        --cxxopt=-Wconversion
+        --cxxopt=-Wdeprecated-pragma
+        --cxxopt=-Wfloat-overflow-conversion
+        --cxxopt=-Wfloat-zero-conversion
+        --cxxopt=-Wfor-loop-analysis
+        --cxxopt=-Wformat-security
+        --cxxopt=-Wgnu-redeclared-enum
+        --cxxopt=-Winfinite-recursion
+        --cxxopt=-Winvalid-constexpr
+        --cxxopt=-Wliteral-conversion
+        --cxxopt=-Wmissing-declarations
+        --cxxopt=-Woverlength-strings
+        --cxxopt=-Wpointer-arith
+        --cxxopt=-Wself-assign
+        --cxxopt=-Wshadow-all
+        --cxxopt=-Wshorten-64-to-32
+        --cxxopt=-Wsign-conversion
+        --cxxopt=-Wstring-conversion
+        --cxxopt=-Wtautological-overlap-compare
+        --cxxopt=-Wtautological-unsigned-zero-compare
+        --cxxopt=-Wuninitialized
+        --cxxopt=-Wunreachable-code
+        --cxxopt=-Wunused-comparison
+        --cxxopt=-Wunused-local-typedefs
+        --cxxopt=-Wunused-result
+        --cxxopt=-Wvla
+        --cxxopt=-Wwrite-strings
+        --cxxopt=-Wno-unknown-warning-option
+        --cxxopt=-Wno-undef
+        --features=external_include_paths
+        --keep_going
+        --linkopt=-fsanitize=address,undefined
+        --linkopt=-fsanitize-link-c++-runtime
+        --linkopt=-stdlib=libc++
+        --repo_env=CC=clang
+        --show_timestamps
+        --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
+        --test_output=errors
+        --test_tag_filters=-benchmark,-fuzztest
+
   Linux-FuzzTest:
     runs-on: ubuntu-latest
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         fetch-depth: 0
 
@@ -132,7 +203,7 @@ jobs:
     runs-on: macos-latest
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         fetch-depth: 0
 
@@ -152,7 +223,7 @@ jobs:
     runs-on: windows-latest
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         fetch-depth: 0
 
