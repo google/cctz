@@ -271,6 +271,13 @@ inline civil_second YearShift(const civil_second& cs, year_t shift) {
 bool TimeZoneInfo::GetTransitionType(std::int_fast32_t utc_offset, bool is_dst,
                                      const std::string& abbr,
                                      std::uint_least8_t* index) {
+  // Keep synthesized types within a day of UTC, matching the bound the reader
+  // enforces on file-supplied types (see Load). ParsePosixSpec() accepts an
+  // std/dst offset field up to 24:59:59, so a future spec can otherwise reach
+  // here with an out-of-range offset the TZif path would have rejected.
+  if (utc_offset <= -kSecsPerDay || utc_offset >= kSecsPerDay) {
+    return false;
+  }
   std::size_t type_index = 0;
   std::size_t abbr_index = abbreviations_.size();
   for (; type_index != transition_types_.size(); ++type_index) {

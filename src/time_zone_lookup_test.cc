@@ -1080,6 +1080,14 @@ std::unique_ptr<ZoneInfoSource> ExtendedTestFactory(
     return std::unique_ptr<ZoneInfoSource>(new StringZoneInfoSource(
         MakeExtendedTzif(0, -5 * 3600, "EST", "EST5EDT,M3.2.0,M11.1.0")));
   }
+  if (name == "test:ExtendedOversizeOffset") {
+    // The DST offset field 24:30:00 (88200s) is more than a day from UTC.
+    // The reader rejects such offsets in file-supplied types, so the type
+    // synthesized from the POSIX footer must be rejected too.
+    return std::unique_ptr<ZoneInfoSource>(new StringZoneInfoSource(
+        MakeExtendedTzif(0, -5 * 3600, std::string{"EST", 4},
+                         "EST5EDT24:30:00,M3.2.0,M11.1.0")));
+  }
   return fallback(name);
 }
 
@@ -1118,6 +1126,19 @@ TEST(TimeZoneEdgeCase, ExtendedOverlappingRules) {
 
   time_zone tz;
   EXPECT_FALSE(load_time_zone("test:ExtendedOverlappingRules", &tz));
+
+  cctz_extension::zone_info_source_factory = prev_factory;
+}
+
+// A POSIX footer whose std/dst offset field is a day or more from UTC yields
+// a transition type the TZif reader would reject; loading must fail rather
+// than build a zone with an out-of-range offset.
+TEST(TimeZoneEdgeCase, ExtendedOversizeOffset) {
+  auto prev_factory = cctz_extension::zone_info_source_factory;
+  cctz_extension::zone_info_source_factory = ExtendedTestFactory;
+
+  time_zone tz;
+  EXPECT_FALSE(load_time_zone("test:ExtendedOversizeOffset", &tz));
 
   cctz_extension::zone_info_source_factory = prev_factory;
 }
