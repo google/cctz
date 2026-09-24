@@ -77,6 +77,30 @@ auto tm_zone(const std::tm& tm) -> decltype(tzname[0]) {
   const bool is_dst = tm.tm_isdst > 0;
   return tzname[is_dst];
 }
+#elif defined(__NEWLIB__)
+// The struct std::tm extension fields are named by __TM_GMTOFF and __TM_ZONE,
+// either of which the configuration may leave undefined. Where it does, fall
+// back on the globals: '_timezone' and 'tzname'.
+#if defined(__TM_GMTOFF)
+auto tm_gmtoff(const std::tm& tm) -> decltype(tm.__TM_GMTOFF) {
+  return tm.__TM_GMTOFF;
+}
+#else
+auto tm_gmtoff(const std::tm& tm) -> decltype(-_timezone + 0) {
+  const bool is_dst = tm.tm_isdst > 0;
+  return -_timezone + (is_dst ? 60 * 60 : 0);
+}
+#endif
+#if defined(__TM_ZONE)
+auto tm_zone(const std::tm& tm) -> decltype(tm.__TM_ZONE) {
+  return tm.__TM_ZONE;
+}
+#else
+auto tm_zone(const std::tm& tm) -> decltype(tzname[0]) {
+  const bool is_dst = tm.tm_isdst > 0;
+  return tzname[is_dst];
+}
+#endif
 #else
 // Adapt to different spellings of the struct std::tm extension fields.
 #if defined(tm_gmtoff)
