@@ -38,9 +38,9 @@ namespace {
 
 #if defined(_WIN32) || defined(_WIN64)
 // Uses the globals: '_timezone', '_dstbias' and '_tzname'.
-auto tm_gmtoff(const std::tm& tm) -> decltype(-_timezone + _dstbias) {
+auto tm_gmtoff(const std::tm& tm) -> decltype(-_timezone + -_dstbias) {
   const bool is_dst = tm.tm_isdst > 0;
-  return -_timezone + (is_dst ? _dstbias : 0);
+  return -_timezone + (is_dst ? -_dstbias : 0);
 }
 auto tm_zone(const std::tm& tm) -> decltype(_tzname[0]) {
   const bool is_dst = tm.tm_isdst > 0;
