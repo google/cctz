@@ -1080,6 +1080,14 @@ std::unique_ptr<ZoneInfoSource> ExtendedTestFactory(
     return std::unique_ptr<ZoneInfoSource>(new StringZoneInfoSource(
         MakeExtendedTzif(0, -5 * 3600, "EST", "EST5EDT,M3.2.0,M11.1.0")));
   }
+  if (name == "test:ExtendedLargeOffset") {
+    // A file-supplied UTC offset of 25h is more than a day from UTC but still
+    // within the (-25h < utoff < 26h) range RFC 9636 allows, so the reader
+    // must accept it.
+    return std::unique_ptr<ZoneInfoSource>(new StringZoneInfoSource(
+        MakeExtendedTzif(0, 25 * 3600, std::string{"EST", 4},
+                         "EST5EDT,M3.2.0,M11.1.0")));
+  }
   return fallback(name);
 }
 
@@ -1118,6 +1126,18 @@ TEST(TimeZoneEdgeCase, ExtendedOverlappingRules) {
 
   time_zone tz;
   EXPECT_FALSE(load_time_zone("test:ExtendedOverlappingRules", &tz));
+
+  cctz_extension::zone_info_source_factory = prev_factory;
+}
+
+// A file-supplied UTC offset more than a day from UTC is still valid per
+// RFC 9636 (which allows -25h < utoff < 26h), so loading must succeed.
+TEST(TimeZoneEdgeCase, ExtendedLargeOffset) {
+  auto prev_factory = cctz_extension::zone_info_source_factory;
+  cctz_extension::zone_info_source_factory = ExtendedTestFactory;
+
+  time_zone tz;
+  EXPECT_TRUE(load_time_zone("test:ExtendedLargeOffset", &tz));
 
   cctz_extension::zone_info_source_factory = prev_factory;
 }
