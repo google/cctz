@@ -38,9 +38,9 @@ namespace {
 
 #if defined(_WIN32) || defined(_WIN64)
 // Uses the globals: '_timezone', '_dstbias' and '_tzname'.
-auto tm_gmtoff(const std::tm& tm) -> decltype(_timezone + _dstbias) {
+auto tm_gmtoff(const std::tm& tm) -> decltype(-_timezone + _dstbias) {
   const bool is_dst = tm.tm_isdst > 0;
-  return _timezone + (is_dst ? _dstbias : 0);
+  return -_timezone + (is_dst ? _dstbias : 0);
 }
 auto tm_zone(const std::tm& tm) -> decltype(_tzname[0]) {
   const bool is_dst = tm.tm_isdst > 0;
@@ -48,9 +48,9 @@ auto tm_zone(const std::tm& tm) -> decltype(_tzname[0]) {
 }
 #elif defined(__sun) || defined(_AIX)
 // Uses the globals: 'timezone', 'altzone' and 'tzname'.
-auto tm_gmtoff(const std::tm& tm) -> decltype(timezone) {
+auto tm_gmtoff(const std::tm& tm) -> decltype(-timezone) {
   const bool is_dst = tm.tm_isdst > 0;
-  return is_dst ? altzone : timezone;
+  return is_dst ? -altzone : -timezone;
 }
 auto tm_zone(const std::tm& tm) -> decltype(tzname[0]) {
   const bool is_dst = tm.tm_isdst > 0;
@@ -59,9 +59,9 @@ auto tm_zone(const std::tm& tm) -> decltype(tzname[0]) {
 #elif defined(__native_client__) || defined(__myriad2__) || \
     defined(__EMSCRIPTEN__)
 // Uses the globals: '_timezone' and 'tzname'.
-auto tm_gmtoff(const std::tm& tm) -> decltype(_timezone + 0) {
+auto tm_gmtoff(const std::tm& tm) -> decltype(-_timezone + 0) {
   const bool is_dst = tm.tm_isdst > 0;
-  return _timezone + (is_dst ? 60 * 60 : 0);
+  return -_timezone + (is_dst ? 60 * 60 : 0);
 }
 auto tm_zone(const std::tm& tm) -> decltype(tzname[0]) {
   const bool is_dst = tm.tm_isdst > 0;
@@ -69,9 +69,9 @@ auto tm_zone(const std::tm& tm) -> decltype(tzname[0]) {
 }
 #elif defined(__VXWORKS__)
 // Uses the globals: 'timezone' and 'tzname'.
-auto tm_gmtoff(const std::tm& tm) -> decltype(timezone + 0) {
+auto tm_gmtoff(const std::tm& tm) -> decltype(-timezone + 0) {
   const bool is_dst = tm.tm_isdst > 0;
-  return timezone + (is_dst ? 60 * 60 : 0);
+  return -timezone + (is_dst ? 60 * 60 : 0);
 }
 auto tm_zone(const std::tm& tm) -> decltype(tzname[0]) {
   const bool is_dst = tm.tm_isdst > 0;
