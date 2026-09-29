@@ -36,7 +36,7 @@ namespace cctz {
 
 namespace {
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
 // Uses the globals: '_timezone', '_dstbias' and '_tzname'.
 auto tm_gmtoff(const std::tm& tm) -> decltype(-_timezone + -_dstbias) {
   const bool is_dst = tm.tm_isdst > 0;
@@ -143,7 +143,7 @@ auto tm_zone(const T& tm) -> decltype(tm.__tm_zone) {
 using tm_gmtoff_t = decltype(tm_gmtoff(std::tm{}));
 
 inline std::tm* gm_time(const std::time_t *timep, std::tm *result) {
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
     return gmtime_s(result, timep) ? nullptr : result;
 #else
     return gmtime_r(timep, result);
@@ -151,7 +151,7 @@ inline std::tm* gm_time(const std::time_t *timep, std::tm *result) {
 }
 
 inline std::tm* local_time(const std::time_t *timep, std::tm *result) {
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
     return localtime_s(result, timep) ? nullptr : result;
 #else
     return localtime_r(timep, result);

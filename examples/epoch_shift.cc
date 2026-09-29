@@ -34,7 +34,7 @@ int main() {
   int off = GetOffset(now, "America/New_York");
   const std::time_t now_nyc = now + off;
   std::tm tm_nyc;
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
   gmtime_s(&tm_nyc, &now_nyc);
 #else
   gmtime_r(&now_nyc, &tm_nyc);

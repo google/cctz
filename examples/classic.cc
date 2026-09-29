@@ -26,7 +26,7 @@ int main() {
   const std::time_t now = std::time(nullptr);
 
   std::tm tm_utc;
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
   gmtime_s(&tm_utc, &now);
 #else
   gmtime_r(&now, &tm_utc);
@@ -34,7 +34,7 @@ int main() {
   std::cout << format("UTC: %Y-%m-%d %H:%M:%S\n", tm_utc);
 
   std::tm tm_local;
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
   localtime_s(&tm_local, &now);
 #else
   localtime_r(&now, &tm_local);
