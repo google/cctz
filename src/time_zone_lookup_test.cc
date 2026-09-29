@@ -463,7 +463,7 @@ TEST(MakeTime, SysSecondsLimits) {
   if (sizeof(std::time_t) >= 8) {
     // Checks that "tm_year + 1900", as used by the "libc" implementation,
     // can produce year values beyond the range on an int without overflow.
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
     // localtime_s() and gmtime_s() don't believe in years outside [1970:3000].
 #else
     const time_zone cut = LoadZone("libc:UTC");

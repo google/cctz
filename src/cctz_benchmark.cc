@@ -259,7 +259,7 @@ void BM_Time_ToCivil_Libc(benchmark::State& state) {
   while (state.KeepRunning()) {
     std::swap(t, t2);
     t += 1;
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
     benchmark::DoNotOptimize(localtime_s(&tm, &t));
 #else
     benchmark::DoNotOptimize(localtime_r(&t, &tm));
@@ -284,7 +284,7 @@ void BM_Time_ToCivilUTC_Libc(benchmark::State& state) {
   struct tm tm;
   while (state.KeepRunning()) {
     t += 1;
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32)
     benchmark::DoNotOptimize(gmtime_s(&tm, &t));
 #else
     benchmark::DoNotOptimize(gmtime_r(&t, &tm));
