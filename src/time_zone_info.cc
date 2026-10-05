@@ -799,9 +799,6 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
   for (std::size_t i = 0; i != hdr.typecnt; ++i) {
     transition_types_[i].utc_offset =
         static_cast<std::int_least32_t>(Decode32(bp));
-    if (transition_types_[i].utc_offset >= kSecsPerDay ||
-        transition_types_[i].utc_offset <= -kSecsPerDay)
-      return false;
     bp += 4;
     transition_types_[i].is_dst = (Decode8(bp++) != 0);
     transition_types_[i].abbr_index = Decode8(bp++);
