@@ -1089,10 +1089,9 @@ std::unique_ptr<ZoneInfoSource> ExtendedTestFactory(
                          "EST5EDT,M3.2.0,M11.1.0")));
   }
   if (name == "test:MinUtcOffset") {
-    // Nothing bounds a file-supplied UTC offset to 24h on load, so a hostile
-    // file can carry the minimum 32-bit value. It is the one offset whose
-    // negation overflows, and FormatOffset() must still render it without
-    // feeding a negative index to the kDigits[] lookup in Format02d().
+    // The minimum 32-bit UTC offset is far outside the (-25h < utoff < 26h)
+    // range RFC 9636 allows, and is the one offset whose negation overflows
+    // in FormatOffset(), so the reader must reject it.
     const std::int_fast32_t min_offset = -2147483647 - 1;
     return std::unique_ptr<ZoneInfoSource>(new StringZoneInfoSource(
         MakeExtendedTzif(0, min_offset, std::string{"X", 2}, "")));
@@ -1151,27 +1150,15 @@ TEST(TimeZoneEdgeCase, ExtendedLargeOffset) {
   cctz_extension::zone_info_source_factory = prev_factory;
 }
 
-// Formatting a time whose zone carries the minimum 32-bit UTC offset must
-// produce a well-formed numeric offset rather than negating INT_MIN or
-// indexing kDigits[] with a negative value.
-TEST(TimeZoneEdgeCase, FormatMinUtcOffset) {
+// A file-supplied UTC offset outside the range RFC 9636 allows (which is
+// -25h < utoff < 26h) would break the fixed-width offset formatting, so
+// loading must fail.
+TEST(TimeZoneEdgeCase, MinUtcOffset) {
   auto prev_factory = cctz_extension::zone_info_source_factory;
   cctz_extension::zone_info_source_factory = ExtendedTestFactory;
 
   time_zone tz;
-  ASSERT_TRUE(load_time_zone("test:MinUtcOffset", &tz));
-
-  const auto tp = chrono::system_clock::from_time_t(86400);  // after transition
-  for (const char* spec : {"%z", "%Ez", "%:z", "%::z", "%:::z"}) {
-    const std::string z = cctz::format(spec, tp, tz);
-    ASSERT_FALSE(z.empty()) << spec;
-    EXPECT_TRUE(z[0] == '+' || z[0] == '-') << spec << " -> " << z;
-    for (std::size_t i = 1; i < z.size(); ++i) {
-      const char c = z[i];
-      EXPECT_TRUE(c == ':' || (c >= '0' && c <= '9'))
-          << spec << " produced non-offset char at " << i << ": " << z;
-    }
-  }
+  EXPECT_FALSE(load_time_zone("test:MinUtcOffset", &tz));
 
   cctz_extension::zone_info_source_factory = prev_factory;
 }

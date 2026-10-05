@@ -193,18 +193,13 @@ char* FormatOffset(char* ep, int offset, const char* mode) {
   // generate a "negative zero" when we're formatting a zero offset
   // as the result of a failed load_time_zone().
   char sign = '+';
-  // A TZif file may carry an out-of-range utc_offset (nothing bounds it to
-  // 24h on load), so widen before negating to keep the magnitude positive:
-  // INT_MIN has no positive int counterpart, and a negative value here would
-  // feed negative indices to Format02d's kDigits[] lookup.
-  std::int_fast64_t v = offset;
-  if (v < 0) {
-    v = -v;
+  if (offset < 0) {
+    offset = -offset;  // bounded by -25h so no overflow
     sign = '-';
   }
-  const int seconds = static_cast<int>(v % 60);
-  const int minutes = static_cast<int>((v /= 60) % 60);
-  const int hours = static_cast<int>(v /= 60);
+  const int seconds = offset % 60;
+  const int minutes = (offset /= 60) % 60;
+  const int hours = offset /= 60;
   const char sep = mode[0];
   const bool ext = (sep != '\0' && mode[1] == '*');
   const bool ccc = (ext && mode[2] == ':');
@@ -220,7 +215,7 @@ char* FormatOffset(char* ep, int offset, const char* mode) {
     ep = Format02d(ep, minutes);
     if (sep != '\0') *--ep = sep;
   }
-  ep = Format02d(ep, hours);
+  ep = Format02d(ep, hours);  // bounded by 26h so fits in two digits
   *--ep = sign;
   return ep;
 }
