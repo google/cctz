@@ -1088,6 +1088,14 @@ std::unique_ptr<ZoneInfoSource> ExtendedTestFactory(
         MakeExtendedTzif(0, 25 * 3600, std::string{"EST", 4},
                          "EST5EDT,M3.2.0,M11.1.0")));
   }
+  if (name == "test:MinUtcOffset") {
+    // The minimum 32-bit UTC offset is far outside the (-25h < utoff < 26h)
+    // range RFC 9636 allows, and is the one offset whose negation overflows
+    // in FormatOffset(), so the reader must reject it.
+    const std::int_fast32_t min_offset = -2147483647 - 1;
+    return std::unique_ptr<ZoneInfoSource>(new StringZoneInfoSource(
+        MakeExtendedTzif(0, min_offset, std::string{"X", 2}, "")));
+  }
   return fallback(name);
 }
 
@@ -1138,6 +1146,19 @@ TEST(TimeZoneEdgeCase, ExtendedLargeOffset) {
 
   time_zone tz;
   EXPECT_TRUE(load_time_zone("test:ExtendedLargeOffset", &tz));
+
+  cctz_extension::zone_info_source_factory = prev_factory;
+}
+
+// A file-supplied UTC offset outside the range RFC 9636 allows (which is
+// -25h < utoff < 26h) would break the fixed-width offset formatting, so
+// loading must fail.
+TEST(TimeZoneEdgeCase, MinUtcOffset) {
+  auto prev_factory = cctz_extension::zone_info_source_factory;
+  cctz_extension::zone_info_source_factory = ExtendedTestFactory;
+
+  time_zone tz;
+  EXPECT_FALSE(load_time_zone("test:MinUtcOffset", &tz));
 
   cctz_extension::zone_info_source_factory = prev_factory;
 }
