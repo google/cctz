@@ -1074,6 +1074,15 @@ std::unique_ptr<ZoneInfoSource> ExtendedTestFactory(
         MakeExtendedTzif(0, -5 * 3600, std::string{"STD", 4},
                          "STD-12:00:00DST12:00:00,358/100:00:00,1/-139:00:00")));
   }
+  if (name == "test:ExtendedCrossingChanges") {
+    // Daylight time ends at 01:00, falling back to 23:00 standard time,
+    // and restarts at 00:00 standard time, springing forward to 02:00.
+    // So the civil times repeated by the first change (23:00 to 00:59)
+    // run into those skipped by the second (00:00 to 01:59).
+    return std::unique_ptr<ZoneInfoSource>(new StringZoneInfoSource(
+        MakeExtendedTzif(0, 0, std::string{"STD", 4},
+                         "STD0DST-2,M3.2.0/0,M3.2.0/1")));
+  }
   if (name == "test:UnterminatedAbbreviation") {
     // The abbreviation area is missing its final NUL, so the abbreviation
     // would run into whatever ExtendTransitions() appends behind it.
@@ -1134,6 +1143,20 @@ TEST(TimeZoneEdgeCase, ExtendedOverlappingRules) {
 
   time_zone tz;
   EXPECT_FALSE(load_time_zone("test:ExtendedOverlappingRules", &tz));
+
+  cctz_extension::zone_info_source_factory = prev_factory;
+}
+
+// Two offset changes can be close enough that the civil times skipped or
+// repeated by one overlap those of the other, even though the transitions
+// are ordered by both absolute and civil time. MakeTime() cannot represent
+// that, so such a zone must be rejected.
+TEST(TimeZoneEdgeCase, ExtendedCrossingChanges) {
+  auto prev_factory = cctz_extension::zone_info_source_factory;
+  cctz_extension::zone_info_source_factory = ExtendedTestFactory;
+
+  time_zone tz;
+  EXPECT_FALSE(load_time_zone("test:ExtendedCrossingChanges", &tz));
 
   cctz_extension::zone_info_source_factory = prev_factory;
 }
