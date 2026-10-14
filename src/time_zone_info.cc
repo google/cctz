@@ -906,11 +906,13 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
       // civil times each one skips or repeats. No one does this in
       // practice, and we depend on increasing absolute and civil times
       // in BreakTime() and MakeTime() respectively.
-      if (!Transition::ByUnixTime()(transitions_[i - 1], tr) ||
-          !Transition::ByCivilTime()(transitions_[i - 1], tr) ||
-          transitions_[i - 1].prev_civil_sec >= tr.prev_civil_sec ||
-          transitions_[i - 1].prev_civil_sec >= tr.civil_sec) {
+      const Transition& prev_tr(transitions_[i - 1]);
+      if (prev_tr.unix_time >= tr.unix_time) {
         return false;  // out of order
+      }
+      if (std::max(prev_tr.prev_civil_sec, prev_tr.civil_sec) >=
+          std::min(tr.prev_civil_sec, tr.civil_sec)) {
+        return false;  // transitions too close
       }
     }
   }

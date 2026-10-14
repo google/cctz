@@ -1083,6 +1083,15 @@ std::unique_ptr<ZoneInfoSource> ExtendedTestFactory(
         MakeExtendedTzif(0, 0, std::string{"STD", 4},
                          "STD0DST-2,M3.2.0/0,M3.2.0/1")));
   }
+  if (name == "test:ExtendedCrossingChangesReversed") {
+    // The reverse order: daylight time starts at 02:00, springing forward
+    // to 04:00, and ends at 05:00, falling back to 03:00. So the civil
+    // times skipped by the first change (02:00 to 03:59) run into those
+    // repeated by the second (03:00 to 04:59).
+    return std::unique_ptr<ZoneInfoSource>(new StringZoneInfoSource(
+        MakeExtendedTzif(0, 0, std::string{"STD", 4},
+                         "STD0DST-2,M3.2.0/2,M3.2.0/5")));
+  }
   if (name == "test:UnterminatedAbbreviation") {
     // The abbreviation area is missing its final NUL, so the abbreviation
     // would run into whatever ExtendTransitions() appends behind it.
@@ -1149,6 +1158,7 @@ TEST(TimeZoneEdgeCase, ExtendedCrossingChanges) {
 
   time_zone tz;
   EXPECT_FALSE(load_time_zone("test:ExtendedCrossingChanges", &tz));
+  EXPECT_FALSE(load_time_zone("test:ExtendedCrossingChangesReversed", &tz));
 
   cctz_extension::zone_info_source_factory = prev_factory;
 }
