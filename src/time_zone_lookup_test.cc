@@ -76,7 +76,7 @@ time_zone LoadZone(const std::string& name) {
     EXPECT_EQ(ss, al.cs.second());                                \
     EXPECT_EQ(off, al.offset);                                    \
     EXPECT_TRUE(isdst == al.is_dst);                              \
-    /* EXPECT_STREQ(zone, al.abbr); */                            \
+    EXPECT_STREQ(zone, al.abbr);                                  \
   } while (0)
 
 // These tests sometimes run on platforms that have zoneinfo data so old
@@ -1201,7 +1201,6 @@ TEST_F(TZifTest, ExtendedFarFuture) {
   auto tp_max = time_point<cctz::seconds>::max();
   ExpectTime(tp_max, tz, 292277026596, 12, 4, 10, 30, 7, -5 * 3600, false,
              "EST");
-  EXPECT_STREQ("EST", tz.lookup(tp_max).abbr);
 }
 
 }  // namespace cctz
