@@ -6,7 +6,7 @@ on:
 
 env:
   BAZEL_CXXOPTS: -std=c++17
-  USE_BAZEL_VERSION: 8.5.1
+  USE_BAZEL_VERSION: 8.8.2
 
 permissions:
   contents: read
