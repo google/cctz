@@ -6,7 +6,7 @@ on:
 
 env:
   BAZEL_CXXOPTS: -std=c++17
-  USE_BAZEL_VERSION: 8.5.1
+  USE_BAZEL_VERSION: 8.8.2
 
 permissions:
   contents: read
@@ -46,6 +46,7 @@ jobs:
         --cxxopt=-Wno-undef
         --features=external_include_paths
         --keep_going
+        --per_file_copt=external/.*@-w
         --show_timestamps
         --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
         --test_output=errors
@@ -101,6 +102,7 @@ jobs:
         --cxxopt=-Wno-undef
         --features=external_include_paths
         --keep_going
+        --per_file_copt=external/.*@-w
         --repo_env=CC=clang
         --show_timestamps
         --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
@@ -167,6 +169,7 @@ jobs:
         --linkopt=-fsanitize=address,undefined
         --linkopt=-fsanitize-link-c++-runtime
         --linkopt=-stdlib=libc++
+        --per_file_copt=external/.*@-w
         --repo_env=CC=clang
         --show_timestamps
         --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
@@ -193,6 +196,7 @@ jobs:
         --features=external_include_paths
         --keep_going
         --repo_env=CC=clang
+        --per_file_copt=external/.*@-w
         --show_timestamps
         --test_arg=--fuzz_for=30s
         --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
@@ -214,6 +218,7 @@ jobs:
         --cxxopt="-std=c++17"
         --features=external_include_paths
         --keep_going
+        --per_file_copt=external/.*@-w
         --show_timestamps
         --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
         --test_output=errors
@@ -232,6 +237,7 @@ jobs:
         bazel test ...
         --build_tag_filters="-fuzztest"
         --keep_going
+        --per_file_copt=external/.*@/w
         --show_timestamps
         --test_env="TZDIR=$env:GITHUB_WORKSPACE\testdata\zoneinfo"
         --test_output=errors
