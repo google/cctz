@@ -20,16 +20,15 @@
 #include <ostream>
 #include <type_traits>
 
-// Disable constexpr support unless we are in C++14 mode. In C++17 mode, use
-// inline variables so that namespace-scope data has a single definition.
-#if defined(__cpp_inline_variables) && __cpp_inline_variables >= 201606L
-#define CONSTEXPR_D inline constexpr  // data
-#define CONSTEXPR_F constexpr         // function
-#define CONSTEXPR_M constexpr         // member
-#elif __cpp_constexpr >= 201304 || (defined(_MSC_VER) && _MSC_VER >= 1910)
-#define CONSTEXPR_D constexpr  // data
-#define CONSTEXPR_F constexpr  // function
-#define CONSTEXPR_M constexpr  // member
+#if __cpp_constexpr >= 201304L || (defined(_MSC_VER) && _MSC_VER >= 1910)
+#if __cpp_inline_variables >= 201606L
+#define INLINE_VAR inline
+#else
+#define INLINE_VAR static
+#endif
+#define CONSTEXPR_D INLINE_VAR constexpr  // data
+#define CONSTEXPR_F constexpr             // function
+#define CONSTEXPR_M constexpr             // member
 #else
 #define CONSTEXPR_D const
 #define CONSTEXPR_F inline
@@ -618,5 +617,6 @@ std::ostream& operator<<(std::ostream& os, weekday wd);
 #undef CONSTEXPR_M
 #undef CONSTEXPR_F
 #undef CONSTEXPR_D
+#undef INLINE_VAR
 
 #endif  // CCTZ_CIVIL_TIME_DETAIL_H_
