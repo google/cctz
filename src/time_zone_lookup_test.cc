@@ -37,7 +37,7 @@
 #include "test_time_zone_names.h"
 #include "tzfile.h"
 
-#if __cplusplus < 201402L && !(defined(_MSVC_LANG) && _MSVC_LANG >= 201402L)
+#if __cplusplus < 201402L && (!defined(_MSVC_LANG) || _MSVC_LANG < 201402L)
 namespace {
 template <typename T, typename... Args>
 typename std::enable_if<!std::is_array<T>::value, std::unique_ptr<T>>::type

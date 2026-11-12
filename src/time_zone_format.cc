@@ -704,7 +704,7 @@ bool FromWeek(int week_num, weekday week_start, year_t* year, std::tm* tm) {
 bool parse(const std::string& format, const std::string& input,
            const time_zone& tz, time_point<seconds>* sec,
            detail::femtoseconds* fs, std::string* err) {
-#if __cplusplus < 202002L
+#if __cpp_lib_chrono < 201907L
   // Assert that the std::chrono::system_clock epoch is the Unix epoch.
   // This is required by C++20, but was also ubiquitous before that.
   // We use this in join_seconds() to simplify overflow detection.

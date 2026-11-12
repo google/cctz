@@ -433,11 +433,11 @@ inline FilePtr FOpen(const char* path) {
 #endif
     if (is_regular(fd)) {
       FILE* fp = fdopen(fd, "rb");
-      if (fp != nullptr) return FilePtr(fp, fclose);
+      if (fp != nullptr) return FilePtr(fp, std::fclose);
     }
     close(fd);
   }
-  return FilePtr(nullptr, fclose);
+  return FilePtr(nullptr, std::fclose);
 #endif
 }
 
@@ -471,13 +471,13 @@ class FileZoneInfoSource : public ZoneInfoSource {
 
   std::size_t Read(void* ptr, std::size_t size) override {
     size = std::min(size, len_);
-    std::size_t nread = fread(ptr, 1, size, fp_.get());
+    std::size_t nread = std::fread(ptr, 1, size, fp_.get());
     len_ -= nread;
     return nread;
   }
   int Skip(std::size_t offset) override {
     offset = std::min(offset, len_);
-    int rc = fseek(fp_.get(), static_cast<long>(offset), SEEK_CUR);
+    int rc = std::fseek(fp_.get(), static_cast<long>(offset), SEEK_CUR);
     if (rc == 0) len_ -= offset;
     return rc;
   }
@@ -556,13 +556,13 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
     if (fp == nullptr) continue;
 
     char hbuf[24];  // covers header.zonetab_offset too
-    if (fread(hbuf, 1, sizeof(hbuf), fp.get()) != sizeof(hbuf)) continue;
-    if (strncmp(hbuf, "tzdata", 6) != 0) continue;
+    if (std::fread(hbuf, 1, sizeof(hbuf), fp.get()) != sizeof(hbuf)) continue;
+    if (std::strncmp(hbuf, "tzdata", 6) != 0) continue;
     const char* vers = (hbuf[11] == '\0') ? hbuf + 6 : "";
     const std::int_fast32_t index_offset = Decode32(hbuf + 12);
     const std::int_fast32_t data_offset = Decode32(hbuf + 16);
     if (index_offset < 0 || data_offset < index_offset) continue;
-    if (fseek(fp.get(), static_cast<long>(index_offset), SEEK_SET) != 0)
+    if (std::fseek(fp.get(), static_cast<long>(index_offset), SEEK_SET) != 0)
       continue;
 
     char ebuf[52];  // covers entry.unused too
@@ -571,16 +571,17 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
     const std::size_t zonecnt = index_size / sizeof(ebuf);
     if (zonecnt * sizeof(ebuf) != index_size) continue;
     for (std::size_t i = 0; i != zonecnt; ++i) {
-      if (fread(ebuf, 1, sizeof(ebuf), fp.get()) != sizeof(ebuf)) break;
+      if (std::fread(ebuf, 1, sizeof(ebuf), fp.get()) != sizeof(ebuf)) break;
       const std::int_fast64_t start =
           std::int_fast64_t{data_offset} + Decode32(ebuf + 40);
       const std::int_fast32_t length = Decode32(ebuf + 44);
       if (start < 0 || length < 0) break;
-      // fseek() takes a long
+      // std::fseek() takes a long
       if (start > std::numeric_limits<long>::max()) break;
       ebuf[40] = '\0';  // ensure zone name is NUL terminated
       if (strcmp(name.c_str() + pos, ebuf) == 0) {
-        if (fseek(fp.get(), static_cast<long>(start), SEEK_SET) != 0) break;
+        if (std::fseek(fp.get(), static_cast<long>(start), SEEK_SET) != 0)
+          break;
         return std::unique_ptr<ZoneInfoSource>(new AndroidZoneInfoSource(
             std::move(fp), static_cast<std::size_t>(length), vers));
       }
@@ -718,7 +719,7 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
   tzhead tzh;
   if (zip->Read(&tzh, sizeof(tzh)) != sizeof(tzh))
     return false;
-  if (strncmp(tzh.tzh_magic, TZ_MAGIC, sizeof(tzh.tzh_magic)) != 0)
+  if (std::strncmp(tzh.tzh_magic, TZ_MAGIC, sizeof(tzh.tzh_magic)) != 0)
     return false;
   Header hdr;
   if (!hdr.Build(tzh))
@@ -731,7 +732,7 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
     // Read and validate the header for the 8-byte data.
     if (zip->Read(&tzh, sizeof(tzh)) != sizeof(tzh))
       return false;
-    if (strncmp(tzh.tzh_magic, TZ_MAGIC, sizeof(tzh.tzh_magic)) != 0)
+    if (std::strncmp(tzh.tzh_magic, TZ_MAGIC, sizeof(tzh.tzh_magic)) != 0)
       return false;
     if (tzh.tzh_version[0] == '\0')
       return false;
@@ -772,41 +773,35 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
   // Decode and validate the transitions.
   transitions_.reserve(hdr.timecnt + 2);
   transitions_.resize(hdr.timecnt);
-  for (std::size_t i = 0; i != hdr.timecnt; ++i) {
-    transitions_[i].unix_time = (time_len == 4) ? Decode32(bp) : Decode64(bp);
+  for (auto& tr : transitions_) {
+    tr.unix_time = (time_len == 4) ? Decode32(bp) : Decode64(bp);
     bp += time_len;
-    // A valid zoneinfo file keeps transition times far from the int64 limits.
-    // A hostile one can place them at the extremes, where the reverse-conversion
-    // arithmetic in MakeTime() (tr.unix_time +/- a sub-day civil delta, see
-    // MakeSkipped()/MakeRepeated()) overflows. Bound them to +/-(1<<59), the
-    // times used by the no-op transitions added below.
-    if (transitions_[i].unix_time < -(1LL << 59) ||
-        transitions_[i].unix_time > (1LL << 59))
+    // A valid zoneinfo file keeps transition times far from the 64-bit
+    // limits, but a hostile one can place them at the extremes where
+    // the reverse-conversion arithmetic in MakeTime() might overflow.
+    // So, bound transitions to the range +/-(1<<59).
+    if (tr.unix_time < -(1LL << 59) || tr.unix_time > (1LL << 59)) {
       return false;  // out of range
+    }
   }
   bool seen_type_0 = false;
-  for (std::size_t i = 0; i != hdr.timecnt; ++i) {
-    transitions_[i].type_index = Decode8(bp++);
-    if (transitions_[i].type_index >= hdr.typecnt)
-      return false;
-    if (transitions_[i].type_index == 0)
-      seen_type_0 = true;
+  for (auto& tr : transitions_) {
+    tr.type_index = Decode8(bp++);
+    if (tr.type_index >= hdr.typecnt) return false;
+    if (tr.type_index == 0) seen_type_0 = true;
   }
 
   // Decode and validate the transition types.
   transition_types_.reserve(hdr.typecnt + 2);
   transition_types_.resize(hdr.typecnt);
-  for (std::size_t i = 0; i != hdr.typecnt; ++i) {
-    transition_types_[i].utc_offset =
-        static_cast<std::int_least32_t>(Decode32(bp));
-    if (transition_types_[i].utc_offset >= 26 * 60 * 60 ||
-        transition_types_[i].utc_offset <= -25 * 60 * 60)
-      return false;
+  for (auto& tt : transition_types_) {
+    tt.utc_offset = static_cast<std::int_least32_t>(Decode32(bp));
     bp += 4;
-    transition_types_[i].is_dst = (Decode8(bp++) != 0);
-    transition_types_[i].abbr_index = Decode8(bp++);
-    if (transition_types_[i].abbr_index >= hdr.charcnt)
+    if (tt.utc_offset >= 26 * 60 * 60 || tt.utc_offset <= -25 * 60 * 60)
       return false;
+    tt.is_dst = (Decode8(bp++) != 0);
+    tt.abbr_index = Decode8(bp++);
+    if (tt.abbr_index >= hdr.charcnt) return false;
   }
 
   // Determine the before-first-transition type.

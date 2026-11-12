@@ -36,10 +36,10 @@ char* Format02d(char* p, int v) {
 }
 
 // Returns the value of the decimal digit ch, or -1 if ch is not a digit.
-// Note that std::strchr() also matches kDigits' terminating '\0', which
-// would otherwise be taken for a tenth digit.
 int ParseDigit(char ch) {
   const char* const dp = std::strchr(kDigits, ch);
+  // Note that std::strchr() considers the terminating NUL as part of
+  // the string to scan, so we must also check that we did not find it.
   return (dp == nullptr || *dp == '\0') ? -1 : static_cast<int>(dp - kDigits);
 }
 
