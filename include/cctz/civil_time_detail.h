@@ -95,11 +95,9 @@ CONSTEXPR_F int days_per_4years(int yi) noexcept {
 CONSTEXPR_F int days_per_year(year_t y, month_t m) noexcept {
   return is_leap_year(y + (m > 2)) ? 366 : 365;
 }
-
 CONSTEXPR_D int k_days_per_month[1 + 12] = {
     -1, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31  // non leap year
 };
-
 // The compiler cannot optimize away the check if we use
 // -fsanitize=array-bounds.
 // m is guaranteed to be in [1:12] in the caller, but the compiler cannot
@@ -534,11 +532,9 @@ CONSTEXPR_D weekday k_weekday_by_mon_off[13] = {
     weekday::wednesday, weekday::thursday, weekday::friday,
     weekday::saturday,
 };
-
 CONSTEXPR_D int k_weekday_offsets[1 + 12] = {
     -1, 0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4,
 };
-
 CONSTEXPR_D weekday k_weekdays_forw[14] = {
     weekday::monday,    weekday::tuesday,  weekday::wednesday,
     weekday::thursday,  weekday::friday,   weekday::saturday,
@@ -546,7 +542,6 @@ CONSTEXPR_D weekday k_weekdays_forw[14] = {
     weekday::wednesday, weekday::thursday, weekday::friday,
     weekday::saturday,  weekday::sunday,
 };
-
 CONSTEXPR_D weekday k_weekdays_back[14] = {
     weekday::sunday,   weekday::saturday,  weekday::friday,
     weekday::thursday, weekday::wednesday, weekday::tuesday,
@@ -554,7 +549,6 @@ CONSTEXPR_D weekday k_weekdays_back[14] = {
     weekday::friday,   weekday::thursday,  weekday::wednesday,
     weekday::tuesday,  weekday::monday,
 };
-
 CONSTEXPR_D int k_month_offsets[1 + 12] = {
     -1, 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334,
 };
