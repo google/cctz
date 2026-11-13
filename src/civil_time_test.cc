@@ -35,7 +35,8 @@ std::string Format(const T& t) {
 
 }  // namespace
 
-#if __cpp_constexpr >= 201304 || (defined(_MSC_VER) && _MSC_VER >= 1910)
+#if (defined(__cpp_constexpr) && __cpp_constexpr >= 201304L) || \
+    (defined(_MSC_VER) && _MSC_VER >= 1910)
 // Construction constexpr tests
 
 TEST(CivilTime, Normal) {

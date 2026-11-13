@@ -20,8 +20,9 @@
 #include <ostream>
 #include <type_traits>
 
-#if __cpp_constexpr >= 201304L || (defined(_MSC_VER) && _MSC_VER >= 1910)
-#if __cpp_inline_variables >= 201606L
+#if (defined(__cpp_constexpr) && __cpp_constexpr >= 201304L) || \
+    (defined(_MSC_VER) && _MSC_VER >= 1910)
+#if defined(__cpp_inline_variables) && __cpp_inline_variables >= 201606L
 #define INLINE_VAR inline
 #else
 #define INLINE_VAR static
