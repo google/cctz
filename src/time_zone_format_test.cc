@@ -15,7 +15,10 @@
 #include "cctz/time_zone.h"
 
 #include <chrono>
+#include <clocale>
+#include <cstddef>
 #include <cstdint>
+#include <ctime>
 #include <iomanip>
 #include <ratio>
 #include <sstream>
@@ -252,6 +255,41 @@ TEST(Format, LocaleSpecific) {
   TestFormatSpecifier(tp, tz, "%Ow", "4");  // 4=Thursday
   TestFormatSpecifier(tp, tz, "%OW", "00");
   TestFormatSpecifier(tp, tz, "%Oy", "70");
+#endif
+}
+
+TEST(Format, LongLocalizedConversions) {
+#if !defined(_WIN32)  // uses POSIX locale names
+  const time_zone tz = utc_time_zone();
+  const auto tp = convert(civil_second(2026, 9, 30, 23, 59, 58), tz);
+
+  // The equivalent std::tm, for direct use with strftime(3).
+  std::tm tm{};
+  tm.tm_year = 2026 - 1900;
+  tm.tm_mon = 9 - 1;
+  tm.tm_mday = 30;
+  tm.tm_hour = 23;
+  tm.tm_min = 59;
+  tm.tm_sec = 58;
+  tm.tm_wday = 3;    // Wednesday
+  tm.tm_yday = 272;  // Sep 30 (zero based)
+
+  // In some locales, conversions like %c expand to more than 16 times
+  // their length (e.g., 46 bytes for %c in fa_IR.UTF-8), and others,
+  // like %p in de_DE.UTF-8, produce nothing at all. Neither of those
+  // should change the result from that of strftime(3) itself.
+  const std::string saved_locale = std::setlocale(LC_TIME, nullptr);
+  for (const char* locale : {"ar_AE.UTF-8", "be_BY.UTF-8", "de_DE.UTF-8",
+                             "fa_IR.UTF-8", "hi_IN.UTF-8", "sv_FI.UTF-8"}) {
+    if (std::setlocale(LC_TIME, locale) == nullptr) continue;
+    for (const char* fmt : {"%c", "%p", "%r", "%x", "%X"}) {
+      char buf[1024];
+      const std::size_t len = std::strftime(buf, sizeof(buf), fmt, &tm);
+      EXPECT_EQ(std::string(buf, len), cctz::format(fmt, tp, tz))
+          << locale << " " << fmt;
+    }
+  }
+  std::setlocale(LC_TIME, saved_locale.c_str());
 #endif
 }
 
