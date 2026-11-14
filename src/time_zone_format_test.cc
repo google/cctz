@@ -271,12 +271,12 @@ TEST(Format, LongLocalizedConversions) {
   tm.tm_hour = 23;
   tm.tm_min = 59;
   tm.tm_sec = 58;
-  tm.tm_wday = 3;    // Wednesday
-  tm.tm_yday = 272;  // Sep 30 (zero based)
+  tm.tm_wday = 3;  // Wednesday
+  tm.tm_yday = 273 - 1;
 
-  // In some locales, conversions like %c expand to more than 16 times
-  // their length (e.g., 46 bytes for %c in fa_IR.UTF-8), and others,
-  // like %p in de_DE.UTF-8, produce nothing at all. Neither of those
+  // In some locales, conversions like %c expand to large multiples of
+  // their length (e.g., 46 bytes for %c in fa_IR.UTF-8), while others
+  // (e.g., %p in de_DE.UTF-8) produce nothing at all. Neither of those
   // should change the result from that of strftime(3) itself.
   const std::string saved_locale = std::setlocale(LC_TIME, nullptr);
   for (const char* locale : {"ar_AE.UTF-8", "be_BY.UTF-8", "de_DE.UTF-8",
