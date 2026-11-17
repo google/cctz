@@ -221,16 +221,23 @@ char* FormatOffset(char* ep, int offset, const char* mode) {
 }
 
 // Formats a std::tm using strftime(3).
-void FormatTM(std::string* out, const std::string& fmt, const std::tm& tm) {
-  // We assume that 16 times the length of the format string will
-  // be sufficient to store the result.  The extreme case appears
-  // to be "%c" (2 chars), which, in the POSIX locale, produces
-  // "Thu Jan 1 00:00:00 1970" (24 chars).
-  auto out_size = out->size();
-  auto buf_size = (16 * fmt.size()) + 1;
-  out->resize(out_size + buf_size);
-  auto len = strftime(&(*out)[out_size], buf_size, fmt.c_str(), &tm);
-  out->resize(out_size + len);
+void FormatTM(std::string* out, std::string fmt, const std::tm& tm) {
+  // We start with a buffer of twice the length of the format
+  // string, but double that every time the result doesn't fit.
+  const auto out_size = out->size();
+  fmt.insert(0, 1, '?');  // pad to avoid empty result
+  for (std::size_t scale = 2; scale <= 256; scale *= 2) {
+    const auto buf_size = scale * fmt.size();
+    out->resize(out_size + buf_size);
+    const auto len = strftime(&(*out)[out_size], buf_size, fmt.c_str(), &tm);
+    if (len != 0) {
+      out->resize(out_size + len);
+      out->erase(out_size, 1);  // drop padding
+      return;
+    }
+  }
+  // Some strftime implementations also return zero for an invalid conversion.
+  out->resize(out_size);
 }
 
 // Used for %E#S/%E#f specifiers and for data values in parse().
