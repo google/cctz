@@ -226,15 +226,18 @@ void FormatTM(std::string* out, std::string fmt, const std::tm& tm) {
   // string, but double that every time the result doesn't fit.
   const auto out_size = out->size();
   fmt.insert(0, 1, '?');  // pad to avoid empty result
-  for (auto buf_size = 2 * fmt.size();; buf_size *= 2) {
+  for (std::size_t scale = 2; scale <= 256; scale *= 2) {
+    const auto buf_size = scale * fmt.size();
     out->resize(out_size + buf_size);
     const auto len = strftime(&(*out)[out_size], buf_size, fmt.c_str(), &tm);
     if (len != 0) {
       out->resize(out_size + len);
       out->erase(out_size, 1);  // drop padding
-      break;
+      return;
     }
   }
+  // Some strftime implementations also return zero for an invalid conversion.
+  out->resize(out_size);
 }
 
 // Used for %E#S/%E#f specifiers and for data values in parse().
