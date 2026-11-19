@@ -360,18 +360,16 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
     // Moves cur to the next percent sign.
     const char* start = cur;
     while (cur != end && *cur != '%') {
-      if (*cur == '\0' && pending != start) {
-        FormatTM(&result, std::string(pending, cur), tm);
+      if (*cur++ == '\0') {
+        FormatTM(&result, std::string(pending, cur - 1), tm);
+        result.push_back('\0');
         pending = start = cur;
       }
-      ++cur;
     }
 
-    // If the new pending text is all ordinary, copy it out.
-    if (cur != start && pending == start) {
-      result.append(pending, cur);
-      pending = start = cur;
-    }
+    // Format any previously unhandled specifier and new ordinary text.
+    FormatTM(&result, std::string(pending, cur), tm);
+    pending = start = cur;
 
     // Span the sequential percent signs.
     const char* const percent = cur;
@@ -394,7 +392,6 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
 
     // Simple specifiers that we handle ourselves.
     if (*cur == '\0' || strchr("YmdeFUuWwHMSTzZs%", *cur)) {
-      FormatTM(&result, std::string(pending, cur - 1), tm);
       switch (*cur) {
         case '\0':
           // Because we allow NULs in the format string, we must give
@@ -487,7 +484,6 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
     if (*cur == ':' && cur + 1 != end) {
       if (*(cur + 1) == 'z') {
         // Formats %:z.
-        FormatTM(&result, std::string(pending, cur - 1), tm);
         bp = FormatOffset(ep, al.offset, ":");
         result.append(bp, ep);
         pending = cur += 2;
@@ -496,7 +492,6 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
       if (*(cur + 1) == ':' && cur + 2 != end) {
         if (*(cur + 2) == 'z') {
           // Formats %::z.
-          FormatTM(&result, std::string(pending, cur - 1), tm);
           bp = FormatOffset(ep, al.offset, ":*");
           result.append(bp, ep);
           pending = cur += 3;
@@ -505,7 +500,6 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
         if (*(cur + 2) == ':' && cur + 3 != end) {
           if (*(cur + 3) == 'z') {
             // Formats %:::z.
-            FormatTM(&result, std::string(pending, cur - 1), tm);
             bp = FormatOffset(ep, al.offset, ":*:");
             result.append(bp, ep);
             pending = cur += 4;
@@ -521,25 +515,21 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
     // Format our extensions.
     if (*cur == 'T') {
       // Formats %ET.
-      FormatTM(&result, std::string(pending, cur - 2), tm);
       result.append("T");
       pending = ++cur;
     } else if (*cur == 'z') {
       // Formats %Ez.
-      FormatTM(&result, std::string(pending, cur - 2), tm);
       bp = FormatOffset(ep, al.offset, ":");
       result.append(bp, ep);
       pending = ++cur;
     } else if (*cur == '*' && cur + 1 != end && *(cur + 1) == 'z') {
       // Formats %E*z.
-      FormatTM(&result, std::string(pending, cur - 2), tm);
       bp = FormatOffset(ep, al.offset, ":*");
       result.append(bp, ep);
       pending = cur += 2;
     } else if (*cur == '*' && cur + 1 != end &&
                (*(cur + 1) == 'S' || *(cur + 1) == 'f')) {
       // Formats %E*S or %E*F.
-      FormatTM(&result, std::string(pending, cur - 2), tm);
       char* cp = ep;
       bp = Format64(cp, 15, fs.count());
       while (cp != bp && cp[-1] == '0') --cp;
@@ -556,7 +546,6 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
       pending = cur += 2;
     } else if (*cur == '4' && cur + 1 != end && *(cur + 1) == 'Y') {
       // Formats %E4Y.
-      FormatTM(&result, std::string(pending, cur - 2), tm);
       bp = Format64(ep, 4, al.cs.year());
       result.append(bp, ep);
       pending = cur += 2;
@@ -566,7 +555,6 @@ std::string format(const std::string& format, const time_point<seconds>& tp,
       if (const char* np = ParseInt(cur, 0, 0, 1024, &n)) {
         if (*np == 'S' || *np == 'f') {
           // Formats %E#S or %E#f.
-          FormatTM(&result, std::string(pending, cur - 2), tm);
           bp = ep;
           if (n > 0) {
             if (n > kDigits10_64) n = kDigits10_64;
