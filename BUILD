@@ -15,6 +15,7 @@
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("cc_test_with_testdata.bzl", "cc_test_with_testdata")
 
 package(
     features = [
@@ -100,7 +101,7 @@ cc_test(
     ],
 )
 
-cc_test(
+cc_test_with_testdata(
     name = "time_zone_format_test",
     size = "small",
     srcs = ["src/time_zone_format_test.cc"],
@@ -112,7 +113,7 @@ cc_test(
     ],
 )
 
-cc_test(
+cc_test_with_testdata(
     name = "time_zone_lookup_test",
     size = "small",
     srcs = [
@@ -140,7 +141,7 @@ cc_test(
     ],
 )
 
-cc_test(
+cc_test_with_testdata(
     name = "time_zone_fuzz_test",
     srcs = [
         "src/time_zone_fuzz_test.cc",
@@ -179,7 +180,7 @@ cc_test(
 
 ### benchmarks
 
-cc_test(
+cc_test_with_testdata(
     name = "cctz_benchmark",
     srcs = [
         "src/cctz_benchmark.cc",
