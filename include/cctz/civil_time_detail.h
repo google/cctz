@@ -45,8 +45,6 @@ using year_t = std::int_fast64_t;
 // constructor parameters and operands/results of addition/subtraction).
 using diff_t = std::int_fast64_t;
 
-class TimeZoneInfo;
-
 namespace detail {
 
 // Type aliases that indicate normalized argument values.
@@ -448,7 +446,6 @@ class civil_time {
   // private constructor and access the private fields member.
   template <typename U>
   friend class civil_time;
-  friend class cctz::TimeZoneInfo;
 
   // The designated constructor that all others eventually call.
   explicit CONSTEXPR_M civil_time(fields f) noexcept : f_(align(T{}, f)) {}

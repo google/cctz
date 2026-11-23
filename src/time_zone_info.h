@@ -95,8 +95,6 @@ class TimeZoneInfo : public TimeZoneIf {
   // Helpers for BreakTime() and MakeTime().
   time_zone::absolute_lookup LocalTime(std::int_fast64_t unix_time,
                                        const TransitionType& tt) const;
-  time_zone::absolute_lookup LocalTime(std::int_fast64_t unix_time,
-                                       const Transition& tr) const;
   time_zone::civil_lookup TimeLocal(const civil_second& cs,
                                     year_t c4_shift) const;
 

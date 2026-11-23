@@ -355,6 +355,30 @@ TEST(BreakTime, LocalTimeInSydney) {
   EXPECT_EQ(weekday::thursday, get_weekday(convert(tp, tz)));
 }
 
+TEST(BreakTime, LeapAndContemporaryBoundaries) {
+  const time_zone utc = utc_time_zone();
+  const time_zone east = fixed_time_zone(chrono::hours(24));
+  const time_zone west = fixed_time_zone(-chrono::hours(24));
+  for (const civil_second& cs : {
+           civil_second(1900, 2, 28, 23, 59, 59),
+           civil_second(1900, 3, 1, 0, 0, 0),
+           civil_second(2000, 2, 29, 23, 59, 59),
+           civil_second(2000, 3, 1, 0, 0, 0),
+           civil_second(2024, 2, 29, 12, 34, 56),
+           civil_second(2024, 12, 31, 23, 59, 59),
+           civil_second(2026, 1, 1, 0, 0, 0),
+           civil_second(2026, 1, 31, 23, 59, 59),
+           civil_second(2026, 2, 28, 23, 59, 59),
+           civil_second(2026, 3, 1, 0, 0, 0),
+           civil_second(2026, 12, 31, 23, 59, 59),
+       }) {
+    for (const time_zone& tz : {utc, east, west}) {
+      const auto tp = convert(cs, tz);
+      EXPECT_EQ(cs, convert(tp, tz));
+    }
+  }
+}
+
 TEST(MakeTime, TimePointResolution) {
   const time_zone utc = utc_time_zone();
   const time_point<chrono::nanoseconds> tp_ns =
@@ -1121,7 +1145,7 @@ std::unique_ptr<ZoneInfoSource> TestZoneInfoSourceFactory(
   }
   if (name == "test:LargeNegOffsetNoFuture") {
     return make_unique<StringZoneInfoSource>(
-        MakeTZif(0, -(25 * 3600 - 1), std::string{"LNO", 4}, ""));
+        MakeTZif(0, -25 * 3600 + 1, std::string{"LNO", 4}, ""));
   }
   if (name == "test:MinUtcOffset") {
     // The minimum 32-bit UTC offset is far outside the (-25h < utoff < 26h)
@@ -1203,37 +1227,13 @@ TEST_F(TZifTest, ExtendedLargeOffset) {
              59, 58, 26 * 3600 - 1, false, "LPO");
   // 1969-12-31T00:00:01Z - 24:59:59 -> 1969-12-29T23:00:02 (3 backward steps).
   ExpectTime(chrono::system_clock::from_time_t(-86399), neg_tz, 1969, 12, 29,
-             23, 0, 2, -(25 * 3600 - 1), false, "LNO");
+             23, 0, 2, -25 * 3600 + 1, false, "LNO");
   const auto tp_max = time_point<cctz::seconds>::max();
   const auto tp_min = time_point<cctz::seconds>::min();
   EXPECT_EQ(tp_max, convert(pos_tz.lookup(tp_max).cs, pos_tz));
   EXPECT_EQ(tp_min, convert(pos_tz.lookup(tp_min).cs, pos_tz));
   EXPECT_EQ(tp_max, convert(neg_tz.lookup(tp_max).cs, neg_tz));
   EXPECT_EQ(tp_min, convert(neg_tz.lookup(tp_min).cs, neg_tz));
-}
-
-TEST(BreakTime, LeapAndContemporaryBoundaries) {
-  const time_zone utc = utc_time_zone();
-  const time_zone east = fixed_time_zone(chrono::hours(24));
-  const time_zone west = fixed_time_zone(-chrono::hours(24));
-  for (const civil_second& cs : {
-           civil_second(1900, 2, 28, 23, 59, 59),
-           civil_second(1900, 3, 1, 0, 0, 0),
-           civil_second(2000, 2, 29, 23, 59, 59),
-           civil_second(2000, 3, 1, 0, 0, 0),
-           civil_second(2024, 2, 29, 12, 34, 56),
-           civil_second(2024, 12, 31, 23, 59, 59),
-           civil_second(2026, 1, 1, 0, 0, 0),
-           civil_second(2026, 1, 31, 23, 59, 59),
-           civil_second(2026, 2, 28, 23, 59, 59),
-           civil_second(2026, 3, 1, 0, 0, 0),
-           civil_second(2026, 12, 31, 23, 59, 59),
-       }) {
-    for (const time_zone& tz : {utc, east, west}) {
-      const auto tp = convert(cs, tz);
-      EXPECT_EQ(cs, convert(tp, tz));
-    }
-  }
 }
 
 // A file-supplied UTC offset outside the range RFC 9636 allows (which is

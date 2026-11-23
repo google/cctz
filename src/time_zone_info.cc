@@ -995,18 +995,8 @@ time_zone::absolute_lookup TimeZoneInfo::LocalTime(
       static_cast<year_t>(100U * c + z2) - kYearShift + static_cast<year_t>(j);
   const std::uint_least32_t m = j ? mp - 12U : mp;
 
-  return {
-      civil_second(detail::fields(
-          y, static_cast<detail::month_t>(m), static_cast<detail::day_t>(d),
-          static_cast<detail::hour_t>(hh), static_cast<detail::minute_t>(mm),
-          static_cast<detail::second_t>(ss))),
-      tt.utc_offset, tt.is_dst, &abbreviations_[tt.abbr_index]};
-}
-
-// BreakTime() translation for a particular transition.
-time_zone::absolute_lookup TimeZoneInfo::LocalTime(std::int_fast64_t unix_time,
-                                                   const Transition& tr) const {
-  return LocalTime(unix_time, transition_types_[tr.type_index]);
+  return {civil_second(y, m, d, hh, mm, ss), tt.utc_offset, tt.is_dst,
+          &abbreviations_[tt.abbr_index]};
 }
 
 // MakeTime() translation with a conversion-preserving +N * 400-year shift.
@@ -1052,14 +1042,16 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
       al.cs = YearShift(al.cs, shift * 400);
       return al;
     }
-    return LocalTime(unix_time, transitions_[timecnt - 1]);
+    const auto type_index = transitions_[timecnt - 1].type_index;
+    return LocalTime(unix_time, transition_types_[type_index]);
   }
 
   const std::size_t hint = local_time_hint_.load(std::memory_order_relaxed);
   if (0 < hint && hint < timecnt) {
     if (transitions_[hint - 1].unix_time <= unix_time) {
       if (unix_time < transitions_[hint].unix_time) {
-        return LocalTime(unix_time, transitions_[hint - 1]);
+        const auto type_index = transitions_[hint - 1].type_index;
+        return LocalTime(unix_time, transition_types_[type_index]);
       }
     }
   }
@@ -1070,7 +1062,8 @@ time_zone::absolute_lookup TimeZoneInfo::BreakTime(
                                           Transition::ByUnixTime());
   local_time_hint_.store(static_cast<std::size_t>(tr - begin),
                          std::memory_order_relaxed);
-  return LocalTime(unix_time, *--tr);
+  const auto type_index = (--tr)->type_index;
+  return LocalTime(unix_time, transition_types_[type_index]);
 }
 
 time_zone::civil_lookup TimeZoneInfo::MakeTime(const civil_second& cs) const {
