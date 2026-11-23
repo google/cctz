@@ -675,24 +675,15 @@ bool TimeZoneInfo::ResetToBuiltinUTC(const seconds& offset) {
   tt.is_dst = false;
   tt.abbr_index = 0;
 
-  // We temporarily add some redundant, contemporary (2015 through 2025)
-  // transitions for performance reasons.  See TimeZoneInfo::LocalTime().
-  // TODO: Fix the performance issue and remove the extra transitions.
+  // Ensure that there are transitions in both the first and second halves
+  // of the time line so that the signed difference between a civil_second
+  // and the civil_second of its previous transition is always representable,
+  // without overflow, in MakeTime().
   transitions_.clear();
-  transitions_.reserve(12);
+  transitions_.reserve(2);
   for (const std::int_fast64_t unix_time : {
            -(1LL << 59),  // a "first half" transition
-           1420070400LL,  // 2015-01-01T00:00:00+00:00
-           1451606400LL,  // 2016-01-01T00:00:00+00:00
-           1483228800LL,  // 2017-01-01T00:00:00+00:00
-           1514764800LL,  // 2018-01-01T00:00:00+00:00
-           1546300800LL,  // 2019-01-01T00:00:00+00:00
-           1577836800LL,  // 2020-01-01T00:00:00+00:00
-           1609459200LL,  // 2021-01-01T00:00:00+00:00
-           1640995200LL,  // 2022-01-01T00:00:00+00:00
-           1672531200LL,  // 2023-01-01T00:00:00+00:00
-           1704067200LL,  // 2024-01-01T00:00:00+00:00
-           1735689600LL,  // 2025-01-01T00:00:00+00:00
+           0LL,           // a "second half" transition
        }) {
     Transition& tr(*transitions_.emplace(transitions_.end()));
     tr.unix_time = unix_time;
@@ -962,21 +953,60 @@ std::unique_ptr<TimeZoneInfo> TimeZoneInfo::Make(const std::string& name) {
 // BreakTime() translation for a particular transition type.
 time_zone::absolute_lookup TimeZoneInfo::LocalTime(
     std::int_fast64_t unix_time, const TransitionType& tt) const {
-  // A civil time in "+offset" looks like (time+offset) in UTC.
-  // Note: We perform two additions in the civil_second domain to
-  // sidestep the chance of overflow in (unix_time + tt.utc_offset).
-  return {(civil_second() + unix_time) + tt.utc_offset,
-          tt.utc_offset, tt.is_dst, &abbreviations_[tt.abbr_index]};
+  // Split unix_time into days and sub-day seconds before adding utc_offset to
+  // avoid signed overflow when unix_time is near seconds::min() or max().
+  std::int_fast64_t days = unix_time / kSecsPerDay;
+  std::int_fast64_t secs = (unix_time % kSecsPerDay) + tt.utc_offset;
+  while (secs < 0) {
+    secs += kSecsPerDay;
+    --days;
+  }
+  while (secs >= kSecsPerDay) {
+    secs -= kSecsPerDay;
+    ++days;
+  }
+
+  const auto u_secs = static_cast<std::uint_least32_t>(secs);
+  const std::uint_least32_t hh = u_secs / 3600;
+  const std::uint_least32_t rem = u_secs % 3600;
+  const std::uint_least32_t mm = rem / 60;
+  const std::uint_least32_t ss = rem % 60;
+
+  // Convert days since 1970-01-01 to Y-M-D using Neri-Schneider's Euclidean
+  // affine algorithm, shifted by 730,692,600 400-year eras so the shifted day
+  // count is non-negative across the full 64-bit seconds range.
+  const std::int_fast64_t kEraShift = 730692600LL;
+  const std::int_fast64_t kDayShift = 719468LL + 146097LL * kEraShift;
+  const year_t kYearShift = 400LL * kEraShift;
+  const auto r0 = static_cast<std::uint_fast64_t>(days + kDayShift);
+  const std::uint_fast64_t n1 = 4 * r0 + 3;
+  const std::uint_fast64_t c = n1 / 146097U;
+  const auto u_c = static_cast<std::uint_least32_t>(n1 - 146097U * c) >> 2;
+  const std::uint_least32_t n2 = 4 * u_c + 3;
+  const std::uint_fast64_t p2 = std::uint_fast64_t{2939745} * n2;
+  const auto z2 = static_cast<std::uint_least32_t>(p2 >> 32);
+  const std::uint_least32_t doy =
+      (static_cast<std::uint_least32_t>(p2 & 0xffffffffU) / 2939745U) >> 2;
+  const std::uint_least32_t n3 = 2141U * doy + 197913U;
+  const std::uint_least32_t mp = n3 >> 16;
+  const std::uint_least32_t d = ((n3 & 0xffffU) / 2141U) + 1U;
+  const std::uint_least32_t j = doy >= 306U;
+  const year_t y =
+      static_cast<year_t>(100U * c + z2) - kYearShift + static_cast<year_t>(j);
+  const std::uint_least32_t m = j ? mp - 12U : mp;
+
+  return {
+      civil_second(detail::fields(
+          y, static_cast<detail::month_t>(m), static_cast<detail::day_t>(d),
+          static_cast<detail::hour_t>(hh), static_cast<detail::minute_t>(mm),
+          static_cast<detail::second_t>(ss))),
+      tt.utc_offset, tt.is_dst, &abbreviations_[tt.abbr_index]};
 }
 
 // BreakTime() translation for a particular transition.
-time_zone::absolute_lookup TimeZoneInfo::LocalTime(
-    std::int_fast64_t unix_time, const Transition& tr) const {
-  const TransitionType& tt = transition_types_[tr.type_index];
-  // Note: (unix_time - tr.unix_time) will never overflow as we
-  // have ensured that there is always a "nearby" transition.
-  return {tr.civil_sec + (unix_time - tr.unix_time),  // TODO: Optimize.
-          tt.utc_offset, tt.is_dst, &abbreviations_[tt.abbr_index]};
+time_zone::absolute_lookup TimeZoneInfo::LocalTime(std::int_fast64_t unix_time,
+                                                   const Transition& tr) const {
+  return LocalTime(unix_time, transition_types_[tr.type_index]);
 }
 
 // MakeTime() translation with a conversion-preserving +N * 400-year shift.
