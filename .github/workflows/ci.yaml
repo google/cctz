@@ -48,7 +48,6 @@ jobs:
         --keep_going
         --per_file_copt=external/.*@-w
         --show_timestamps
-        --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
         --test_output=errors
         --test_tag_filters=-benchmark,-fuzztest
 
@@ -105,7 +104,6 @@ jobs:
         --per_file_copt=external/.*@-w
         --repo_env=CC=clang
         --show_timestamps
-        --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
         --test_output=errors
         --test_tag_filters=-benchmark,-fuzztest
 
@@ -172,7 +170,6 @@ jobs:
         --per_file_copt=external/.*@-w
         --repo_env=CC=clang
         --show_timestamps
-        --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
         --test_output=errors
         --test_tag_filters=-benchmark,-fuzztest
 
@@ -199,7 +196,6 @@ jobs:
         --per_file_copt=external/.*@-w
         --show_timestamps
         --test_arg=--fuzz_for=30s
-        --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
         --test_output=errors
         --test_tag_filters=fuzztest
 
@@ -220,7 +216,6 @@ jobs:
         --keep_going
         --per_file_copt=external/.*@-w
         --show_timestamps
-        --test_env="TZDIR=${GITHUB_WORKSPACE}/testdata/zoneinfo"
         --test_output=errors
         --test_tag_filters=-benchmark,-fuzztest
 
@@ -239,6 +234,5 @@ jobs:
         --keep_going
         --per_file_copt=external/.*@/w
         --show_timestamps
-        --test_env="TZDIR=$env:GITHUB_WORKSPACE\testdata\zoneinfo"
         --test_output=errors
         --test_tag_filters="-benchmark,-fuzztest"
