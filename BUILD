@@ -81,12 +81,27 @@ cc_library(
 
 ### tests
 
+filegroup(
+    name = "zoneinfo",
+    srcs = glob(["testdata/zoneinfo/**"]),
+    visibility = ["//visibility:private"],
+)
+
 cc_library(
     name = "test_time_zone_names",
     testonly = True,
     srcs = ["src/test_time_zone_names.cc"],
     hdrs = ["src/test_time_zone_names.h"],
     visibility = ["//visibility:private"],
+)
+
+cc_library(
+    name = "test_zoneinfo_env",
+    testonly = True,
+    srcs = ["src/test_zoneinfo_env.cc"],
+    data = [":zoneinfo"],
+    visibility = ["//visibility:private"],
+    alwayslink = True,
 )
 
 cc_test(
@@ -106,6 +121,7 @@ cc_test(
     srcs = ["src/time_zone_format_test.cc"],
     deps = [
         ":civil_time",
+        ":test_zoneinfo_env",
         ":time_zone",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
@@ -122,6 +138,7 @@ cc_test(
     deps = [
         ":civil_time",
         ":test_time_zone_names",
+        ":test_zoneinfo_env",
         ":time_zone",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
@@ -155,6 +172,7 @@ cc_test(
     deps = [
         ":civil_time",
         ":test_time_zone_names",
+        ":test_zoneinfo_env",
         ":time_zone",
         "@fuzztest//fuzztest",
         "@fuzztest//fuzztest:fuzztest_gtest_main",
@@ -193,6 +211,7 @@ cc_test(
     deps = [
         ":civil_time",
         ":test_time_zone_names",
+        ":test_zoneinfo_env",
         ":time_zone",
         "@google_benchmark//:benchmark_main",
     ],
