@@ -98,7 +98,7 @@ set_target_properties(cctz PROPERTIES
   PUBLIC_HEADER "${CCTZ_HDRS}"
   )
 if(APPLE)
-  target_link_libraries(cctz PUBLIC ${CoreFoundation})
+  target_link_libraries(cctz PRIVATE ${CoreFoundation})
 endif()
 add_library(cctz::cctz ALIAS cctz)
 
